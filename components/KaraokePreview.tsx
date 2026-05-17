@@ -12,29 +12,27 @@ export function KaraokePreview() {
   let bottomIndex = -1;
   let previewLineIndex = activeLineIndex;
 
-  const enableAdvance = dualLineGapSec >= 5.5;
+    if (lines.length > 0) {
+        let firstStampedIndex = -1;
+        for (let i = 0; i < lines.length; i++) {
+           if (lines[i].start !== null) {
+              firstStampedIndex = i;
+              break;
+           }
+        }
 
-  if (lines.length > 0) {
-      let firstStampedIndex = -1;
-      for (let i = 0; i < lines.length; i++) {
-         if (lines[i].start !== null) {
-            firstStampedIndex = i;
-            break;
-         }
-      }
-
-      if (firstStampedIndex !== -1 && activeLineIndex <= firstStampedIndex && currentTime <= lines[firstStampedIndex].start! && enableAdvance) {
-          previewLineIndex = firstStampedIndex;
-      } else if (activeLineIndex + 1 < lines.length && enableAdvance) {
-         const nextLine = lines[activeLineIndex + 1];
-         if (paragraphStarts[activeLineIndex + 1] && nextLine.start !== null) {
-             const gap = nextLine.start - currentTime;
-             if (gap > 0 && gap <= 5.5) {
-                 previewLineIndex = activeLineIndex + 1;
-             }
-         }
-      }
-  }
+        if (firstStampedIndex !== -1 && activeLineIndex <= firstStampedIndex && currentTime <= lines[firstStampedIndex].start!) {
+            previewLineIndex = firstStampedIndex;
+        } else if (activeLineIndex + 1 < lines.length) {
+           const nextLine = lines[activeLineIndex + 1];
+           if (paragraphStarts[activeLineIndex + 1] && nextLine.start !== null) {
+               const gap = nextLine.start - currentTime;
+               if (gap > 0 && gap <= dualLineGapSec) {
+                   previewLineIndex = activeLineIndex + 1;
+               }
+           }
+        }
+    }
 
   if (lines.length > 0) {
       let paraStart = previewLineIndex;
@@ -94,11 +92,12 @@ export function KaraokePreview() {
   };
 
   let dotsCount = 0;
+  let countdownSec = dualLineGapSec > 0 ? dualLineGapSec : 5.5;
 
-  if (enableAdvance && lines.length > 0 && lines[previewLineIndex]?.start !== null && paragraphStarts[previewLineIndex]) {
+  if (lines.length > 0 && lines[previewLineIndex]?.start !== null && paragraphStarts[previewLineIndex]) {
       const start = lines[previewLineIndex].start!;
       const timeLeft = start - currentTime;
-      if (timeLeft > 0 && timeLeft <= 5.5) {
+      if (timeLeft > 0 && timeLeft <= Math.max(5.5, countdownSec)) {
           dotsCount = Math.max(0, Math.min(4, Math.ceil(timeLeft - 1)));
       }
   }

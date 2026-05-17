@@ -274,7 +274,6 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
           const lastWordWithStart = [...prevLine.words].reverse().find(w => w.start !== null);
           if (lastWordWithStart) prevEnd = lastWordWithStart.start; 
       }
-      if (prevEnd === null) prevEnd = prevLine.start;
 
       let gapSec = -1;
       if (prevEnd !== null && line.start !== null) {

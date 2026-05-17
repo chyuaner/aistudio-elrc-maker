@@ -52,6 +52,13 @@ export function useGlobalHotkeys() {
         e.preventDefault();
         player.currentTime = Math.min(player.duration, player.currentTime + 5);
       }
+
+      // Number keys for seeking 0% - 90%
+      if (/^[0-9]$/.test(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        e.preventDefault();
+        const percent = parseInt(e.key, 10) * 10;
+        player.currentTime = (percent / 100) * player.duration;
+      }
     };
 
     window.addEventListener('keydown', onKeyDown);

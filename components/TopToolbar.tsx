@@ -7,6 +7,60 @@ import { Music, Download, ChevronDown, X } from 'lucide-react';
 import { UndoRedoControls } from './UndoRedo';
 import { useDialogs } from './DialogProvider';
 
+function extractVorbisComments(buffer: ArrayBuffer): Map<string, string> {
+    const view = new DataView(buffer);
+    const decoder = new TextDecoder('utf-8');
+    const tagsMap = new Map<string, string>();
+
+    if (view.getUint32(0) !== 0x664C6143) {
+        throw new Error("非標準 FLAC 檔案格式");
+    }
+
+    let offset = 4;
+    let isLastBlock = false;
+
+    while (!isLastBlock && offset < view.byteLength) {
+        const blockHeader = view.getUint8(offset);
+        isLastBlock = (blockHeader & 0x80) !== 0;
+        const blockType = blockHeader & 0x7F;
+
+        const length = (view.getUint8(offset + 1) << 16) |
+                       (view.getUint8(offset + 2) << 8) |
+                       view.getUint8(offset + 3);
+
+        offset += 4; // Shift to block content
+
+        if (blockType === 4) {
+            let p = offset;
+            const vendorLength = view.getUint32(p, true);
+            p += 4 + vendorLength; // Skip vendor string
+
+            const commentListLength = view.getUint32(p, true);
+            p += 4;
+
+            for (let i = 0; i < commentListLength; i++) {
+                const commentLength = view.getUint32(p, true);
+                p += 4;
+
+                const commentBytes = new Uint8Array(buffer, p, commentLength);
+                const commentStr = decoder.decode(commentBytes);
+                p += commentLength;
+
+                const equalIndex = commentStr.indexOf('=');
+                if (equalIndex !== -1) {
+                    const key = commentStr.substring(0, equalIndex).toUpperCase();
+                    const value = commentStr.substring(equalIndex + 1);
+                    tagsMap.set(key, value);
+                }
+            }
+            break; 
+        }
+        offset += length; 
+    }
+
+    return tagsMap;
+}
+
 export function TopToolbar() {
   const { setFile, commitLines, resetHistory, lines, syncMode, setMetadata, metadata, audioFileName, lyricFileName, setLyricFileName, exportFormat, shiftTime } = useEditor();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -17,74 +71,143 @@ export function TopToolbar() {
   const [loadDropdownOpen, setLoadDropdownOpen] = useState(false);
   const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
 
-  const handleAudioSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
-    if (f) {
-      setFile(f);
-      resetHistory([]);
-      setLyricFileName(null);
-      
-      // Try parsing ID3 / Vorbis tags for lyrics
-      if (typeof window !== 'undefined') {
-        const jsmediatags = require('jsmediatags');
-        jsmediatags.read(f, {
-          onSuccess: async function(tag: any) {
-             const { title, artist, album, year, comment, track, picture } = tag.tags;
-             
-             let picUrl = null;
-             if (picture) {
-                try {
-                  const base64String = picture.data.reduce((acc: string, byte: number) => acc + String.fromCharCode(byte), '');
-                  picUrl = `data:${picture.format};base64,${window.btoa(base64String)}`;
-                } catch(e) {}
-             }
-             
-             let foundLyrics: any = tag.tags.USLT?.lyrics || tag.tags.SYLT?.lyrics || tag.tags.LYRICS || tag.tags.lyrics || tag.tags['©lyr'] || tag.tags.COMMENT?.text || tag.tags.comment?.text;
-             
-             if (!foundLyrics) {
-                // fallback scan all keys
-                for (const key of Object.keys(tag.tags)) {
-                   const k = key.toLowerCase();
-                   // Support flac tags like 'lyrics', 'lyrics:xxx', '©lyr', etc.
-                   if (k === 'lyrics' || k.startsWith('lyrics:') || k.startsWith('©lyr')) {
-                      foundLyrics = typeof tag.tags[key] === 'string' ? tag.tags[key] : tag.tags[key]?.data || tag.tags[key]?.text;
-                      if (foundLyrics) break;
-                   }
+  const processAudioFile = React.useCallback(async (f: File) => {
+    setFile(f);
+    resetHistory([]);
+    setLyricFileName(null);
+    
+    if (f.name.toLowerCase().endsWith('.flac') && typeof window !== 'undefined') {
+       try {
+          const slice = f.slice(0, 10 * 1024 * 1024);
+          const arrayBuffer = await slice.arrayBuffer();
+          const tags = extractVorbisComments(arrayBuffer);
+          let foundLyrics = tags.get('LYRICS') || tags.get('UNSYNCEDLYRICS') || tags.get('UNSYNCED LYRICS');
+          
+          if (!foundLyrics) {
+             for (const [key, value] of tags.entries()) {
+                if (key === 'LYRICS' || key.startsWith('LYRICS:') || key.startsWith('©LYR')) {
+                   foundLyrics = value;
+                   break;
                 }
              }
-
-             if (foundLyrics && typeof foundLyrics !== 'string' && foundLyrics.data) {
-                foundLyrics = foundLyrics.data;
-             }
-             if (typeof foundLyrics !== 'string') {
-                foundLyrics = undefined;
-             }
-
+          }
+          
+          if (foundLyrics || tags.size > 0) {
              setMetadata({
-               title,
-               artist,
-               album,
-               year,
-               comment: comment?.text || (typeof comment === 'string' ? comment : undefined),
-               track,
-               format: picture?.format,
-               picture: picUrl,
-               lyric: foundLyrics,
-               rawTags: tag.tags
+                title: tags.get('TITLE'),
+                artist: tags.get('ARTIST'),
+                album: tags.get('ALBUM'),
+                year: tags.get('DATE'),
+                track: tags.get('TRACKNUMBER'),
+                lyric: foundLyrics,
+                rawTags: Object.fromEntries(tags)
              });
-             
              if (foundLyrics) {
                  setLyricFileName('Embedded Tag');
                  resetHistory(parseRawLyrics(foundLyrics));
              }
-          },
-          onError: function(error: any) {
-            console.log('No ID3 tags or error', error);
-            setMetadata(null);
+             return;
           }
-        });
-      }
+       } catch (e) {
+          console.error(e);
+       }
     }
+
+    // Try parsing ID3 / Vorbis tags (fallback)
+    if (typeof window !== 'undefined') {
+      const jsmediatags = require('jsmediatags');
+      jsmediatags.read(f, {
+        onSuccess: async function(tag: any) {
+           const { title, artist, album, year, comment, track, picture } = tag.tags;
+           
+           let picUrl = null;
+           if (picture) {
+              try {
+                const base64String = picture.data.reduce((acc: string, byte: number) => acc + String.fromCharCode(byte), '');
+                picUrl = `data:${picture.format};base64,${window.btoa(base64String)}`;
+              } catch(e) {}
+           }
+           
+           let foundLyrics: any = tag.tags.USLT?.lyrics || tag.tags.SYLT?.lyrics || tag.tags.LYRICS || tag.tags.lyrics || tag.tags['©lyr'] || tag.tags.COMMENT?.text || tag.tags.comment?.text;
+           
+           if (!foundLyrics) {
+              for (const key of Object.keys(tag.tags)) {
+                 const k = key.toLowerCase();
+                 if (k === 'lyrics' || k.startsWith('lyrics:') || k.startsWith('©lyr')) {
+                    foundLyrics = typeof tag.tags[key] === 'string' ? tag.tags[key] : tag.tags[key]?.data || tag.tags[key]?.text;
+                    if (foundLyrics) break;
+                 }
+              }
+           }
+
+           if (foundLyrics && typeof foundLyrics !== 'string' && foundLyrics.data) {
+              foundLyrics = foundLyrics.data;
+           }
+           if (typeof foundLyrics !== 'string') {
+              foundLyrics = undefined;
+           }
+
+           setMetadata({
+             title, artist, album, year, track,
+             comment: comment?.text || (typeof comment === 'string' ? comment : undefined),
+             format: picture?.format, picture: picUrl, lyric: foundLyrics, rawTags: tag.tags
+           });
+           
+           if (foundLyrics) {
+               setLyricFileName('Embedded Tag');
+               resetHistory(parseRawLyrics(foundLyrics));
+           }
+        },
+        onError: function(error: any) {
+          console.log('No ID3 tags or error', error);
+          setMetadata(null);
+        }
+      });
+    }
+  }, [resetHistory, setFile, setLyricFileName, setMetadata]);
+
+  const processLyricFile = React.useCallback(async (f: File) => {
+    if (lines.length > 0) {
+      const confirmed = await dialogs.confirm('Loading a new lyrics file will discard your current ones. Continue?');
+      if (!confirmed) return;
+    }
+    setLyricFileName(f.name);
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const text = evt.target?.result as string;
+      resetHistory(parseRawLyrics(text));
+    };
+    reader.readAsText(f);
+  }, [lines.length, dialogs, resetHistory, setLyricFileName]);
+
+  React.useEffect(() => {
+    const handleDrop = (e: DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
+        const f = e.dataTransfer.files[0];
+        if (f.type.startsWith('audio/') || f.type.startsWith('video/') || f.name.toLowerCase().endsWith('.flac')) {
+          processAudioFile(f);
+        } else if (f.name.toLowerCase().endsWith('.txt') || f.name.toLowerCase().endsWith('.lrc')) {
+          processLyricFile(f);
+        }
+      }
+    };
+    const handleDragOver = (e: DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    window.addEventListener('drop', handleDrop);
+    window.addEventListener('dragover', handleDragOver);
+    return () => {
+      window.removeEventListener('drop', handleDrop);
+      window.removeEventListener('dragover', handleDragOver);
+    };
+  }, [lines, processAudioFile, processLyricFile]);
+
+  const handleAudioSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (f) processAudioFile(f);
   };
 
   const clearLyrics = async () => {
@@ -105,19 +228,7 @@ export function TopToolbar() {
 
   const handleLyricSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
-    if (f) {
-      if (lines.length > 0) {
-        const confirmed = await dialogs.confirm('Loading a new lyrics file will discard your current ones. Continue?');
-        if (!confirmed) return;
-      }
-      setLyricFileName(f.name);
-      const reader = new FileReader();
-      reader.onload = (evt) => {
-        const text = evt.target?.result as string;
-        resetHistory(parseRawLyrics(text));
-      };
-      reader.readAsText(f);
-    }
+    if (f) processLyricFile(f);
   };
 
   const handleExport = (format: 'standard' | 'enhanced') => {

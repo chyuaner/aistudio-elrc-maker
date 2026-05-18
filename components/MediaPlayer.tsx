@@ -62,9 +62,9 @@ export function MediaPlayer() {
   };
 
   useEffect(() => {
-    if (fileUrl && containerRef.current && playerRef.current) {
+    if (fileUrl && playerRef.current) {
        waveSurferRef.current = WaveSurfer.create({
-          container: containerRef.current,
+          container: containerRef.current!,
           waveColor: 'var(--app-border-light)',
           progressColor: 'var(--app-accent)',
           cursorColor: 'var(--app-accent)',
@@ -84,6 +84,16 @@ export function MediaPlayer() {
        };
     }
   }, [fileUrl, playerRef]);
+
+  // When a new file is loaded, read the duration pre-parsed by Rust (via window.__mediaDurations__).
+  // This bypasses the Chromium/GStreamer issue where FLAC files report Infinity for duration.
+  useEffect(() => {
+    if (!fileUrl) return;
+    const cached = (window as any).__mediaDurations__?.[fileUrl];
+    if (typeof cached === 'number' && isFinite(cached) && cached > 0) {
+      setDuration(cached);
+    }
+  }, [fileUrl, setDuration]);
 
   useEffect(() => {
     if (playerRef.current) {
@@ -110,7 +120,11 @@ export function MediaPlayer() {
     controls: false,
     crossOrigin: 'anonymous' as const,
     className: 'w-full rounded bg-black object-contain ' + (isVideo ? 'h-48' : 'hidden'),
-    onDurationChange: (e: React.SyntheticEvent<HTMLMediaElement>) => setDuration(e.currentTarget.duration),
+    onDurationChange: (e: React.SyntheticEvent<HTMLMediaElement>) => {
+      const d = e.currentTarget.duration;
+      // Ignore Infinity/NaN (FLAC streaming quirk); real duration is pre-cached from Rust
+      if (isFinite(d) && !isNaN(d) && d > 0) setDuration(d);
+    },
     onPlay: () => setIsPlaying(true),
     onPause: () => setIsPlaying(false),
     ref: playerRef as any,

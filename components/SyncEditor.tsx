@@ -11,6 +11,7 @@ import { Edit2, Trash2, X, ArrowRight } from 'lucide-react';
 import { useAutoScroll } from './useAutoScroll';
 import { useDialogs } from './DialogProvider';
 import { useI18n } from '@/hooks/useI18n';
+import { LyricCellContent } from './LyricCell';
 
 export function SyncEditor() {
   const {
@@ -142,9 +143,8 @@ export function SyncEditor() {
         <table className="w-full text-left text-xs border-collapse">
           <thead className="sticky top-0 bg-[var(--app-bg-panel)] text-[var(--app-text-muted)] border-b border-[var(--app-border-base)] z-10 text-[10px] uppercase tracking-widest">
             <tr>
-              <th className="p-3 font-medium w-24 border-r border-[var(--app-border-base)] text-center">{i18n.time}</th>
-              <th className="p-3 font-medium">{i18n.lyricsContentEnhanced}</th>
-              <th className="p-3 font-medium w-28 text-center border-l border-[var(--app-border-base)]">{i18n.action}</th>
+              <th className="p-3 font-medium border-r border-[var(--app-border-base)]">{i18n.lyricsContentEnhanced}</th>
+              <th className="p-3 font-medium w-32 text-center">{i18n.action}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#21262D]">
@@ -161,65 +161,21 @@ export function SyncEditor() {
                 (paragraphStarts[idx] ? 'bg-[#293B33]/40 hover:bg-[#293B33]/60 text-[var(--app-text-muted)] shadow-[inset_2px_0_0_0_rgba(65,168,125,0.5)]' : 'hover:bg-[var(--app-bg-panel-alt)] text-[var(--app-text-muted)]') +
                 (isPast && !isActiveLine && !paragraphStarts[idx] ? ' opacity-60' : '')
               }`}
-              onClick={() => {
-                 setActiveLineIndex(idx);
-                 setActiveWordIndex(0);
-              }}
             >
-              <td 
-                className={`p-3 font-mono text-center border-r border-[var(--app-border-base)] ${isActiveLine ? 'text-[var(--app-accent)]' : isPast ? 'text-blue-400' : 'text-gray-500 text-[10px]'} cursor-pointer hover:text-[var(--app-text-primary)]`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  const player = playerRef?.current;
-                  if (player && line.start !== null) {
-                    player.currentTime = line.start;
-                  }
-                }}
-                title="Click to seek"
-              >
-                {line.start !== null ? formatTime(line.start) : '--:--.--'}
+              <td className="p-0 align-top border-r border-[var(--app-border-base)]">
+                 <LyricCellContent 
+                   line={line}
+                   globalIndex={idx}
+                   isActive={isActiveLine}
+                   activeWordIndex={activeWordIndex}
+                   syncMode={syncMode}
+                   playerRef={playerRef}
+                   setActiveLineIndex={setActiveLineIndex}
+                   setActiveWordIndex={setActiveWordIndex}
+                 />
               </td>
               
-              <td className="p-3 font-medium">
-                <div className="flex flex-wrap gap-1 items-center">
-                {syncMode === 'word' ? (
-                  line.words.map((word, wIdx) => {
-                    const isWordActive = isActiveLine && wIdx === activeWordIndex;
-                    const isWordPast = isActiveLine && wIdx < activeWordIndex || (isPast && word.start !== null) || (!isActiveLine && word.start !== null);
-                    
-                    return (
-                      <Tooltip key={wIdx} title={word.start !== null ? formatTime(word.start) : 'Not synced'}>
-                        <span 
-                          className={`
-                            px-1 py-0.5 rounded transition-all select-none
-                            ${isWordActive ? 'bg-[var(--app-accent)] text-black font-bold ring-2 ring-[var(--app-accent)]/50 cursor-pointer' : 'cursor-pointer'}
-                            ${isWordPast && !isWordActive ? 'text-[var(--app-accent)] bg-[var(--app-border-base)]' : ''}
-                            ${!isWordPast && !isWordActive ? 'text-[var(--app-text-muted)] bg-[var(--app-bg-panel)]' : ''}
-                          `}
-                          onClick={(e) => {
-                             e.stopPropagation();
-                             setActiveLineIndex(idx);
-                             setActiveWordIndex(wIdx);
-                             const player = playerRef?.current;
-                             if (player && word.start !== null) {
-                                player.currentTime = word.start;
-                             }
-                          }}
-                        >
-                           {word.text || (wIdx === line.words.length - 1 ? '⏎' : '')}
-                        </span>
-                      </Tooltip>
-                    )
-                  })
-                ) : (
-                   <span className={isActiveLine ? 'text-[var(--app-accent)]' : 'text-[var(--app-text-muted)]'}>
-                     {line.words.map(w => w.text).join('')}
-                   </span>
-                )}
-                </div>
-              </td>
-              
-              <td className="p-2 border-l border-[var(--app-border-base)]">
+              <td className="p-2 align-middle">
                 <div className="flex items-center justify-center gap-1 opacity-70 hover:opacity-100">
                    <Tooltip title={i18n.editText} delay={1000}>
                      <button onClick={(e) => { e.stopPropagation(); handleEditText(idx, line.raw || ''); }} className="p-1 px-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-text-secondary)] hover:bg-[var(--app-bg-hover)] rounded transition-colors"><Edit2 className="w-3.5 h-3.5" /></button>

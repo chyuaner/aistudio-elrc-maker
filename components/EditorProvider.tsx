@@ -168,8 +168,10 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
   const [dualLineGapSec, setDualLineGapSec] = useState<number>(6);
   const [autoScrollEnabled, setAutoScrollEnabled] = useState<boolean>(false);
   const [metadata, setMetadata] = useState<FileMetadata | null>(null);
-  const [mode, setMode] = useState<EditorMode>('sync');
+  const [rawMode, setRawMode] = useState<EditorMode>('sync');
   const [syncMode, setSyncMode] = useState<SyncMode>('line');
+
+  const mode = rawMode;
   
   useEffect(() => {
     let titleParts = [];
@@ -209,6 +211,18 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
     present: [],
     future: []
   });
+
+  const setMode = React.useCallback((newMode: EditorMode) => {
+    if (newMode === 'sync' || newMode === 'dual-sync') {
+      const currentLines = historyState.present;
+      const hasWordTimestamps = currentLines.some(l => l.words && l.words.some(w => w.start !== null));
+      if (hasWordTimestamps) {
+        setSyncMode('word');
+        setExportFormat('enhanced');
+      }
+    }
+    setRawMode(newMode);
+  }, [historyState.present]);
 
   const dispatchLines = (action: Action) => {
     dispatchLinesRaw({ ...action, currentCursor: { line: activeLineIndex, word: activeWordIndex } } as any);
@@ -328,9 +342,17 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
     dispatchLines({ type: 'SET', payload });
   };
   const resetHistory = (payload: LyricLine[] | ((prev: LyricLine[]) => LyricLine[])) => {
-    dispatchLines({ type: 'RESET', payload });
+    const newLines = typeof payload === 'function' ? payload(historyState.present) : payload;
+    dispatchLines({ type: 'RESET', payload: newLines });
     setActiveLineIndex(0);
     setActiveWordIndex(0);
+    
+    // Smart detect word timestamps on load
+    const hasWordTimestamps = newLines.some(l => l.words && l.words.some(w => w.start !== null));
+    if (hasWordTimestamps) {
+       setSyncMode('word');
+       setExportFormat('enhanced');
+    }
   };
   const commitLines = (payload: LyricLine[] | ((prev: LyricLine[]) => LyricLine[]), actionName?: string) => {
     dispatchLines({ type: 'COMMIT', payload, actionName });

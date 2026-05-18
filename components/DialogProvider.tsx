@@ -52,7 +52,7 @@ export function DialogProvider({ children }: { children: ReactNode }) {
       
       {/* Confirm Modal */}
       {confirmState && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[var(--app-text-primary)] text-[var(--app-bg-base)]/60 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-[var(--app-bg-panel)] border border-[var(--app-border-base)] p-6 rounded shadow-xl max-w-sm w-full mx-4 animate-in zoom-in-95 duration-200">
             <p className="text-[var(--app-text-secondary)] mb-6 whitespace-pre-wrap">{confirmState.msg}</p>
             <div className="flex justify-end gap-3">
@@ -75,7 +75,7 @@ export function DialogProvider({ children }: { children: ReactNode }) {
 
       {/* Prompt Modal */}
       {promptState && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[var(--app-text-primary)] text-[var(--app-bg-base)]/60 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-[var(--app-bg-panel)] border border-[var(--app-border-base)] p-6 rounded shadow-xl max-w-sm w-full mx-4 animate-in zoom-in-95 duration-200">
             <p className="text-[var(--app-text-secondary)] mb-4">{promptState.msg}</p>
             <input 

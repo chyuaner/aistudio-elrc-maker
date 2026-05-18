@@ -180,10 +180,13 @@ export function TopToolbar() {
     reader.readAsText(f);
   }, [lines.length, dialogs, resetHistory, setLyricFileName]);
 
+  const [dragOverlay, setDragOverlay] = useState<'media' | 'lyric' | 'file' | null>(null);
+
   React.useEffect(() => {
     const handleDrop = (e: DragEvent) => {
       e.preventDefault();
       e.stopPropagation();
+      setDragOverlay(null);
       if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
         const f = e.dataTransfer.files[0];
         if (f.type.startsWith('audio/') || f.type.startsWith('video/') || f.name.toLowerCase().endsWith('.flac')) {
@@ -196,14 +199,34 @@ export function TopToolbar() {
     const handleDragOver = (e: DragEvent) => {
       e.preventDefault();
       e.stopPropagation();
+      if (!dragOverlay) {
+         let detected: 'media' | 'lyric' | 'file' = 'file';
+         if (e.dataTransfer?.items && e.dataTransfer.items.length > 0) {
+             const item = e.dataTransfer.items[0];
+             if (item.type.startsWith('audio/') || item.type.startsWith('video/')) detected = 'media';
+             else if (item.type.startsWith('text/')) detected = 'lyric';
+         }
+         setDragOverlay(detected);
+      }
     };
+    const handleDragLeave = (e: DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      // Only hide if we leave the actual window, to prevent flickering over children
+      if (e.relatedTarget === null || (e.relatedTarget as HTMLElement).nodeName === 'HTML') {
+          setDragOverlay(null);
+      }
+    };
+
     window.addEventListener('drop', handleDrop);
     window.addEventListener('dragover', handleDragOver);
+    window.addEventListener('dragleave', handleDragLeave);
     return () => {
       window.removeEventListener('drop', handleDrop);
       window.removeEventListener('dragover', handleDragOver);
+      window.removeEventListener('dragleave', handleDragLeave);
     };
-  }, [lines, processAudioFile, processLyricFile]);
+  }, [dragOverlay, processAudioFile, processLyricFile]);
 
   const handleAudioSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
@@ -247,6 +270,17 @@ export function TopToolbar() {
   };
 
   return (
+    <>
+      {dragOverlay && (
+         <div className="fixed inset-0 z-[100] bg-[#0F1115]/80 backdrop-blur-sm flex items-center justify-center border-[3px] border-dashed border-[#F27D26] m-4 rounded-xl pointer-events-none">
+             <div className="text-center flex flex-col items-center gap-4 text-[#F27D26] bg-[#1A1D23] px-12 py-8 rounded-2xl shadow-2xl animate-pulse">
+                <Music className="w-16 h-16" />
+                <span className="text-3xl font-bold tracking-wide">
+                   Load {dragOverlay === 'media' ? 'Media' : dragOverlay === 'lyric' ? 'Lyrics' : 'Media / Lyrics'}
+                </span>
+             </div>
+         </div>
+      )}
     <header className="bg-[#1A1D23] border-b border-[#2D333B] p-2 flex items-center justify-between shrink-0 relative select-none">
       {/* Left Group */}
       <div className="flex items-center">
@@ -408,5 +442,6 @@ export function TopToolbar() {
         <div className="w-[0px] h-full app-region-drag pointer-events-none self-stretch" />
       </div>
     </header>
+    </>
   );
 }

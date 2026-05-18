@@ -250,13 +250,17 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
     let currentTrack = 0;
     
     let firstStampedFound = false;
+    let explicitInterludePending = false;
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
+      const isLineEmpty = !line.raw || line.raw.trim() === '' || line.words.every(w => !w.text.trim());
+
       if (i === 0) {
         tracks.push(0);
         pStarts.push(true);
         if (line.start !== null) firstStampedFound = true;
+        if (isLineEmpty && line.start !== null) explicitInterludePending = true;
         continue;
       }
 
@@ -265,6 +269,7 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
         currentTrack = 0;
         tracks.push(0);
         pStarts.push(true);
+        if (isLineEmpty) explicitInterludePending = true;
         continue;
       }
 
@@ -280,13 +285,19 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
           gapSec = line.start - prevEnd;
       }
 
-      if (gapSec >= dualLineGapSec) {
+      if (gapSec >= dualLineGapSec || explicitInterludePending) {
           currentTrack = 0;
           pStarts.push(true);
+          explicitInterludePending = false;
       } else {
           currentTrack = currentTrack === 0 ? 1 : 0;
           pStarts.push(false);
       }
+      
+      if (isLineEmpty && line.start !== null) {
+          explicitInterludePending = true;
+      }
+
       tracks.push(currentTrack);
     }
     return { tracks, pStarts };

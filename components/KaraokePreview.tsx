@@ -5,7 +5,7 @@ import { useEditor } from './EditorProvider';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 
 export function KaraokePreview() {
-  const { lines, activeLineIndex, activeWordIndex, trackAssignments, paragraphStarts, currentTime, dualLineGapSec } = useEditor();
+  const { lines, activeLineIndex, activeWordIndex, trackAssignments, paragraphStarts, currentTime, dualLineGapSec, syncMode } = useEditor();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   let topIndex = -1;
@@ -21,7 +21,7 @@ export function KaraokePreview() {
            }
         }
 
-        if (firstStampedIndex !== -1 && activeLineIndex <= firstStampedIndex && currentTime <= lines[firstStampedIndex].start!) {
+        if (firstStampedIndex !== -1 && currentTime <= lines[firstStampedIndex].start!) {
             previewLineIndex = firstStampedIndex;
         } else if (activeLineIndex + 1 < lines.length) {
            const nextLine = lines[activeLineIndex + 1];
@@ -79,6 +79,10 @@ export function KaraokePreview() {
       if (lineIdx < activeLineIndex) {
           return "text-[#F27D26] drop-shadow-[0_0_8px_rgba(242,125,38,0.8)] transition-all";
       } else if (lineIdx === activeLineIndex) {
+          const isLineSynced = lines[lineIdx].words.every(w => w.start === null);
+          if (syncMode === 'line' || isLineSynced) {
+              return "text-white underline decoration-[#F27D26] decoration-4 underline-offset-8 transition-all relative transform scale-110 origin-bottom z-10";
+          }
           if (wordIdx < activeWordIndex) {
               return "text-[#F27D26] drop-shadow-[0_0_8px_rgba(242,125,38,0.8)] transition-all";
           } else if (wordIdx === activeWordIndex) {
@@ -92,12 +96,11 @@ export function KaraokePreview() {
   };
 
   let dotsCount = 0;
-  let countdownSec = dualLineGapSec > 0 ? dualLineGapSec : 5.5;
 
   if (lines.length > 0 && lines[previewLineIndex]?.start !== null && paragraphStarts[previewLineIndex]) {
       const start = lines[previewLineIndex].start!;
       const timeLeft = start - currentTime;
-      if (timeLeft > 0 && timeLeft <= Math.max(5.5, countdownSec)) {
+      if (timeLeft > 0) {
           dotsCount = Math.max(0, Math.min(4, Math.ceil(timeLeft - 1)));
       }
   }

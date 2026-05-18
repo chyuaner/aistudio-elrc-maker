@@ -63,6 +63,10 @@ export function LeftPanelInfo() {
                     <td className="py-2 text-right"><kbd className="bg-[#2D333B] text-[#E0E0E0] px-1.5 py-0.5 rounded text-[10px] font-mono border border-[#444C56]">Right Arrow →</kbd></td>
                   </tr>
                   <tr className="border-b border-[#2D333B]/50">
+                    <td className="py-2 pr-2">Skip to 0%~90%</td>
+                    <td className="py-2 text-right"><kbd className="bg-[#2D333B] text-[#E0E0E0] px-1.5 py-0.5 rounded text-[10px] font-mono border border-[#444C56]">0</kbd> - <kbd className="bg-[#2D333B] text-[#E0E0E0] px-1.5 py-0.5 rounded text-[10px] font-mono border border-[#444C56]">9</kbd></td>
+                  </tr>
+                  <tr className="border-b border-[#2D333B]/50">
                     <td className="py-2 pr-2">Stamp Word/Line</td>
                     <td className="py-2 text-right"><kbd className="bg-[#2D333B] text-[#F27D26] px-1.5 py-0.5 rounded text-[10px] font-mono border border-[#F27D26]/50">Space</kbd></td>
                   </tr>

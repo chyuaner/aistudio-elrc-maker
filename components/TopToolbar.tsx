@@ -290,6 +290,9 @@ export function TopToolbar() {
   const [dragOverlay, setDragOverlay] = useState<'media' | 'lyric' | 'file' | null>(null);
 
   React.useEffect(() => {
+    const isTauri = typeof window !== 'undefined' && !!(window as any).__TAURI__;
+
+    // --- STANDARD HTML5 BROWSER EVENTS (Chrome / Web) ---
     const handleDrop = (e: DragEvent) => {
       e.preventDefault();
       e.stopPropagation();
@@ -303,19 +306,35 @@ export function TopToolbar() {
         }
       }
     };
+
     const handleDragOver = (e: DragEvent) => {
       e.preventDefault();
       e.stopPropagation();
       if (!dragOverlay) {
          let detected: 'media' | 'lyric' | 'file' = 'file';
          if (e.dataTransfer?.items && e.dataTransfer.items.length > 0) {
-             const item = e.dataTransfer.items[0];
-             if (item.type.startsWith('audio/') || item.type.startsWith('video/')) detected = 'media';
-             else if (item.type.startsWith('text/')) detected = 'lyric';
+             const items = Array.from(e.dataTransfer.items);
+             
+             // Check if any dragged item is an audio/video file
+             const hasAudioVideo = items.some(item => 
+                 item.kind === 'file' && (item.type.startsWith('audio/') || item.type.startsWith('video/'))
+             );
+             
+             // Check if any dragged item is a text file (but ignore metadata types like text/uri-list)
+             const hasText = items.some(item => 
+                 item.kind === 'file' && item.type.startsWith('text/') && item.type !== 'text/uri-list'
+             );
+             
+             if (hasAudioVideo) {
+                 detected = 'media';
+             } else if (hasText) {
+                 detected = 'lyric';
+             }
          }
          setDragOverlay(detected);
       }
     };
+
     const handleDragLeave = (e: DragEvent) => {
       e.preventDefault();
       e.stopPropagation();
@@ -328,10 +347,94 @@ export function TopToolbar() {
     window.addEventListener('drop', handleDrop);
     window.addEventListener('dragover', handleDragOver);
     window.addEventListener('dragleave', handleDragLeave);
+
+    // --- NATIVE TAURI DRAG-AND-DROP EVENTS (Tauri Desktop App) ---
+    let active = true;
+    const unlisteners: (() => void)[] = [];
+
+    if (isTauri) {
+      const tauri = (window as any).__TAURI__;
+      
+      const setupTauriListeners = async () => {
+        try {
+          const uEnter = await tauri.event.listen('tauri://drag-enter', (event: any) => {
+            const paths = event.payload?.paths || [];
+            if (paths.length > 0) {
+              const path = paths[0];
+              const ext = path.split('.').pop()?.toLowerCase();
+              let detected: 'media' | 'lyric' | 'file' = 'file';
+              if (['flac', 'mp3', 'wav', 'm4a', 'aac', 'ogg', 'mp4', 'mkv', 'webm'].includes(ext)) {
+                detected = 'media';
+              } else if (['txt', 'lrc'].includes(ext)) {
+                detected = 'lyric';
+              }
+              setDragOverlay(detected);
+            }
+          });
+          if (active) unlisteners.push(uEnter);
+          else uEnter();
+
+          const uLeave = await tauri.event.listen('tauri://drag-leave', () => {
+            setDragOverlay(null);
+          });
+          if (active) unlisteners.push(uLeave);
+          else uLeave();
+
+          const uCancelled = await tauri.event.listen('tauri://drag-cancelled', () => {
+            setDragOverlay(null);
+          });
+          if (active) unlisteners.push(uCancelled);
+          else uCancelled();
+
+          const uDrop = await tauri.event.listen('tauri://drag-drop', async (event: any) => {
+            setDragOverlay(null);
+            const paths = event.payload?.paths || [];
+            if (paths.length > 0) {
+              const path = paths[0];
+              const fileName = path.split(/[/\\]/).pop() || 'temp_file';
+              const ext = fileName.split('.').pop()?.toLowerCase();
+              
+              let mimeType = 'application/octet-stream';
+              if (ext === 'flac') mimeType = 'audio/flac';
+              else if (ext === 'mp3') mimeType = 'audio/mpeg';
+              else if (ext === 'wav') mimeType = 'audio/wav';
+              else if (ext === 'm4a') mimeType = 'audio/mp4';
+              else if (ext === 'aac') mimeType = 'audio/aac';
+              else if (ext === 'txt') mimeType = 'text/plain';
+              else if (ext === 'lrc') mimeType = 'text/plain';
+
+              try {
+                const bytes = await tauri.core.invoke('read_file_binary', { path });
+                const blob = new Blob([bytes], { type: mimeType });
+                const file = new File([blob], fileName, { type: mimeType });
+                
+                if (ext === 'txt' || ext === 'lrc') {
+                  processLyricFile(file);
+                } else {
+                  processAudioFile(file);
+                }
+              } catch (err) {
+                console.error('Failed to read file from Tauri native drop:', err);
+              }
+            }
+          });
+          if (active) unlisteners.push(uDrop);
+          else uDrop();
+        } catch (err) {
+          console.error('Error setting up Tauri drag listeners:', err);
+        }
+      };
+      
+      setupTauriListeners();
+    }
+
     return () => {
       window.removeEventListener('drop', handleDrop);
       window.removeEventListener('dragover', handleDragOver);
       window.removeEventListener('dragleave', handleDragLeave);
+      
+      active = false;
+      unlisteners.forEach(u => u());
     };
   }, [dragOverlay, processAudioFile, processLyricFile]);
 

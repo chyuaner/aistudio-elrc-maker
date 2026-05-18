@@ -357,13 +357,6 @@ export function TopToolbar() {
       
       const setupTauriListeners = async () => {
         try {
-          const uNativeButton = await tauri.event.listen('native-button-clicked', (event: any) => {
-            console.log("Native GTK3 button clicked!", event.payload);
-            alert(`[Native GTK3 Event] 收到原生視窗標題列按鈕點擊事件：${event.payload}`);
-          });
-          if (active) unlisteners.push(uNativeButton);
-          else uNativeButton();
-
           const uEnter = await tauri.event.listen('tauri://drag-enter', (event: any) => {
 
             const paths = event.payload?.paths || [];

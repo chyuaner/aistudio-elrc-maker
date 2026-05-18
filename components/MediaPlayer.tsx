@@ -7,9 +7,41 @@ import { Play, Pause, Square, Rewind, FastForward, ChevronLeft, ChevronRight, Vo
 import { formatTime } from '@/lib/lyric-utils';
 import { Tooltip } from './Tooltip';
 
+function TimeDisplay() {
+  const { duration, playerRef } = useEditor();
+  const [currentTime, setCurrentTime] = useState(0);
+
+  useEffect(() => {
+    let rafId: number;
+    const updateTime = () => {
+      if (playerRef.current) {
+        setCurrentTime(playerRef.current.currentTime);
+      }
+      rafId = requestAnimationFrame(updateTime);
+    };
+    rafId = requestAnimationFrame(updateTime);
+    return () => cancelAnimationFrame(rafId);
+  }, [playerRef]);
+
+  return (
+    <div className="flex justify-between items-end px-1">
+        <span className="text-3xl font-mono text-[var(--app-accent)] tabular-nums tracking-tighter leading-none font-medium">
+          {formatTime(currentTime)}
+        </span>
+        <div className="flex flex-col items-end gap-0.5">
+          <span className="text-xs font-mono text-[var(--app-text-secondary)] tabular-nums leading-none">
+            -{formatTime(Math.max(0, duration - currentTime))}
+          </span>
+          <span className="text-[10px] font-mono text-[var(--app-text-muted)] tabular-nums leading-none">
+            {formatTime(duration)}
+          </span>
+        </div>
+    </div>
+  );
+}
+
 export function MediaPlayer() {
-  const { file, fileUrl, playerRef, currentTime, setCurrentTime, duration, setDuration, isPlaying, setIsPlaying, audioLatency, setAudioLatency, playbackRate, setPlaybackRate, audioSpecs } = useEditor();
-  const rafRef = useRef<number | null>(null);
+  const { file, fileUrl, playerRef, duration, setDuration, isPlaying, setIsPlaying, audioLatency, setAudioLatency, playbackRate, setPlaybackRate, audioSpecs } = useEditor();
   const containerRef = useRef<HTMLDivElement>(null);
   const waveSurferRef = useRef<WaveSurfer | null>(null);
   const [volume, setVolume] = useState(1);
@@ -28,23 +60,6 @@ export function MediaPlayer() {
     let sampleRateDisplay = audioSpecs?.sampleRate ? `${audioSpecs.sampleRate} Hz` : '';
     return [formatDisplay, sampleRateDisplay, bitrateDisplay].filter(Boolean).join(' · ');
   };
-
-  useEffect(() => {
-    const updateTime = () => {
-      if (playerRef.current) {
-        const newTime = playerRef.current.currentTime;
-        setCurrentTime((prev: number) => {
-          if (prev !== newTime) return newTime;
-          return prev;
-        });
-      }
-      rafRef.current = requestAnimationFrame(updateTime);
-    };
-    rafRef.current = requestAnimationFrame(updateTime);
-    return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    };
-  }, [setCurrentTime, playerRef]);
 
   useEffect(() => {
     if (fileUrl && containerRef.current && playerRef.current) {
@@ -136,19 +151,7 @@ export function MediaPlayer() {
       </div>
 
       {/* Time Display */}
-      <div className="flex justify-between items-end px-1">
-          <span className="text-3xl font-mono text-[var(--app-accent)] tabular-nums tracking-tighter leading-none font-medium">
-            {formatTime(currentTime)}
-          </span>
-          <div className="flex flex-col items-end gap-0.5">
-            <span className="text-xs font-mono text-[var(--app-text-secondary)] tabular-nums leading-none">
-              -{formatTime(Math.max(0, duration - currentTime))}
-            </span>
-            <span className="text-[10px] font-mono text-[var(--app-text-muted)] tabular-nums leading-none">
-              {formatTime(duration)}
-            </span>
-          </div>
-      </div>
+      <TimeDisplay />
       
       <div className="flex flex-col gap-3 bg-[var(--app-bg-panel)] p-3 rounded shadow-sm border border-[var(--app-border-base)]">
         {/* Playback controls row */}

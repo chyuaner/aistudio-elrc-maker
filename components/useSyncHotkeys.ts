@@ -9,13 +9,14 @@ export function useSyncHotkeys() {
     syncMode,
     activeLineIndex, setActiveLineIndex,
     activeWordIndex, setActiveWordIndex,
-    currentTime, playerRef, audioLatency,
+    playerRef, audioLatency,
     hotkeys, mode
   } = useEditor();
 
   const getEffectiveTime = useCallback(() => {
-    return Math.max(0, currentTime - audioLatency / 1000);
-  }, [currentTime, audioLatency]);
+    const time = playerRef.current ? playerRef.current.currentTime : 0;
+    return Math.max(0, time - audioLatency / 1000);
+  }, [playerRef, audioLatency]);
 
   const handleLineStamp = useCallback(() => {
     if (activeLineIndex >= lines.length) return;

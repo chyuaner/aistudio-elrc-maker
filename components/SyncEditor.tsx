@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, memo, useCallback } from 'react';
 import { useEditor } from './EditorProvider';
 import { useSyncHotkeys } from './useSyncHotkeys';
 import { formatTime } from '@/lib/lyric-utils';
@@ -10,6 +10,62 @@ import { useAutoScroll } from './useAutoScroll';
 import { useDialogs } from './DialogProvider';
 import { useI18n } from '@/hooks/useI18n';
 import { LyricCellContent } from './LyricCell';
+
+const SyncCell = memo(({ 
+  data, isDual, isActive, isPassed, activeWordIndex, syncMode, paragraphStart, playerRef, i18n, 
+  setActiveLineIndex, setActiveWordIndex, handleEditText, handleOffsetFromHere, handleClearTime, handleDeleteLine 
+}: any) => {
+  if (!data) {
+    return (
+      <td className={`p-3 border-r border-[var(--app-border-base)] align-top bg-[var(--app-bg-input)]/30 text-center ${isDual ? 'w-1/2' : 'w-full'}`}>
+        <span className="opacity-20 font-mono text-[10px] tracking-widest uppercase">Instrumental Break</span>
+      </td>
+    );
+  }
+  
+  const { line, index: globalIndex } = data;
+
+  return (
+    <td 
+      data-line-index={globalIndex}
+      onClick={() => {
+        setActiveLineIndex(globalIndex);
+        setActiveWordIndex(0);
+      }}
+      className={`p-0 align-top group cursor-pointer border-r border-[var(--app-border-base)] transition-colors relative ${isDual ? 'w-1/2' : 'w-full'}
+        ${isActive ? 'bg-[var(--app-border-base)] text-[var(--app-text-primary)] shadow-[inset_2px_0_0_0_var(--app-accent)]' : 
+          (paragraphStart ? 'bg-[#293B33]/40 hover:bg-[#293B33]/60 text-[var(--app-text-muted)] shadow-[inset_2px_0_0_0_rgba(65,168,125,0.5)]' : 'hover:bg-[var(--app-bg-panel-alt)] text-[var(--app-text-muted)]')}
+        ${(!isActive && isPassed && !paragraphStart) ? ' opacity-60' : ''}`}
+    >
+      <LyricCellContent
+        line={line}
+        globalIndex={globalIndex}
+        isActive={isActive}
+        activeWordIndex={activeWordIndex}
+        syncMode={syncMode}
+        playerRef={playerRef}
+        setActiveLineIndex={setActiveLineIndex}
+        setActiveWordIndex={setActiveWordIndex}
+        actions={
+          <>
+            <Tooltip title={i18n.editText} delay={1000}>
+              <button onClick={(e) => { e.stopPropagation(); handleEditText(globalIndex, line.raw || ''); }} className="p-1 px-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-text-secondary)] hover:bg-[var(--app-bg-hover)] rounded transition-colors"><Edit2 className="w-3.5 h-3.5" /></button>
+            </Tooltip>
+            <Tooltip title={i18n.offsetSubsequent} delay={1000}>
+              <button onClick={(e) => { e.stopPropagation(); handleOffsetFromHere(globalIndex); }} className="p-1 px-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-text-secondary)] hover:bg-[var(--app-bg-hover)] rounded transition-colors"><ArrowRight className="w-3.5 h-3.5" /></button>
+            </Tooltip>
+            <Tooltip title={i18n.clearTimestamps} delay={1000}>
+              <button onClick={(e) => { e.stopPropagation(); handleClearTime(globalIndex); }} className="p-1 px-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-accent)] hover:bg-[var(--app-bg-hover)] rounded transition-colors"><X className="w-3.5 h-3.5" /></button>
+            </Tooltip>
+            <Tooltip title={i18n.deleteLine} delay={1000}>
+              <button onClick={(e) => { e.stopPropagation(); handleDeleteLine(globalIndex); }} className="p-1 px-1.5 text-[var(--app-text-muted)] hover:text-red-500 hover:bg-[var(--app-bg-hover)] rounded transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
+            </Tooltip>
+          </>
+        }
+      />
+    </td>
+  );
+});
 
 export function SyncEditor() {
   const {
@@ -40,7 +96,7 @@ export function SyncEditor() {
     }
   }, [activeLineIndex, autoScrollEnabled]);
 
-  const handleOffsetFromHere = async (globalIndex: number) => {
+  const handleOffsetFromHere = useCallback(async (globalIndex: number) => {
     const val = await dialogs.prompt(i18n.promptShiftTime, '0');
     if (val !== null) {
       const sec = parseFloat(val);
@@ -48,87 +104,59 @@ export function SyncEditor() {
         shiftTimeFromIndex(globalIndex, sec);
       }
     }
-  };
+  }, [dialogs, i18n, shiftTimeFromIndex]);
 
-  const handleEditText = async (globalIndex: number, currentText: string) => {
+  const handleEditText = useCallback(async (globalIndex: number, currentText: string) => {
     const newText = await dialogs.prompt('Edit line text:', currentText);
     if (newText !== null && newText !== currentText) {
-       const newLines = [...lines];
-       newLines[globalIndex].raw = newText;
-       newLines[globalIndex].words = newText.split(' ').map((w, i, arr) => ({
-          text: w + (i < arr.length - 1 ? ' ' : ''),
-          start: null,
-          end: null
-       }));
-       commitLines(newLines, 'Edit Text');
+       commitLines(prev => {
+         const newLines = [...prev];
+         newLines[globalIndex] = { ...newLines[globalIndex], raw: newText };
+         newLines[globalIndex].words = newText.split(' ').map((w, i, arr) => ({
+            text: w + (i < arr.length - 1 ? ' ' : ''),
+            start: null,
+            end: null
+         }));
+         return newLines;
+       }, 'Edit Text');
     }
-  };
+  }, [dialogs, commitLines]);
 
-  const handleClearTime = (globalIndex: number) => {
-    const newLines = [...lines];
-    newLines[globalIndex].start = null;
-    if (newLines[globalIndex].words) {
-        newLines[globalIndex].words = newLines[globalIndex].words.map((w: any) => ({...w, start: null, end: null}));
-    }
-    commitLines(newLines, 'Reset Time');
-  };
+  const handleClearTime = useCallback((globalIndex: number) => {
+    commitLines(prev => {
+      const newLines = [...prev];
+      newLines[globalIndex] = { ...newLines[globalIndex], start: null };
+      if (newLines[globalIndex].words) {
+          newLines[globalIndex].words = newLines[globalIndex].words.map((w: any) => ({...w, start: null, end: null}));
+      }
+      return newLines;
+    }, 'Reset Time');
+  }, [commitLines]);
 
-  const handleDeleteLine = (globalIndex: number) => {
-    const newLines = lines.filter((_, i) => i !== globalIndex);
-    commitLines(newLines, 'Delete Line');
-  };
+  const handleDeleteLine = useCallback((globalIndex: number) => {
+    commitLines(prev => prev.filter((_, i) => i !== globalIndex), 'Delete Line');
+  }, [commitLines]);
 
-  const renderCell = (data: { line: any, index: number } | null, isDual: boolean) => {
-    if (!data) {
-      return (
-        <td className={`p-3 border-r border-[var(--app-border-base)] align-top bg-[var(--app-bg-input)]/30 text-center ${isDual ? 'w-1/2' : 'w-full'}`}>
-          <span className="opacity-20 font-mono text-[10px] tracking-widest uppercase">Instrumental Break</span>
-        </td>
-      );
-    }
-    
-    const { line, index: globalIndex } = data;
-    const isActive = globalIndex === activeLineIndex;
-
+  const renderCellWrapper = (data: { line: any, index: number } | null, isDual: boolean) => {
     return (
-      <td 
-        data-line-index={globalIndex}
-        onClick={() => {
-          setActiveLineIndex(globalIndex);
-          setActiveWordIndex(0);
-        }}
-        className={`p-0 align-top group cursor-pointer border-r border-[var(--app-border-base)] transition-colors relative ${isDual ? 'w-1/2' : 'w-full'}
-          ${isActive ? 'bg-[var(--app-border-base)] text-[var(--app-text-primary)] shadow-[inset_2px_0_0_0_var(--app-accent)]' : 
-            (paragraphStarts[globalIndex] ? 'bg-[#293B33]/40 hover:bg-[#293B33]/60 text-[var(--app-text-muted)] shadow-[inset_2px_0_0_0_rgba(65,168,125,0.5)]' : 'hover:bg-[var(--app-bg-panel-alt)] text-[var(--app-text-muted)]')}
-          ${(!isActive && globalIndex < activeLineIndex && !paragraphStarts[globalIndex]) ? ' opacity-60' : ''}`}
-      >
-        <LyricCellContent
-          line={line}
-          globalIndex={globalIndex}
-          isActive={isActive}
-          activeWordIndex={activeWordIndex}
-          syncMode={syncMode}
-          playerRef={playerRef}
-          setActiveLineIndex={setActiveLineIndex}
-          setActiveWordIndex={setActiveWordIndex}
-          actions={
-            <>
-              <Tooltip title={i18n.editText} delay={1000}>
-                <button onClick={(e) => { e.stopPropagation(); handleEditText(globalIndex, line.raw || ''); }} className="p-1 px-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-text-secondary)] hover:bg-[var(--app-bg-hover)] rounded transition-colors"><Edit2 className="w-3.5 h-3.5" /></button>
-              </Tooltip>
-              <Tooltip title={i18n.offsetSubsequent} delay={1000}>
-                <button onClick={(e) => { e.stopPropagation(); handleOffsetFromHere(globalIndex); }} className="p-1 px-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-text-secondary)] hover:bg-[var(--app-bg-hover)] rounded transition-colors"><ArrowRight className="w-3.5 h-3.5" /></button>
-              </Tooltip>
-              <Tooltip title={i18n.clearTimestamps} delay={1000}>
-                <button onClick={(e) => { e.stopPropagation(); handleClearTime(globalIndex); }} className="p-1 px-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-accent)] hover:bg-[var(--app-bg-hover)] rounded transition-colors"><X className="w-3.5 h-3.5" /></button>
-              </Tooltip>
-              <Tooltip title={i18n.deleteLine} delay={1000}>
-                <button onClick={(e) => { e.stopPropagation(); handleDeleteLine(globalIndex); }} className="p-1 px-1.5 text-[var(--app-text-muted)] hover:text-red-500 hover:bg-[var(--app-bg-hover)] rounded transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
-              </Tooltip>
-            </>
-          }
-        />
-      </td>
+      <SyncCell 
+        key={data ? data.index : 'empty'}
+        data={data}
+        isDual={isDual}
+        isActive={data ? data.index === activeLineIndex : false}
+        isPassed={data ? data.index < activeLineIndex : false}
+        activeWordIndex={data?.index === activeLineIndex ? activeWordIndex : 0}
+        syncMode={syncMode}
+        paragraphStart={data ? paragraphStarts[data.index] : false}
+        playerRef={playerRef}
+        i18n={i18n}
+        setActiveLineIndex={setActiveLineIndex}
+        setActiveWordIndex={setActiveWordIndex}
+        handleEditText={handleEditText}
+        handleOffsetFromHere={handleOffsetFromHere}
+        handleClearTime={handleClearTime}
+        handleDeleteLine={handleDeleteLine}
+      />
     );
   };
 
@@ -249,8 +277,8 @@ export function SyncEditor() {
           <tbody className="divide-y divide-[#21262D]">
             {uiRows.map((row, idx) => (
               <tr key={idx} className="border-b border-[var(--app-border-base)]/50">
-                {renderCell(row.left, isDual)}
-                {isDual && renderCell(row.right || null, true)}
+                {renderCellWrapper(row.left, isDual)}
+                {isDual && renderCellWrapper(row.right || null, true)}
               </tr>
             ))}
           </tbody>

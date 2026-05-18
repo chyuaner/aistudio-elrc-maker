@@ -1,12 +1,25 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useEditor } from './EditorProvider';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 
 export function KaraokePreview() {
-  const { lines, activeLineIndex, activeWordIndex, trackAssignments, paragraphStarts, currentTime, dualLineGapSec, syncMode, autoScrollEnabled } = useEditor();
+  const { lines, activeLineIndex, activeWordIndex, trackAssignments, paragraphStarts, dualLineGapSec, syncMode, autoScrollEnabled, playerRef, isPlaying } = useEditor();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+
+  useEffect(() => {
+    let rafId: number;
+    const updateTime = () => {
+      if (playerRef.current) {
+        setCurrentTime(playerRef.current.currentTime);
+      }
+      rafId = requestAnimationFrame(updateTime);
+    };
+    rafId = requestAnimationFrame(updateTime);
+    return () => cancelAnimationFrame(rafId);
+  }, [playerRef]);
 
   let topIndex = -1;
   let bottomIndex = -1;

@@ -143,9 +143,6 @@ interface EditorContextType {
   hotkeys: Hotkeys;
   setHotkeys: (hk: Hotkeys) => void;
   
-  currentTime: number;
-  setCurrentTime: React.Dispatch<React.SetStateAction<number>>;
-  
   duration: number;
   setDuration: (time: number) => void;
   
@@ -208,7 +205,6 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
     nextLine: 'm',
   });
   
-  const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [audioLatency, setAudioLatency] = useState(0);
@@ -425,7 +421,6 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
       activeLineIndex, setActiveLineIndex,
       activeWordIndex, setActiveWordIndex,
       hotkeys, setHotkeys,
-      currentTime, setCurrentTime,
       duration, setDuration,
       isPlaying, setIsPlaying,
       audioLatency, setAudioLatency,

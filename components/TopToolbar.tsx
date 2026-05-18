@@ -320,6 +320,7 @@ export function TopToolbar() {
       },
       exportStandard: () => handleExport('standard'),
       exportEnhanced: () => handleExport('enhanced'),
+      exportCurrent: () => handleExport(exportFormat),
       shiftTime: async () => {
         const val = await dialogs.prompt('Shift all timings by X seconds (e.g., 0.5 or -1.2):', '0');
         if (val !== null) {

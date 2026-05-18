@@ -30,6 +30,7 @@ export interface AppCommandsType {
   
   exportStandard: null | (() => void);
   exportEnhanced: null | (() => void);
+  exportCurrent: null | (() => void);
   shiftTime: null | (() => Promise<void>);
   
   register: (handlers: Partial<Omit<AppCommandsType, "register">>) => void;
@@ -60,6 +61,7 @@ export const AppCommands: AppCommandsType = {
   
   exportStandard: null,
   exportEnhanced: null,
+  exportCurrent: null,
   shiftTime: null,
   
   register: (handlers: Partial<Omit<AppCommandsType, "register">>) => {

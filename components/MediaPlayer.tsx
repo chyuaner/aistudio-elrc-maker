@@ -93,6 +93,7 @@ export function MediaPlayer() {
   const commonProps = {
     src: fileUrl,
     controls: false,
+    crossOrigin: 'anonymous' as const,
     className: 'w-full rounded bg-black object-contain ' + (isVideo ? 'h-48' : 'hidden'),
     onDurationChange: (e: React.SyntheticEvent<HTMLMediaElement>) => setDuration(e.currentTarget.duration),
     onPlay: () => setIsPlaying(true),

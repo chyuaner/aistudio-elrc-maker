@@ -371,14 +371,113 @@ export function TopToolbar() {
     window.addEventListener('drop', handleDrop);
     window.addEventListener('dragover', handleDragOver);
     window.addEventListener('dragleave', handleDragLeave);
-    
+
     return () => {
       window.removeEventListener('drop', handleDrop);
       window.removeEventListener('dragover', handleDragOver);
       window.removeEventListener('dragleave', handleDragLeave);
-      unlisteners.forEach(u => u());
     };
   }, [dragOverlay, processAudioFile, processLyricFile]);
+
+  // Create refs to always have access to the latest process functions without recreating Tauri listeners
+  const processAudioRef = useRef(processAudioFile);
+  const processLyricRef = useRef(processLyricFile);
+  useEffect(() => {
+    processAudioRef.current = processAudioFile;
+    processLyricRef.current = processLyricFile;
+  }, [processAudioFile, processLyricFile]);
+
+  useEffect(() => {
+    const isTauri = typeof window !== 'undefined' && !!(window as any).__TAURI__;
+    if (!isTauri) return;
+
+    let active = true;
+    const unlisteners: (() => void)[] = [];
+    const tauri = (window as any).__TAURI__;
+    
+    const setupTauriListeners = async () => {
+      try {
+        const uEnter = await tauri.event.listen('tauri://drag-enter', (event: any) => {
+          const paths = event.payload?.paths || [];
+          if (paths.length > 0) {
+            const path = paths[0];
+            const ext = path.split('.').pop()?.toLowerCase();
+            let detected: 'media' | 'lyric' | 'file' = 'file';
+            if (['flac', 'mp3', 'wav', 'm4a', 'aac', 'ogg', 'mp4', 'mkv', 'webm'].includes(ext as string)) {
+              detected = 'media';
+            } else if (['txt', 'lrc'].includes(ext as string)) {
+              detected = 'lyric';
+            }
+            setDragOverlay(detected);
+          }
+        });
+        if (active) unlisteners.push(uEnter);
+        else try { uEnter(); } catch(e){}
+
+        const uLeave = await tauri.event.listen('tauri://drag-leave', () => {
+          setDragOverlay(null);
+        });
+        if (active) unlisteners.push(uLeave);
+        else try { uLeave(); } catch(e){}
+
+        const uCancelled = await tauri.event.listen('tauri://drag-cancelled', () => {
+          setDragOverlay(null);
+        });
+        if (active) unlisteners.push(uCancelled);
+        else try { uCancelled(); } catch(e){}
+
+        const uDrop = await tauri.event.listen('tauri://drag-drop', async (event: any) => {
+          setDragOverlay(null);
+          const paths = event.payload?.paths || [];
+          if (paths.length > 0) {
+            const path = paths[0];
+            const fileName = path.split(/[/\\]/).pop() || 'temp_file';
+            const ext = fileName.split('.').pop()?.toLowerCase();
+            
+            let mimeType = 'application/octet-stream';
+            if (ext === 'flac') mimeType = 'audio/flac';
+            else if (ext === 'mp3') mimeType = 'audio/mpeg';
+            else if (ext === 'wav') mimeType = 'audio/wav';
+            else if (ext === 'm4a') mimeType = 'audio/mp4';
+            else if (ext === 'aac') mimeType = 'audio/aac';
+            else if (ext === 'txt') mimeType = 'text/plain';
+            else if (ext === 'lrc') mimeType = 'text/plain';
+
+            try {
+              const bytes = await tauri.core.invoke('read_file_binary', { path });
+              const blob = new Blob([bytes], { type: mimeType });
+              const file = new File([blob], fileName, { type: mimeType });
+              
+              if (ext === 'txt' || ext === 'lrc') {
+                processLyricRef.current(file);
+              } else {
+                processAudioRef.current(file);
+              }
+            } catch (err) {
+              console.error('Failed to read file from Tauri native drop:', err);
+            }
+          }
+        });
+        if (active) unlisteners.push(uDrop);
+        else try { uDrop(); } catch(e){}
+      } catch (err) {
+        console.error('Error setting up Tauri drag listeners:', err);
+      }
+    };
+    
+    setupTauriListeners();
+
+    return () => {
+      active = false;
+      unlisteners.forEach(u => {
+        try {
+          if (typeof u === 'function') u();
+        } catch (e) {
+          console.warn("Caught unlisten error:", e);
+        }
+      });
+    };
+  }, []);
 
   const handleAudioSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];

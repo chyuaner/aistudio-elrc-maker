@@ -31,7 +31,7 @@ export function LyricCellContent({
         className="w-16 font-mono text-[11px] hover:text-[var(--app-text-primary)] pt-1 shrink-0 cursor-pointer"
         onClick={(e) => {
            e.stopPropagation();
-           const player = playerRef?.current;
+           const { current: player } = playerRef;
            if (player instanceof HTMLMediaElement && line.start !== null) {
               player.currentTime = line.start;
            }
@@ -64,7 +64,7 @@ export function LyricCellContent({
                       e.stopPropagation();
                       setActiveLineIndex(globalIndex);
                       setActiveWordIndex(wIdx);
-                      const player = playerRef?.current;
+                      const { current: player } = playerRef;
                       if (player instanceof HTMLMediaElement && word.start !== null) {
                          player.currentTime = word.start;
                       }

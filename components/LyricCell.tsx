@@ -32,7 +32,7 @@ export function LyricCellContent({
         onClick={(e) => {
            e.stopPropagation();
            const player = playerRef?.current;
-           if (player && line.start !== null) {
+           if (player instanceof HTMLMediaElement && line.start !== null) {
               player.currentTime = line.start;
            }
         }}
@@ -65,7 +65,7 @@ export function LyricCellContent({
                       setActiveLineIndex(globalIndex);
                       setActiveWordIndex(wIdx);
                       const player = playerRef?.current;
-                      if (player && word.start !== null) {
+                      if (player instanceof HTMLMediaElement && word.start !== null) {
                          player.currentTime = word.start;
                       }
                     }}

@@ -757,8 +757,10 @@ export function TopToolbar() {
       {/* Desktop Buttons */}
       {renderButtonsRow('hidden lg:flex flex-1 z-10')}
     </header>
-    {/* Mobile Buttons */}
-    {renderButtonsRow('flex lg:hidden bg-[var(--app-bg-panel-alt)] border-b border-[var(--app-border-base)] shrink-0')}
+    {/* Mobile Buttons — wrapped so --top-toolbar-display: none also hides this row on Linux Tauri */}
+    <div style={{ display: 'var(--top-toolbar-display, flex)' }}>
+      {renderButtonsRow('flex lg:hidden bg-[var(--app-bg-panel-alt)] border-b border-[var(--app-border-base)] shrink-0')}
+    </div>
     </>
   );
 }

@@ -306,7 +306,6 @@ export function TopToolbar() {
   React.useEffect(() => {
     const isTauri = typeof window !== 'undefined' && !!(window as any).__TAURI__;
     if (isTauri) {
-      document.documentElement.style.setProperty('--top-toolbar-display', 'none');
       const tauri = (window as any).__TAURI__;
       tauri.core.invoke('show_titlebar_buttons').catch((err: any) => {
         console.error("Failed to show titlebar buttons:", err);
@@ -517,6 +516,7 @@ export function TopToolbar() {
       />
 
       <header 
+        data-tauri-drag-region
         style={{ display: 'var(--top-toolbar-display, flex)' }}
         className="bg-[var(--app-bg-panel)] border-b border-[var(--app-border-base)] p-2 flex items-center justify-between shrink-0 relative select-none"
       >

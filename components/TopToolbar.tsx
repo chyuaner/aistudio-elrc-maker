@@ -348,6 +348,14 @@ export function TopToolbar() {
                 canLoadEmbeddedLyrics: !!metadata?.lyric,
             }).catch(() => {});
         } catch (e) {}
+        try {
+            (window as any).__TAURI__.core.invoke('on_history_changed', {
+                canUndo: pastActions.length > 0,
+                canRedo: futureActions.length > 0,
+                undoList: pastActions.map((a) => a.action),
+                redoList: futureActions.map((a) => a.action),
+            }).catch(() => {});
+        } catch (e) {}
     }
   }, [dialogs, audioFileName, lyricFileName, lines.length, metadata, setFile, setMetadata, commitLines, setLyricFileName, resetHistory, shiftTime, undo, redo, pastActions, futureActions, handleExport, setAudioSpecs]);
 

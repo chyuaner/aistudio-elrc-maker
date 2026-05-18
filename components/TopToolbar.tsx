@@ -227,7 +227,7 @@ export function TopToolbar() {
     const isTauri = typeof window !== 'undefined' && ((window as any).__TAURI__);
     if (isTauri) {
         try {
-            await (window as any).__TAURI__.invoke('save_lyrics_dialog', {
+            await (window as any).__TAURI__.core.invoke('save_lyrics_dialog', {
                 lyricsText: lrcText,
                 defaultName: 'lyrics.lrc'
             });
@@ -323,7 +323,7 @@ export function TopToolbar() {
     let unlisteners: (() => void)[] = [];
     
     if (isTauri) {
-        (window as any).__TAURI__.invoke('show_titlebar_buttons').catch((err: any) => console.error("Failed to show titlebar buttons", err));
+        (window as any).__TAURI__.core.invoke('show_titlebar_buttons').catch((err: any) => console.error("Failed to show titlebar buttons", err));
 
         const setupTauriListeners = async () => {
           const tauri = (window as any).__TAURI__;

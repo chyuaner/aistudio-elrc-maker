@@ -21,6 +21,7 @@ export function LeftPanelInfo() {
 
   // Reset index when metadata changes
   useEffect(() => {
+     // eslint-disable-next-line react-hooks/set-state-in-effect
      setPictureIndex(0);
   }, [metadata]);
 

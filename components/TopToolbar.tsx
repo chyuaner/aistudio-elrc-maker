@@ -576,7 +576,7 @@ export function TopToolbar() {
   };
 
   const renderButtonsRow = (className: string) => (
-      <div className={`flex flex-col lg:flex-row flex-1 items-center justify-between w-full px-2 py-2 gap-2 ${className}`}>
+      <div className={`flex flex-row flex-wrap items-center justify-center lg:justify-between w-full px-2 py-2 gap-y-2 gap-x-4 ${className}`}>
         {/* Left Group */}
         <div className="flex items-center gap-2 flex-wrap justify-center lg:justify-start">
           <div style={{ width: 'var(--titlebar-left-padding, 0px)' }} className="h-8 app-region-drag pointer-events-none shrink-0 transition-[width] hidden lg:block" />

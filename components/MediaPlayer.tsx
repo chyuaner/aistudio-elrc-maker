@@ -126,30 +126,30 @@ export function MediaPlayer() {
       
       <div className="flex flex-col">
         {/* Waveform */}
-        <div className="w-full rounded overflow-hidden bg-[var(--app-bg-input)] border border-[var(--app-border-base)]" ref={containerRef}></div>
+        <div className="w-full rounded overflow-hidden bg-[var(--app-bg-input)]" ref={containerRef}></div>
         
         {/* Specs */}
         <div className="text-[9px] font-mono text-[var(--app-text-muted)] text-right mt-1 px-1 tracking-widest uppercase truncate">
           {computeAudioSpecsText()}
         </div>
       </div>
+
+      {/* Time Display */}
+      <div className="flex justify-between items-end px-1">
+          <span className="text-3xl font-mono text-[var(--app-accent)] tabular-nums tracking-tighter leading-none font-medium">
+            {formatTime(currentTime)}
+          </span>
+          <div className="flex flex-col items-end gap-0.5">
+            <span className="text-xs font-mono text-[var(--app-text-secondary)] tabular-nums leading-none">
+              -{formatTime(Math.max(0, duration - currentTime))}
+            </span>
+            <span className="text-[10px] font-mono text-[var(--app-text-muted)] tabular-nums leading-none">
+              {formatTime(duration)}
+            </span>
+          </div>
+      </div>
       
       <div className="flex flex-col gap-3 bg-[var(--app-bg-panel)] p-3 rounded shadow-sm border border-[var(--app-border-base)]">
-        {/* Time Display */}
-        <div className="flex justify-between items-end px-1 border-b border-[var(--app-border-light)] pb-2">
-            <span className="text-3xl font-mono text-[var(--app-accent)] tabular-nums tracking-tighter leading-none font-medium">
-              {formatTime(currentTime)}
-            </span>
-            <div className="flex flex-col items-end gap-0.5">
-              <span className="text-xs font-mono text-[var(--app-text-secondary)] tabular-nums leading-none">
-                -{formatTime(Math.max(0, duration - currentTime))}
-              </span>
-              <span className="text-[10px] font-mono text-[var(--app-text-muted)] tabular-nums leading-none">
-                {formatTime(duration)}
-              </span>
-            </div>
-        </div>
-
         {/* Playback controls row */}
         <div className="flex items-center justify-between gap-1">
           <div className="flex items-center gap-1.5">

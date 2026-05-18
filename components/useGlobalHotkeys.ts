@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useEditor } from './EditorProvider';
 
 export function useGlobalHotkeys() {
-  const { undo, redo, playerRef, mode, isPlaying } = useEditor();
+  const { undo, redo, playerRef, mode, isPlaying, setPlaybackRate } = useEditor();
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -59,9 +59,18 @@ export function useGlobalHotkeys() {
         const percent = parseInt(e.key, 10) * 10;
         player.currentTime = (percent / 100) * player.duration;
       }
+
+      // [ and ] for playback rate
+      if (e.key === '[' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        e.preventDefault();
+        setPlaybackRate((prev: number) => Math.max(0.25, prev - 0.05));
+      } else if (e.key === ']' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        e.preventDefault();
+        setPlaybackRate((prev: number) => Math.min(2.0, prev + 0.05));
+      }
     };
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [undo, redo, playerRef, mode, isPlaying]);
+  }, [undo, redo, playerRef, mode, isPlaying, setPlaybackRate]);
 }

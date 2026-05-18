@@ -1,5 +1,3 @@
-'use client';
-
 import React, { useEffect, useRef } from 'react';
 import { useEditor } from './EditorProvider';
 import { useSyncHotkeys } from './useSyncHotkeys';
@@ -15,11 +13,12 @@ import { LyricCellContent } from './LyricCell';
 
 export function SyncEditor() {
   const {
-    lines, activeLineIndex, setActiveLineIndex,
+    mode, lines, activeLineIndex, setActiveLineIndex,
     activeWordIndex, setActiveWordIndex,
     syncMode, setSyncMode, setMode, hotkeys, commitLines, playerRef,
     dualLineGapSec, setDualLineGapSec,
-    autoScrollEnabled, setAutoScrollEnabled, trackAssignments, paragraphStarts, shiftTimeFromIndex
+    autoScrollEnabled, setAutoScrollEnabled, trackAssignments, paragraphStarts, shiftTimeFromIndex,
+    shiftTime
   } = useEditor();
   
   const dialogs = useDialogs();
@@ -28,14 +27,16 @@ export function SyncEditor() {
   const i18n = useI18n();
   
   const containerRef = useRef<HTMLDivElement>(null);
-  const activeLineRef = useRef<HTMLTableRowElement>(null);
 
   useEffect(() => {
-    if (activeLineRef.current && containerRef.current && autoScrollEnabled) {
-      activeLineRef.current.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center',
-      });
+    if (containerRef.current && autoScrollEnabled) {
+      const activeEl = containerRef.current.querySelector(`[data-line-index="${activeLineIndex}"]`);
+      if (activeEl) {
+        activeEl.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+      }
     }
   }, [activeLineIndex, autoScrollEnabled]);
 
@@ -77,28 +78,119 @@ export function SyncEditor() {
     commitLines(newLines, 'Delete Line');
   };
 
+  const renderCell = (data: { line: any, index: number } | null, isDual: boolean) => {
+    if (!data) {
+      return (
+        <td className={`p-3 border-r border-[var(--app-border-base)] align-top bg-[var(--app-bg-input)]/30 text-center ${isDual ? 'w-1/2' : 'w-full'}`}>
+          <span className="opacity-20 font-mono text-[10px] tracking-widest uppercase">Instrumental Break</span>
+        </td>
+      );
+    }
+    
+    const { line, index: globalIndex } = data;
+    const isActive = globalIndex === activeLineIndex;
+
+    return (
+      <td 
+        data-line-index={globalIndex}
+        onClick={() => {
+          setActiveLineIndex(globalIndex);
+          setActiveWordIndex(0);
+        }}
+        className={`p-0 align-top group cursor-pointer border-r border-[var(--app-border-base)] transition-colors relative ${isDual ? 'w-1/2' : 'w-full'}
+          ${isActive ? 'bg-[var(--app-border-base)] text-[var(--app-text-primary)] shadow-[inset_2px_0_0_0_var(--app-accent)]' : 
+            (paragraphStarts[globalIndex] ? 'bg-[#293B33]/40 hover:bg-[#293B33]/60 text-[var(--app-text-muted)] shadow-[inset_2px_0_0_0_rgba(65,168,125,0.5)]' : 'hover:bg-[var(--app-bg-panel-alt)] text-[var(--app-text-muted)]')}
+          ${(!isActive && globalIndex < activeLineIndex && !paragraphStarts[globalIndex]) ? ' opacity-60' : ''}`}
+      >
+        <LyricCellContent
+          line={line}
+          globalIndex={globalIndex}
+          isActive={isActive}
+          activeWordIndex={activeWordIndex}
+          syncMode={syncMode}
+          playerRef={playerRef}
+          setActiveLineIndex={setActiveLineIndex}
+          setActiveWordIndex={setActiveWordIndex}
+          actions={
+            <>
+              <Tooltip title={i18n.editText} delay={1000}>
+                <button onClick={(e) => { e.stopPropagation(); handleEditText(globalIndex, line.raw || ''); }} className="p-1 px-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-text-secondary)] hover:bg-[var(--app-bg-hover)] rounded transition-colors"><Edit2 className="w-3.5 h-3.5" /></button>
+              </Tooltip>
+              <Tooltip title={i18n.offsetSubsequent} delay={1000}>
+                <button onClick={(e) => { e.stopPropagation(); handleOffsetFromHere(globalIndex); }} className="p-1 px-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-text-secondary)] hover:bg-[var(--app-bg-hover)] rounded transition-colors"><ArrowRight className="w-3.5 h-3.5" /></button>
+              </Tooltip>
+              <Tooltip title={i18n.clearTimestamps} delay={1000}>
+                <button onClick={(e) => { e.stopPropagation(); handleClearTime(globalIndex); }} className="p-1 px-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-accent)] hover:bg-[var(--app-bg-hover)] rounded transition-colors"><X className="w-3.5 h-3.5" /></button>
+              </Tooltip>
+              <Tooltip title={i18n.deleteLine} delay={1000}>
+                <button onClick={(e) => { e.stopPropagation(); handleDeleteLine(globalIndex); }} className="p-1 px-1.5 text-[var(--app-text-muted)] hover:text-red-500 hover:bg-[var(--app-bg-hover)] rounded transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
+              </Tooltip>
+            </>
+          }
+        />
+      </td>
+    );
+  };
+
+  const isDual = mode === 'dual-sync';
+  const uiRows: ({ left: { line: any, index: number } | null, right?: { line: any, index: number } | null })[] = [];
+  
+  if (isDual) {
+    let currentPair: { left: { line: any, index: number } | null, right: { line: any, index: number } | null } = { left: null, right: null };
+    const currentPairEmpty = () => currentPair.left === null && currentPair.right === null;
+
+    lines.forEach((line, i) => {
+       const track = trackAssignments[i] || 0;
+       if (track === 0) {
+          if (!currentPairEmpty()) uiRows.push(currentPair);
+          currentPair = { left: { line, index: i }, right: null };
+       } else {
+          currentPair.right = { line, index: i };
+          uiRows.push(currentPair);
+          currentPair = { left: null, right: null };
+       }
+    });
+    if (!currentPairEmpty()) uiRows.push(currentPair);
+  } else {
+    lines.forEach((line, i) => {
+       uiRows.push({ left: { line, index: i } });
+    });
+  }
+
   return (
     <div className="flex flex-col h-full bg-[var(--app-bg-base)]">
-      <div className="p-3 bg-[var(--app-bg-panel-alt)] border-b border-[var(--app-border-base)] flex items-center justify-between shrink-0">
-        <div className="flex gap-2">
+      <div className="p-3 bg-[var(--app-bg-panel-alt)] border-b border-[var(--app-border-base)] flex flex-wrap items-center justify-between shrink-0 gap-2">
+        <div className="flex bg-[var(--app-bg-input)] p-1 rounded-md border border-[var(--app-border-base)] shadow-inner">
           <button
             onClick={() => {
               setSyncMode('line');
               setActiveWordIndex(0);
             }}
-            className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded border transition-colors ${syncMode === 'line' ? 'bg-[var(--app-border-base)] border-[var(--app-accent)] text-[var(--app-accent)] shadow-inner' : 'border-[var(--app-border-light)] text-[var(--app-text-muted)] hover:text-[var(--app-text-secondary)]'}`}
+            className={`px-3 py-1 text-xs font-medium rounded transition-all ${syncMode === 'line' ? 'bg-[var(--app-bg-panel)] text-[var(--app-accent)] shadow-sm' : 'text-[var(--app-text-muted)] hover:text-[var(--app-text-secondary)]'}`}
           >
             {i18n.lineByLine}
           </button>
           <button
             onClick={() => setSyncMode('word')}
-             className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded border transition-colors ${syncMode === 'word' ? 'bg-[var(--app-border-base)] border-[var(--app-accent)] text-[var(--app-accent)] shadow-inner' : 'border-[var(--app-border-light)] text-[var(--app-text-muted)] hover:text-[var(--app-text-secondary)]'}`}
+             className={`px-3 py-1 text-xs font-medium rounded transition-all ${syncMode === 'word' ? 'bg-[var(--app-bg-panel)] text-[var(--app-accent)] shadow-sm' : 'text-[var(--app-text-muted)] hover:text-[var(--app-text-secondary)]'}`}
           >
             {i18n.wordByWord}
           </button>
         </div>
 
         <div className="flex flex-wrap items-center gap-4 text-[10px] text-[var(--app-text-muted)]">
+          <button
+            onClick={async () => {
+              const val = await dialogs.prompt(i18n.promptShiftTime, '0');
+              if (val && !isNaN(parseFloat(val))) {
+                 shiftTime(parseFloat(val));
+              }
+            }}
+            className="px-3 py-1.5 bg-[var(--app-bg-panel)] hover:bg-[var(--app-bg-hover)] rounded shadow-sm uppercase font-bold tracking-widest border border-[var(--app-border-light)] flex items-center text-[var(--app-text-secondary)] transition-colors h-[26px]"
+          >
+            ± Offset
+          </button>
+
           <label className="flex items-center gap-2 cursor-pointer hover:text-[var(--app-text-primary)] transition-colors">
             <input 
               type="checkbox" 
@@ -121,13 +213,14 @@ export function SyncEditor() {
              <span>{i18n.sec}</span>
           </div>
 
-          <button onFocus={(e) => e.target.blur()} onClick={() => syncMode === 'line' ? handleLineStamp() : handleWordStamp()} className="bg-[var(--app-bg-panel)] hover:bg-[var(--app-border-base)] transition-colors p-1.5 rounded border border-[var(--app-border-base)] flex items-center gap-2 shadow-sm cursor-pointer select-none text-xs">
-              <span className="uppercase">{syncMode === 'line' ? i18n.lineTrigger : i18n.wordTrigger}</span>
+          <button onFocus={(e) => e.target.blur()} onClick={() => syncMode === 'line' ? handleLineStamp() : handleWordStamp()} className="bg-[var(--app-bg-panel)] hover:bg-[var(--app-border-base)] transition-colors p-1.5 rounded border border-[var(--app-border-base)] flex items-center gap-2 shadow-sm cursor-pointer select-none text-xs h-[26px]">
+              <span className="uppercase">{i18n.timestampWords}</span>
               <kbd className="bg-[var(--app-bg-base)] text-[var(--app-accent)] px-1.5 py-0.5 rounded font-mono border border-[var(--app-border-light)]">{hotkeys.stampWord === ' ' ? 'SPACE' : hotkeys.stampWord}</kbd>
           </button>
+          
           {syncMode === 'word' && (
-            <button onFocus={(e) => e.target.blur()} onClick={() => handleWordNextLine()} className="bg-[var(--app-bg-panel)] hover:bg-[var(--app-border-base)] transition-colors p-1.5 rounded border border-[var(--app-border-base)] flex items-center gap-2 shadow-sm cursor-pointer select-none text-xs">
-                <span className="uppercase">{i18n.lineAdvance}</span>
+            <button onFocus={(e) => e.target.blur()} onClick={() => handleWordNextLine()} className="bg-[var(--app-bg-panel)] hover:bg-[var(--app-border-base)] transition-colors p-1.5 rounded border border-[var(--app-border-base)] flex items-center gap-2 shadow-sm cursor-pointer select-none text-xs h-[26px]">
+                <span className="uppercase">{i18n.nextLine}</span>
                 <kbd className="bg-[var(--app-bg-base)] text-[var(--app-accent)] px-1.5 py-0.5 rounded font-mono border border-[var(--app-border-light)]">{hotkeys.nextLine.toUpperCase()}</kbd>
             </button>
           )}
@@ -138,62 +231,28 @@ export function SyncEditor() {
 
       <div 
         ref={containerRef}
-        className="flex-1 overflow-y-auto w-full bg-[var(--app-bg-base)]"
+        className="flex-1 md:overflow-y-auto w-full custom-scrollbar"
       >
-        <table className="w-full text-left text-xs border-collapse">
-          <thead className="sticky top-0 bg-[var(--app-bg-panel)] text-[var(--app-text-muted)] border-b border-[var(--app-border-base)] z-10 text-[10px] uppercase tracking-widest">
+        <table className="w-full text-left text-xs border-collapse table-fixed">
+          <thead className="md:sticky md:top-0 bg-[var(--app-bg-panel)] text-[var(--app-text-muted)] z-10 text-[10px] uppercase tracking-widest font-bold outline outline-1 outline-b-[var(--app-border-base)]">
             <tr>
-              <th className="p-3 font-medium border-r border-[var(--app-border-base)]">{i18n.lyricsContentEnhanced}</th>
-              <th className="p-3 font-medium w-32 text-center">{i18n.action}</th>
+              {isDual ? (
+                <>
+                  <th className="p-3 w-1/2 border-r border-[var(--app-border-base)]">{i18n.leftTrack}</th>
+                  <th className="p-3 w-1/2">{i18n.rightTrack}</th>
+                </>
+              ) : (
+                <th className="p-3 w-full border-r border-[var(--app-border-base)]">{i18n.lyricsContentEnhanced}</th>
+              )}
             </tr>
           </thead>
           <tbody className="divide-y divide-[#21262D]">
-        {lines.map((line, idx) => {
-          const isActiveLine = idx === activeLineIndex;
-          const isPast = idx < activeLineIndex;
-          
-          return (
-            <tr 
-              key={line.id || idx} 
-              ref={isActiveLine ? activeLineRef : null}
-              className={`transition-colors cursor-pointer group border-b border-[var(--app-border-base)]/50 ${
-                isActiveLine ? 'bg-[var(--app-border-base)] text-[var(--app-text-primary)] shadow-[inset_2px_0_0_0_var(--app-accent)]' : 
-                (paragraphStarts[idx] ? 'bg-[#293B33]/40 hover:bg-[#293B33]/60 text-[var(--app-text-muted)] shadow-[inset_2px_0_0_0_rgba(65,168,125,0.5)]' : 'hover:bg-[var(--app-bg-panel-alt)] text-[var(--app-text-muted)]') +
-                (isPast && !isActiveLine && !paragraphStarts[idx] ? ' opacity-60' : '')
-              }`}
-            >
-              <td className="p-0 align-top border-r border-[var(--app-border-base)]">
-                 <LyricCellContent 
-                   line={line}
-                   globalIndex={idx}
-                   isActive={isActiveLine}
-                   activeWordIndex={activeWordIndex}
-                   syncMode={syncMode}
-                   playerRef={playerRef}
-                   setActiveLineIndex={setActiveLineIndex}
-                   setActiveWordIndex={setActiveWordIndex}
-                 />
-              </td>
-              
-              <td className="p-2 align-middle">
-                <div className="flex items-center justify-center gap-1 opacity-70 hover:opacity-100">
-                   <Tooltip title={i18n.editText} delay={1000}>
-                     <button onClick={(e) => { e.stopPropagation(); handleEditText(idx, line.raw || ''); }} className="p-1 px-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-text-secondary)] hover:bg-[var(--app-bg-hover)] rounded transition-colors"><Edit2 className="w-3.5 h-3.5" /></button>
-                   </Tooltip>
-                   <Tooltip title={i18n.offsetSubsequent} delay={1000}>
-                     <button onClick={(e) => { e.stopPropagation(); handleOffsetFromHere(idx); }} className="p-1 px-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-text-secondary)] hover:bg-[var(--app-bg-hover)] rounded transition-colors"><ArrowRight className="w-3.5 h-3.5" /></button>
-                   </Tooltip>
-                   <Tooltip title={i18n.clearTimestamps} delay={1000}>
-                     <button onClick={(e) => { e.stopPropagation(); handleClearTime(idx); }} className="p-1 px-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-accent)] hover:bg-[var(--app-bg-hover)] rounded transition-colors"><X className="w-3.5 h-3.5" /></button>
-                   </Tooltip>
-                   <Tooltip title={i18n.deleteLine} delay={1000}>
-                     <button onClick={(e) => { e.stopPropagation(); handleDeleteLine(idx); }} className="p-1 px-1.5 text-[var(--app-text-muted)] hover:text-red-500 hover:bg-[var(--app-bg-hover)] rounded transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
-                   </Tooltip>
-                </div>
-              </td>
-            </tr>
-          );
-        })}
+            {uiRows.map((row, idx) => (
+              <tr key={idx} className="border-b border-[var(--app-border-base)]/50">
+                {renderCell(row.left, isDual)}
+                {isDual && renderCell(row.right || null, true)}
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>

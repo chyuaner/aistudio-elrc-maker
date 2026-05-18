@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect, ReactNode } from 'react';
 
-export function Tooltip({ children, title, delay = 50 }: { children: ReactNode, title: string, delay?: number }) {
+export function Tooltip({ children, title, delay = 50 }: { children: ReactNode, title: ReactNode, delay?: number }) {
   const [isVisible, setIsVisible] = useState(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 

@@ -1,18 +1,26 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useEditor } from './EditorProvider';
 import { useI18n } from '@/hooks/useI18n';
 
 export function LeftPanelInfo() {
   const { metadata } = useEditor();
   const i18n = useI18n();
-  const [activeTab, setActiveTab] = useState<'instructions' | 'metadata'>('metadata');
+  const [activeTab, setActiveTab] = useState<'instructions' | 'metadata'>('instructions');
   const [pictureIndex, setPictureIndex] = useState(0);
 
+  // Switch to metadata tab when a file is loaded for the first time
+  const prevMetadataRef = useRef(metadata);
+  useEffect(() => {
+    if (metadata && (!prevMetadataRef.current)) {
+      setActiveTab('metadata');
+    }
+    prevMetadataRef.current = metadata;
+  }, [metadata]);
+
   // Reset index when metadata changes
-  React.useEffect(() => {
-     // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => {
      setPictureIndex(0);
   }, [metadata]);
 
@@ -98,7 +106,7 @@ export function LeftPanelInfo() {
                    <div className="flex flex-col mb-4">
                      <div className="w-full aspect-square rounded border border-[var(--app-border-base)] overflow-hidden">
                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                       <img src={currentPicture} alt="Cover" className="w-full h-full object-cover" />
+                       <img src={currentPicture} alt="Cover" className="w-full h-full object-cover" draggable={false} onDragStart={(e) => e.preventDefault()} />
                      </div>
                      {pictures.length > 1 && (
                        <div className="flex items-center justify-between mt-2 px-1">

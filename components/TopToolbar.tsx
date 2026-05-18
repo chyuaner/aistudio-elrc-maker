@@ -99,7 +99,7 @@ function extractFlacMetadata(buffer: ArrayBuffer) {
 }
 
 export function TopToolbar() {
-  const { undo, redo, pastActions, futureActions, setFile, commitLines, resetHistory, lines, syncMode, setMetadata, metadata, audioFileName, lyricFileName, setLyricFileName, exportFormat, shiftTime } = useEditor();
+  const { undo, redo, pastActions, futureActions, setFile, commitLines, resetHistory, lines, syncMode, setMetadata, metadata, audioFileName, lyricFileName, setLyricFileName, exportFormat, shiftTime, setAudioSpecs } = useEditor();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const lyricInputRef = useRef<HTMLInputElement>(null);
   const dialogs = useDialogs();
@@ -113,6 +113,23 @@ export function TopToolbar() {
     setFile(f);
     resetHistory([]);
     setLyricFileName(null);
+    
+    // Parse audio specs with music-metadata
+    import('music-metadata').then(async (mm) => {
+      try {
+        const parsedMetadata = await mm.parseBlob(f);
+        setAudioSpecs({
+          format: parsedMetadata.format?.container || f.name.split('.').pop()?.toUpperCase(),
+          bitrate: parsedMetadata.format?.bitrate ? Math.round(parsedMetadata.format.bitrate / 1000).toString() : undefined,
+          sampleRate: parsedMetadata.format?.sampleRate?.toString(),
+          bitsPerSample: parsedMetadata.format?.bitsPerSample?.toString()
+        });
+      } catch (e) {
+        setAudioSpecs({ format: f.name.split('.').pop()?.toUpperCase() });
+      }
+    }).catch(() => {
+        setAudioSpecs({ format: f.name.split('.').pop()?.toUpperCase() });
+    });
     
     if (f.name.toLowerCase().endsWith('.flac') && typeof window !== 'undefined') {
        try {
@@ -204,7 +221,7 @@ export function TopToolbar() {
         }
       });
     }
-  }, [resetHistory, setFile, setLyricFileName, setMetadata]);
+  }, [resetHistory, setFile, setLyricFileName, setMetadata, setAudioSpecs]);
 
   const processLyricFile = React.useCallback(async (f: File) => {
     if (lines.length > 0) {
@@ -224,12 +241,19 @@ export function TopToolbar() {
     if (lines.length === 0) return;
     const lrcText = exportLrc(lines, format === 'enhanced');
 
+    let defaultName = 'lyrics.lrc';
+    if (lyricFileName && lyricFileName !== 'Embedded Tag' && lyricFileName !== 'New Lyrics') {
+        defaultName = lyricFileName;
+    } else if (audioFileName) {
+        defaultName = audioFileName.replace(/\.[^/.]+$/, "") + ".lrc";
+    }
+
     const isTauri = typeof window !== 'undefined' && ((window as any).__TAURI__);
     if (isTauri) {
         try {
             await (window as any).__TAURI__.core.invoke('save_lyrics_dialog', {
                 lyricsText: lrcText,
-                defaultName: 'lyrics.lrc'
+                defaultName: defaultName
             });
         } catch (err) {
             console.error("Tauri save_lyrics_dialog failed", err);
@@ -239,19 +263,30 @@ export function TopToolbar() {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'lyrics.lrc';
+        a.download = defaultName;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
     }
     setExportDropdownOpen(false);
-  }, [lines]);
+  }, [lines, lyricFileName, audioFileName]);
 
   // AppCommands mapping extracted from useEditor hooks above
 
   useEffect(() => {
+    // Expose state for Tauri
     AppCommands.register({
+      getState: () => ({
+        audioFileName,
+        lyricFileName,
+        canClearMedia: !!audioFileName,
+        canClearLyrics: lines.length > 0,
+        canLoadEmbeddedLyrics: !!metadata?.lyric,
+      }),
+      setAudioSpecs: (specs: { format?: string, bitrate?: string, sampleRate?: string }) => {
+        setAudioSpecs(specs);
+      },
       loadMedia: () => fileInputRef.current?.click(),
       loadLyrics: () => lyricInputRef.current?.click(),
       clearMedia: async () => {
@@ -261,6 +296,7 @@ export function TopToolbar() {
             setMetadata(null);
             resetHistory([]);
             setLyricFileName(null);
+            setAudioSpecs(null);
           }
         }
       },
@@ -300,7 +336,19 @@ export function TopToolbar() {
       getUndoList: () => pastActions.map((a, i) => ({ id: `undo-${i}`, name: a.action })),
       getRedoList: () => futureActions.map((a, i) => ({ id: `redo-${i}`, name: a.action })),
     });
-  }, [dialogs, audioFileName, lines.length, metadata, setFile, setMetadata, commitLines, setLyricFileName, resetHistory, shiftTime, undo, redo, pastActions, futureActions, handleExport]);
+    const isTauri = typeof window !== 'undefined' && ((window as any).__TAURI__);
+    if (isTauri) {
+        try {
+            (window as any).__TAURI__.core.invoke('on_app_state_changed', {
+                audioFileName,
+                lyricFileName,
+                canClearMedia: !!audioFileName,
+                canClearLyrics: lines.length > 0,
+                canLoadEmbeddedLyrics: !!metadata?.lyric,
+            }).catch(() => {});
+        } catch (e) {}
+    }
+  }, [dialogs, audioFileName, lyricFileName, lines.length, metadata, setFile, setMetadata, commitLines, setLyricFileName, resetHistory, shiftTime, undo, redo, pastActions, futureActions, handleExport, setAudioSpecs]);
 
   const [dragOverlay, setDragOverlay] = useState<'media' | 'lyric' | 'file' | null>(null);
 
@@ -345,18 +393,37 @@ export function TopToolbar() {
     const handleDragOver = (e: DragEvent) => {
       e.preventDefault();
       e.stopPropagation();
+      const isTauri = typeof window !== 'undefined' && ((window as any).__TAURI__);
+      
       if (!dragOverlay) {
-         let detected: 'media' | 'lyric' | 'file' = 'file';
+         let detected: 'media' | 'lyric' | 'file' | null = null;
+         
          if (e.dataTransfer?.items && e.dataTransfer.items.length > 0) {
-             const item = e.dataTransfer.items[0];
-             // Check if any dragged item is an audio/video file
-             const hasAudioVideo = Array.from(e.dataTransfer.items).some(i => i.type.startsWith('audio/') || i.type.startsWith('video/'));
-             const hasText = Array.from(e.dataTransfer.items).some(i => i.type.startsWith('text/'));
+             const items = Array.from(e.dataTransfer.items);
+             const hasFiles = items.some(i => i.kind === 'file');
              
-             if (hasAudioVideo) detected = 'media';
-             else if (hasText) detected = 'lyric';
+             if (isTauri) {
+                 // Tauri sometimes doesn't expose kind/type properly during dragover, just show default if there's *any* item or types contains 'Files'
+                 if (e.dataTransfer.types.includes('Files')) {
+                     detected = 'file';
+                 }
+             } else {
+                 if (!hasFiles) return; // Ignore drag of text selections or images from other tabs
+                 
+                 const hasImage = items.some(i => i.kind === 'file' && i.type.startsWith('image/'));
+                 if (hasImage) return; // Ignore dragging cover images around
+                 
+                 const hasAudioVideo = items.some(i => i.kind === 'file' && (i.type.startsWith('audio/') || i.type.startsWith('video/') || i.type === ''));
+                 // Some browsers leave type empty for unknown formats like flac during dragover
+                 const hasText = items.some(i => i.kind === 'file' && (i.type.startsWith('text/') || i.type === ''));
+                 
+                 if (hasAudioVideo) detected = 'media';
+                 else if (hasText) detected = 'lyric';
+                 else detected = 'file';
+             }
          }
-         setDragOverlay(detected);
+         
+         if (detected) setDragOverlay(detected);
       }
     };
     const handleDragLeave = (e: DragEvent) => {
@@ -499,6 +566,7 @@ export function TopToolbar() {
       setMetadata(null);
       resetHistory([]);
       setLyricFileName(null);
+      setAudioSpecs(null);
     }
   };
 
@@ -507,78 +575,24 @@ export function TopToolbar() {
     if (f) processLyricFile(f);
   };
 
-  return (
-    <>
-      {dragOverlay && (
-         <div className="fixed inset-0 z-[100] bg-[var(--app-bg-base)]/80 backdrop-blur-sm flex items-center justify-center border-[3px] border-dashed border-[var(--app-accent)] m-4 rounded-xl pointer-events-none">
-             <div className="text-center flex flex-col items-center gap-4 text-[var(--app-accent)] bg-[var(--app-bg-panel)] px-12 py-8 rounded-2xl shadow-2xl animate-pulse">
-                <Music className="w-16 h-16" />
-                <span className="text-3xl font-bold tracking-wide">
-                   Load {dragOverlay === 'media' ? 'Media' : dragOverlay === 'lyric' ? 'Lyrics' : 'Media / Lyrics'}
-                </span>
-             </div>
-         </div>
-      )}
-    <header 
-      className="bg-[var(--app-bg-panel-alt)] border-b border-[var(--app-border-base)] shrink-0 relative select-none flex flex-col md:flex-row md:items-center md:justify-between"
-      style={{ display: 'var(--top-toolbar-display, flex)' }}
-    >
-      {/* Desktop Title (Absolute centered) */}
-      <div className="absolute inset-0 flex-col items-center justify-center pointer-events-none whitespace-nowrap overflow-hidden px-8 z-0 hidden md:flex">
-        <h1 className="text-sm font-bold tracking-tight uppercase text-[var(--app-text-secondary)]">LRC Maker <span className="text-[var(--app-text-muted)] font-normal italic ml-1">Enhanced</span></h1>
-        <div className="text-[10px] text-[var(--app-text-muted)] font-mono mt-0.5 truncate flex items-center justify-center gap-2 max-w-full">
-          {audioFileName ? <span>{i18n.audio}: <span className="text-[var(--app-text-secondary)] truncate max-w-[200px] inline-block align-bottom">{audioFileName}</span></span> : <span>{i18n.noAudio}</span>}
-          <span className="opacity-50 shrink-0">|</span>
-          {lyricFileName ? <span>{i18n.lyrics}: <span className="text-[var(--app-text-secondary)] truncate max-w-[200px] inline-block align-bottom">{lyricFileName}</span></span> : metadata?.lyric ? <span>{i18n.lyrics}: <span className="text-[var(--app-text-secondary)]">{i18n.embeddedTag}</span></span> : <span>{i18n.noLyrics}</span>}
-        </div>
-      </div>
-
-      {/* Mobile Title Row */}
-      <div className="flex md:hidden items-center justify-between w-full border-b border-[var(--app-border-base)] py-1.5 app-region-drag relative bg-[var(--app-bg-panel-alt)]">
-         <div style={{ width: 'var(--titlebar-left-padding, 0px)' }} className="h-6 pointer-events-none shrink-0 transition-[width]" />
-         <div className="flex flex-col items-center justify-center pointer-events-none whitespace-nowrap overflow-hidden px-2 z-0 flex-1">
-             <h1 className="text-sm font-bold tracking-tight uppercase text-[var(--app-text-secondary)]">LRC Maker <span className="text-[var(--app-text-muted)] font-normal italic ml-1">Enhanced</span></h1>
-             <div className="text-[10px] text-[var(--app-text-muted)] font-mono truncate flex items-center justify-center gap-2 max-w-full mt-0.5">
-                {audioFileName ? <span className="truncate max-w-[160px] text-[var(--app-text-secondary)]">{audioFileName}</span> : <span>{i18n.noAudio}</span>}
-             </div>
-         </div>
-         <div style={{ width: 'var(--titlebar-right-padding, 0px)' }} className="h-6 pointer-events-none shrink-0 transition-[width]" />
-      </div>
-
-      {/* Buttons Row */}
-      <div className="flex flex-col md:flex-row flex-1 items-center justify-between w-full z-10 px-2 py-2 gap-2">
+  const renderButtonsRow = (className: string) => (
+      <div className={`flex flex-col lg:flex-row flex-1 items-center justify-between w-full px-2 py-2 gap-2 ${className}`}>
         {/* Left Group */}
-        <div className="flex items-center gap-2 flex-wrap justify-center md:justify-start">
-          <div style={{ width: 'var(--titlebar-left-padding, 0px)' }} className="h-8 app-region-drag pointer-events-none shrink-0 transition-[width] hidden md:block" />
-          
-          <input 
-            type="file" 
-            accept="audio/*,video/*" 
-            className="hidden" 
-            ref={fileInputRef} 
-            onChange={handleAudioSelect} 
-            onClick={(e) => { (e.target as HTMLInputElement).value = ''; }}
-          />
-          <input 
-            type="file" 
-            accept=".txt,.lrc" 
-            className="hidden" 
-            ref={lyricInputRef} 
-            onChange={handleLyricSelect}
-            onClick={(e) => { (e.target as HTMLInputElement).value = ''; }}
-          />
+        <div className="flex items-center gap-2 flex-wrap justify-center lg:justify-start">
+          <div style={{ width: 'var(--titlebar-left-padding, 0px)' }} className="h-8 app-region-drag pointer-events-none shrink-0 transition-[width] hidden lg:block" />
           
           <div className="relative">
             <div className="flex group shadow-sm rounded">
               <button 
                 onClick={() => fileInputRef.current?.click()}
-                className="px-3 py-1.5 bg-[var(--app-border-base)] hover:bg-[var(--app-bg-hover)] rounded-l text-xs font-medium border border-[var(--app-border-light)] border-r-0 flex items-center gap-2 text-[var(--app-text-secondary)] transition-colors"
+                className="px-3 py-1.5 bg-[var(--app-border-base)] hover:bg-[var(--app-bg-hover)] rounded-l text-xs font-medium border border-[var(--app-border-light)] border-r-0 flex items-center gap-2 text-[var(--app-text-secondary)] transition-colors min-w-0"
               >
-                <Music className="w-3.5 h-3.5 text-blue-400" /> {i18n.loadMedia}
+                <Music className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                <span className="truncate">{i18n.loadMedia}</span>
               </button>
               <button
                  onClick={() => setLoadMediaDropdownOpen(!loadMediaDropdownOpen)}
-                 className="px-1.5 py-1.5 bg-[var(--app-border-base)] hover:bg-[var(--app-bg-hover)] rounded-r border border-[var(--app-border-light)] text-[var(--app-text-muted)] transition-colors"
+                 className="px-1.5 py-1.5 bg-[var(--app-border-base)] hover:bg-[var(--app-bg-hover)] rounded-r border border-[var(--app-border-light)] text-[var(--app-text-muted)] transition-colors shrink-0"
               >
                  <ChevronDown className="w-3 h-3" />
               </button>
@@ -601,13 +615,14 @@ export function TopToolbar() {
             <div className="flex group shadow-sm rounded">
               <button 
                 onClick={() => lyricInputRef.current?.click()}
-                className="px-3 py-1.5 bg-[var(--app-border-base)] hover:bg-[var(--app-bg-hover)] rounded-l text-xs font-medium border border-[var(--app-border-light)] border-r-0 flex items-center gap-2 text-[var(--app-text-secondary)] transition-colors"
+                className="px-3 py-1.5 bg-[var(--app-border-base)] hover:bg-[var(--app-bg-hover)] rounded-l text-xs font-medium border border-[var(--app-border-light)] border-r-0 flex items-center gap-2 text-[var(--app-text-secondary)] transition-colors min-w-0"
               >
-                <span className="w-2 h-2 bg-purple-400 rounded-full"></span> {i18n.loadLyrics}
+                <span className="w-2 h-2 bg-purple-400 rounded-full shrink-0"></span>
+                <span className="truncate">{i18n.loadLyrics}</span>
               </button>
               <button
                  onClick={() => setLoadDropdownOpen(!loadDropdownOpen)}
-                 className="px-1.5 py-1.5 bg-[var(--app-border-base)] hover:bg-[var(--app-bg-hover)] rounded-r border border-[var(--app-border-light)] text-[var(--app-text-muted)] transition-colors"
+                 className="px-1.5 py-1.5 bg-[var(--app-border-base)] hover:bg-[var(--app-bg-hover)] rounded-r border border-[var(--app-border-light)] text-[var(--app-text-muted)] transition-colors shrink-0"
               >
                  <ChevronDown className="w-3 h-3" />
               </button>
@@ -651,19 +666,7 @@ export function TopToolbar() {
         </div>
         
         {/* Right Group */}
-        <div className="flex items-center gap-2 flex-wrap justify-center md:justify-end">
-          <button
-            onClick={async () => {
-              const val = await dialogs.prompt(i18n.promptShiftTime, '0');
-              if (val && !isNaN(parseFloat(val))) {
-                 shiftTime(parseFloat(val));
-              }
-            }}
-            className="px-3 py-1.5 bg-[var(--app-border-base)] hover:bg-[var(--app-bg-hover)] rounded text-[10px] shadow-sm uppercase font-bold tracking-widest border border-[var(--app-border-light)] flex items-center text-[var(--app-text-secondary)] transition-colors"
-          >
-            ± Offset
-          </button>
-          
+        <div className="flex items-center gap-2 flex-wrap justify-center lg:justify-end mt-2 lg:mt-0">
           <div className="relative">
              <div className="flex group shadow-sm rounded">
                 <button 
@@ -691,10 +694,70 @@ export function TopToolbar() {
                </div>
             )}
           </div>
-          <div style={{ width: 'var(--titlebar-right-padding, 0px)' }} className="h-8 app-region-drag pointer-events-none shrink-0 transition-[width] hidden md:block" />
+          <div style={{ width: 'var(--titlebar-right-padding, 0px)' }} className="h-8 app-region-drag pointer-events-none shrink-0 transition-[width] hidden lg:block" />
         </div>
       </div>
+  );
+
+  return (
+    <>
+      <input 
+        type="file" 
+        accept="audio/*,video/*" 
+        className="hidden" 
+        ref={fileInputRef} 
+        onChange={handleAudioSelect} 
+        onClick={(e) => { (e.target as HTMLInputElement).value = ''; }}
+      />
+      <input 
+        type="file" 
+        accept=".txt,.lrc" 
+        className="hidden" 
+        ref={lyricInputRef} 
+        onChange={handleLyricSelect}
+        onClick={(e) => { (e.target as HTMLInputElement).value = ''; }}
+      />
+      {dragOverlay && (
+         <div className="fixed inset-0 z-[100] bg-[var(--app-bg-base)]/80 backdrop-blur-sm flex items-center justify-center border-[3px] border-dashed border-[var(--app-accent)] m-4 rounded-xl pointer-events-none">
+             <div className="text-center flex flex-col items-center gap-4 text-[var(--app-accent)] bg-[var(--app-bg-panel)] px-12 py-8 rounded-2xl shadow-2xl animate-pulse">
+                <Music className="w-16 h-16" />
+                <span className="text-3xl font-bold tracking-wide">
+                   Load {dragOverlay === 'media' ? 'Media' : dragOverlay === 'lyric' ? 'Lyrics' : 'Media / Lyrics'}
+                </span>
+             </div>
+         </div>
+      )}
+    <header 
+      className="bg-[var(--app-bg-panel-alt)] border-b border-[var(--app-border-base)] shrink-0 relative select-none flex flex-col lg:flex-row lg:items-center lg:justify-between sticky top-0 z-50 w-full"
+      style={{ display: 'var(--top-toolbar-display, flex)' }}
+    >
+      {/* Desktop Title (Absolute centered) */}
+      <div className="absolute inset-0 flex-col items-center justify-center pointer-events-none whitespace-nowrap overflow-hidden px-8 z-0 hidden lg:flex">
+        <h1 className="text-sm font-bold tracking-tight uppercase text-[var(--app-text-secondary)]">LRC Maker <span className="text-[var(--app-text-muted)] font-normal italic ml-1">Enhanced</span></h1>
+        <div className="text-[10px] text-[var(--app-text-muted)] font-mono mt-0.5 truncate flex items-center justify-center gap-2 max-w-full">
+          {audioFileName ? <span>{i18n.audio}: <span className="text-[var(--app-text-secondary)] truncate max-w-[200px] inline-block align-bottom">{audioFileName}</span></span> : <span>{i18n.noAudio}</span>}
+          <span className="opacity-50 shrink-0">|</span>
+          {lyricFileName ? <span>{i18n.lyrics}: <span className="text-[var(--app-text-secondary)] truncate max-w-[200px] inline-block align-bottom">{lyricFileName}</span></span> : metadata?.lyric ? <span>{i18n.lyrics}: <span className="text-[var(--app-text-secondary)]">{i18n.embeddedTag}</span></span> : <span>{i18n.noLyrics}</span>}
+        </div>
+      </div>
+
+      {/* Mobile Title Row */}
+      <div className="flex lg:hidden items-center justify-between w-full py-2 app-region-drag relative bg-[var(--app-bg-panel-alt)] z-10">
+         <div style={{ width: 'var(--titlebar-left-padding, 0px)' }} className="h-6 pointer-events-none shrink-0 transition-[width]" />
+         <div className="flex flex-col items-center justify-center pointer-events-none whitespace-nowrap overflow-hidden px-2 z-0 flex-1">
+             <h1 className="text-sm font-bold tracking-tight uppercase text-[var(--app-text-secondary)]">LRC Maker <span className="text-[var(--app-text-muted)] font-normal italic ml-1">Enhanced</span></h1>
+             <div className="text-[10px] text-[var(--app-text-muted)] font-mono truncate flex items-center justify-center gap-2 max-w-full mt-0.5">
+                {audioFileName ? <span className="truncate max-w-[160px] text-[var(--app-text-secondary)]">{audioFileName}</span> : <span>{i18n.noAudio}</span>}
+             </div>
+         </div>
+         <div style={{ width: 'var(--titlebar-right-padding, 0px)' }} className="h-6 pointer-events-none shrink-0 transition-[width]" />
+      </div>
+
+      {/* Desktop Buttons */}
+      {renderButtonsRow('hidden lg:flex flex-1 z-10')}
     </header>
+    {/* Mobile Buttons */}
+    {renderButtonsRow('flex lg:hidden bg-[var(--app-bg-panel-alt)] border-b border-[var(--app-border-base)] shrink-0')}
     </>
   );
 }

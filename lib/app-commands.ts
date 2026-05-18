@@ -3,7 +3,17 @@ export interface HistoryItem {
   name: string;
 }
 
+export interface AppStateType {
+  audioFileName: string | null;
+  lyricFileName: string | null;
+  canClearMedia: boolean;
+  canClearLyrics: boolean;
+  canLoadEmbeddedLyrics: boolean;
+}
+
 export interface AppCommandsType {
+  getState: () => AppStateType;
+  setAudioSpecs: null | ((specs: { format?: string, bitrate?: string, sampleRate?: string, bitsPerSample?: string }) => void);
   loadMedia: null | (() => void);
   loadLyrics: null | (() => void);
   clearMedia: null | (() => Promise<void>);
@@ -26,6 +36,14 @@ export interface AppCommandsType {
 }
 
 export const AppCommands: AppCommandsType = {
+  getState: () => ({
+    audioFileName: null,
+    lyricFileName: null,
+    canClearMedia: false,
+    canClearLyrics: false,
+    canLoadEmbeddedLyrics: false,
+  }),
+  setAudioSpecs: null,
   loadMedia: null,
   loadLyrics: null,
   clearMedia: null,

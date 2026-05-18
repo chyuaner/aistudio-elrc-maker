@@ -4,7 +4,6 @@ import React, { useEffect, useState } from 'react';
 import { useEditor } from './EditorProvider';
 import { TextEditor } from './TextEditor';
 import { SyncEditor } from './SyncEditor';
-import { DualSyncEditor } from './DualSyncEditor';
 import { RawTextDisplay } from './RawTextDisplay';
 import { useGlobalHotkeys } from './useGlobalHotkeys';
 import { useI18n } from '@/hooks/useI18n';
@@ -30,8 +29,8 @@ export function EditorView() {
   }, [mode, setMode]);
 
   return (
-    <div className="flex-1 w-full h-full overflow-hidden flex flex-col">
-      <div className="flex bg-[var(--app-bg-panel)] border-b border-[var(--app-border-base)] shrink-0">
+    <div className="flex-1 w-full h-full md:overflow-hidden flex flex-col">
+      <div className="flex bg-[var(--app-bg-panel)] border-b border-[var(--app-border-base)] shrink-0 sticky md:static top-[55px] z-40 shadow-sm md:shadow-none">
         <button
           onClick={() => setMode('text')}
           className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-widest border-b-2 transition-colors ${mode === 'text' ? 'border-[var(--app-accent)] text-[var(--app-accent)]' : 'border-transparent text-[var(--app-text-muted)] hover:text-[var(--app-text-secondary)]'}`}
@@ -60,10 +59,9 @@ export function EditorView() {
         </button>
       </div>
 
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 md:overflow-hidden flex flex-col">
         {mode === 'text' && <TextEditor />}
-        {mode === 'sync' && <SyncEditor />}
-        {mode === 'dual-sync' && <DualSyncEditor />}
+        {(mode === 'sync' || mode === 'dual-sync') && <SyncEditor />}
         {mode === 'raw' && <RawTextDisplay />}
       </div>
     </div>

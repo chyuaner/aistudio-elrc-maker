@@ -9,24 +9,29 @@ export function useSyncHotkeys() {
     syncMode,
     activeLineIndex, setActiveLineIndex,
     activeWordIndex, setActiveWordIndex,
-    currentTime, playerRef,
+    currentTime, playerRef, audioLatency,
     hotkeys, mode
   } = useEditor();
 
+  const getEffectiveTime = useCallback(() => {
+    return Math.max(0, currentTime - audioLatency / 1000);
+  }, [currentTime, audioLatency]);
+
   const handleLineStamp = useCallback(() => {
     if (activeLineIndex >= lines.length) return;
+    const timeToStamp = getEffectiveTime();
     
     commitLines(prev => {
       const newLines = [...prev];
       newLines[activeLineIndex] = {
         ...newLines[activeLineIndex],
-        start: currentTime
+        start: timeToStamp
       };
       return newLines;
     }, `Stamp Line ${activeLineIndex + 1}`);
     
     setActiveLineIndex(activeLineIndex + 1);
-  }, [activeLineIndex, lines.length, currentTime, commitLines, setActiveLineIndex]);
+  }, [activeLineIndex, lines.length, getEffectiveTime, commitLines, setActiveLineIndex]);
 
   const handleWordStamp = useCallback(() => {
     if (activeLineIndex >= lines.length) return;
@@ -40,20 +45,21 @@ export function useSyncHotkeys() {
     }
 
     const wordText = currentLine.words[activeWordIndex].text || '⏎';
+    const timeToStamp = getEffectiveTime();
 
     commitLines(prev => {
       const newLines = [...prev];
       const newWords = [...newLines[activeLineIndex].words];
       newWords[activeWordIndex] = {
         ...newWords[activeWordIndex],
-        start: currentTime
+        start: timeToStamp
       };
       
       newLines[activeLineIndex] = {
         ...newLines[activeLineIndex],
         words: newWords,
         // Optionally stamp the line if it's the first word
-        start: activeWordIndex === 0 ? currentTime : newLines[activeLineIndex].start
+        start: activeWordIndex === 0 ? timeToStamp : newLines[activeLineIndex].start
       };
       
       return newLines;
@@ -69,7 +75,7 @@ export function useSyncHotkeys() {
     } else {
       setActiveWordIndex(activeWordIndex + 1);
     }
-  }, [activeLineIndex, activeWordIndex, lines, currentTime, commitLines, setActiveLineIndex, setActiveWordIndex]);
+  }, [activeLineIndex, activeWordIndex, lines, getEffectiveTime, commitLines, setActiveLineIndex, setActiveWordIndex]);
 
   const handleWordNextLine = useCallback(() => {
     if (activeLineIndex < lines.length - 1) {

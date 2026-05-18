@@ -45,11 +45,11 @@ export function ResizableLayout() {
   }, []);
 
   return (
-    <div className="flex-1 flex flex-col lg:flex-row overflow-hidden border-t border-[var(--app-border-base)]">
+    <div className="flex-1 flex flex-col lg:flex-row md:overflow-hidden border-t border-[var(--app-border-base)]">
       {/* Left side: Media Player Component and Info Tabs */}
       <div 
         style={{ width: isMobile ? '100%' : `calc(${leftWidth}% - 4px)` }} 
-        className="flex flex-col border-r border-[var(--app-border-base)] bg-[var(--app-bg-panel-alt)] shrink-0 lg:h-full max-h-[40vh] lg:max-h-full overflow-hidden"
+        className="flex flex-col border-r border-[var(--app-border-base)] bg-[var(--app-bg-panel-alt)] shrink-0 lg:h-full lg:overflow-hidden"
       >
         <div className="bg-[var(--app-bg-input)] border-b border-[var(--app-border-base)] p-2 lg:p-4 flex flex-col justify-center shrink-0">
           <MediaPlayer />
@@ -72,7 +72,7 @@ export function ResizableLayout() {
       {/* Right side: Editor View */}
       <div 
         style={{ width: isMobile ? '100%' : `calc(${100 - leftWidth}% - 4px)` }} 
-        className="flex-1 lg:h-full flex flex-col bg-[var(--app-bg-base)] overflow-hidden min-h-0"
+        className="flex-1 lg:h-full flex flex-col bg-[var(--app-bg-base)] md:overflow-hidden min-h-0"
       >
          <EditorView />
       </div>

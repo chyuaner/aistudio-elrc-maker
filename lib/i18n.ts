@@ -24,10 +24,10 @@ export const defaultI18n = {
   promptShiftTime: "將接下來的時間軸平移 X 秒 (例如 0.5 或 -1.2)：",
   
   // Editor View
-  tabText: "文字編輯器",
-  tabSync: "同步編輯器",
-  tabDualSync: "雙軌編輯器",
-  tabRaw: "原始碼",
+  tabText: "編輯原始文字",
+  tabSync: "動態歌詞編輯",
+  tabDualSync: "雙行動態歌詞編輯",
+  tabRaw: "預覽",
   
   // Left Panel
   tabMetadata: "音樂資訊",

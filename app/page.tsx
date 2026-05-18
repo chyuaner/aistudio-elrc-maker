@@ -8,7 +8,7 @@ export default function Page() {
   return (
     <DialogProvider>
       <EditorProvider>
-        <main className="h-screen w-full bg-[var(--app-bg-base)] text-[var(--app-text-secondary)] font-sans flex flex-col overflow-hidden selection:bg-[var(--app-accent)]/30">
+        <main className="h-[100dvh] w-full bg-[var(--app-bg-base)] text-[var(--app-text-secondary)] font-sans flex flex-col md:overflow-hidden overflow-y-auto custom-scrollbar selection:bg-[var(--app-accent)]/30">
           <TopToolbar />
           <ResizableLayout />
         </main>

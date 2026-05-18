@@ -152,7 +152,15 @@ interface EditorContextType {
   isPlaying: boolean;
   setIsPlaying: (playing: boolean) => void;
   
+  audioLatency: number;
+  setAudioLatency: (latency: number) => void;
+  playbackRate: number;
+  setPlaybackRate: React.Dispatch<React.SetStateAction<number>>;
+  
   playerRef: React.RefObject<HTMLVideoElement | HTMLAudioElement | null>;
+  
+  audioSpecs: { format?: string, bitrate?: string, sampleRate?: string, bitsPerSample?: string } | null;
+  setAudioSpecs: (specs: { format?: string, bitrate?: string, sampleRate?: string, bitsPerSample?: string } | null) => void;
   
   handleFormatWords: () => void;
 }
@@ -203,8 +211,17 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [audioLatency, setAudioLatency] = useState(0);
+  const [playbackRate, setPlaybackRate] = useState(1);
+  const [audioSpecs, setAudioSpecs] = useState<{ format?: string, bitrate?: string, sampleRate?: string } | null>(null);
   
   const playerRef = useRef<HTMLVideoElement | HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    if (playerRef.current) {
+      playerRef.current.playbackRate = playbackRate;
+    }
+  }, [playbackRate]);
 
   const [historyState, dispatchLinesRaw] = useReducer(historyReducer, {
     past: [],
@@ -411,6 +428,9 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
       currentTime, setCurrentTime,
       duration, setDuration,
       isPlaying, setIsPlaying,
+      audioLatency, setAudioLatency,
+      playbackRate, setPlaybackRate,
+      audioSpecs, setAudioSpecs,
       playerRef,
       handleFormatWords,
     }}>

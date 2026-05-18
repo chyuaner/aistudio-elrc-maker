@@ -105,7 +105,11 @@ export function KaraokePreview() {
       }
   }
 
-  const DotNode = <span style={{ WebkitTextStroke: '1px var(--app-border-light)', color: 'white' }}>●</span>;
+  const DotNode = (
+      <svg width="1em" height="1em" viewBox="0 0 24 24" className="drop-shadow-sm overflow-visible inline-block align-text-bottom mx-1">
+         <circle cx="12" cy="12" r="10" fill="white" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--app-border-light)' }} />
+      </svg>
+  );
 
   return (
     <div className="flex flex-col border-b border-[var(--app-border-base)] bg-[var(--app-bg-panel-alt)] shrink-0">

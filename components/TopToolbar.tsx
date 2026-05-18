@@ -291,6 +291,9 @@ export function TopToolbar() {
 
   React.useEffect(() => {
     const isTauri = typeof window !== 'undefined' && !!(window as any).__TAURI__;
+    if (isTauri) {
+      document.documentElement.style.setProperty('--top-toolbar-display', 'none');
+    }
 
     // --- STANDARD HTML5 BROWSER EVENTS (Chrome / Web) ---
     const handleDrop = (e: DragEvent) => {
@@ -477,27 +480,32 @@ export function TopToolbar() {
              </div>
          </div>
       )}
-    <header className="bg-[var(--app-bg-panel)] border-b border-[var(--app-border-base)] p-2 flex items-center justify-between shrink-0 relative select-none">
-      {/* Left Group */}
-      <div className="flex items-center">
-        <div style={{ width: 'var(--titlebar-left-padding, 0px)' }} className="h-full app-region-drag pointer-events-none self-stretch shrink-0 transition-[width]" />
-        <div className="flex items-center gap-2 z-10">
-          <input 
-            type="file" 
-            accept="audio/*,video/*" 
-            className="hidden" 
-            ref={fileInputRef} 
-            onChange={handleAudioSelect} 
-            onClick={(e) => { (e.target as HTMLInputElement).value = ''; }}
-          />
-          <input 
-            type="file" 
-            accept=".txt,.lrc" 
-            className="hidden" 
-            ref={lyricInputRef} 
-            onChange={handleLyricSelect}
-            onClick={(e) => { (e.target as HTMLInputElement).value = ''; }}
-          />
+      
+      <input 
+        type="file" 
+        accept="audio/*,video/*" 
+        className="hidden" 
+        ref={fileInputRef} 
+        onChange={handleAudioSelect} 
+        onClick={(e) => { (e.target as HTMLInputElement).value = ''; }}
+      />
+      <input 
+        type="file" 
+        accept=".txt,.lrc" 
+        className="hidden" 
+        ref={lyricInputRef} 
+        onChange={handleLyricSelect}
+        onClick={(e) => { (e.target as HTMLInputElement).value = ''; }}
+      />
+
+      <header 
+        style={{ display: 'var(--top-toolbar-display, flex)' }}
+        className="bg-[var(--app-bg-panel)] border-b border-[var(--app-border-base)] p-2 flex items-center justify-between shrink-0 relative select-none"
+      >
+          {/* Left Group */}
+          <div className="flex items-center">
+            <div style={{ width: 'var(--titlebar-left-padding, 0px)' }} className="h-full app-region-drag pointer-events-none self-stretch shrink-0 transition-[width]" />
+            <div className="flex items-center gap-2 z-10">
           
           <div className="relative">
             <div className="flex group shadow-sm rounded">

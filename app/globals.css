@@ -16,6 +16,7 @@
 
   --titlebar-left-padding: 0px;
   --titlebar-right-padding: 0px;
+  --top-toolbar-display: flex;
 }
 
 @media (prefers-color-scheme: light) {

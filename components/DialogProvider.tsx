@@ -52,19 +52,19 @@ export function DialogProvider({ children }: { children: ReactNode }) {
       
       {/* Confirm Modal */}
       {confirmState && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-[#1A1D23] border border-[#2D333B] p-6 rounded shadow-xl max-w-sm w-full mx-4 animate-in zoom-in-95 duration-200">
-            <p className="text-[#E0E0E0] mb-6 whitespace-pre-wrap">{confirmState.msg}</p>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[var(--app-text-primary)] text-[var(--app-bg-base)]/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-[var(--app-bg-panel)] border border-[var(--app-border-base)] p-6 rounded shadow-xl max-w-sm w-full mx-4 animate-in zoom-in-95 duration-200">
+            <p className="text-[var(--app-text-secondary)] mb-6 whitespace-pre-wrap">{confirmState.msg}</p>
             <div className="flex justify-end gap-3">
               <button 
                 onClick={() => handleConfirmClose(false)}
-                className="px-4 py-2 rounded text-sm text-[#E0E0E0] hover:bg-[#2D333B] transition-colors"
+                className="px-4 py-2 rounded text-sm text-[var(--app-text-secondary)] hover:bg-[var(--app-border-base)] transition-colors"
               >
                 Cancel
               </button>
               <button 
                 onClick={() => handleConfirmClose(true)}
-                className="px-4 py-2 rounded text-sm bg-[#F27D26] hover:bg-[#E26D16] text-black font-medium transition-colors"
+                className="px-4 py-2 rounded text-sm bg-[var(--app-accent)] hover:bg-[var(--app-accent-hover)] text-black font-medium transition-colors"
               >
                 Confirm
               </button>
@@ -75,13 +75,13 @@ export function DialogProvider({ children }: { children: ReactNode }) {
 
       {/* Prompt Modal */}
       {promptState && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-[#1A1D23] border border-[#2D333B] p-6 rounded shadow-xl max-w-sm w-full mx-4 animate-in zoom-in-95 duration-200">
-            <p className="text-[#E0E0E0] mb-4">{promptState.msg}</p>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[var(--app-text-primary)] text-[var(--app-bg-base)]/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-[var(--app-bg-panel)] border border-[var(--app-border-base)] p-6 rounded shadow-xl max-w-sm w-full mx-4 animate-in zoom-in-95 duration-200">
+            <p className="text-[var(--app-text-secondary)] mb-4">{promptState.msg}</p>
             <input 
               type="text" 
               autoFocus
-              className="w-full bg-[#0F1115] border border-[#2D333B] rounded p-2 text-white mb-6 outline-none focus:border-[#F27D26] transition-colors"
+              className="w-full bg-[var(--app-bg-base)] border border-[var(--app-border-base)] rounded p-2 text-[var(--app-text-primary)] mb-6 outline-none focus:border-[var(--app-accent)] transition-colors"
               value={promptInput}
               onChange={(e) => setPromptInput(e.target.value)}
               onKeyDown={(e) => {
@@ -92,13 +92,13 @@ export function DialogProvider({ children }: { children: ReactNode }) {
             <div className="flex justify-end gap-3">
               <button 
                 onClick={() => handlePromptClose(false)}
-                className="px-4 py-2 rounded text-sm text-[#E0E0E0] hover:bg-[#2D333B] transition-colors"
+                className="px-4 py-2 rounded text-sm text-[var(--app-text-secondary)] hover:bg-[var(--app-border-base)] transition-colors"
               >
                 Cancel
               </button>
               <button 
                 onClick={() => handlePromptClose(true)}
-                className="px-4 py-2 rounded text-sm bg-[#F27D26] hover:bg-[#E26D16] text-black font-medium transition-colors"
+                className="px-4 py-2 rounded text-sm bg-[var(--app-accent)] hover:bg-[var(--app-accent-hover)] text-black font-medium transition-colors"
               >
                 Submit
               </button>

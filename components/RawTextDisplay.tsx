@@ -30,25 +30,25 @@ export function RawTextDisplay() {
   }, [exportFormat, text]);
 
   return (
-    <div className="flex flex-col h-full bg-[#16191E]">
-      <div className="p-3 bg-[#1A1D23] border-b border-[#2D333B] flex justify-between items-center shrink-0">
+    <div className="flex flex-col h-full bg-[var(--app-bg-panel-alt)]">
+      <div className="p-3 bg-[var(--app-bg-panel)] border-b border-[var(--app-border-base)] flex justify-between items-center shrink-0">
         <div className="flex gap-2">
            <button
              onClick={() => setExportFormat('standard')}
-             className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded border transition-colors disabled:opacity-50 ${exportFormat === 'standard' ? 'bg-[#2D333B] border-[#F27D26] text-[#F27D26] shadow-inner' : 'border-[#444C56] text-[#7D8590] hover:text-[#E0E0E0]'}`}
+             className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded border transition-colors disabled:opacity-50 ${exportFormat === 'standard' ? 'bg-[var(--app-border-base)] border-[var(--app-accent)] text-[var(--app-accent)] shadow-inner' : 'border-[var(--app-border-light)] text-[var(--app-text-muted)] hover:text-[var(--app-text-secondary)]'}`}
            >
              LRC 逐行
            </button>
            <button
              onClick={() => setExportFormat('enhanced')}
-             className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded border transition-colors disabled:opacity-50 ${exportFormat === 'enhanced' ? 'bg-[#2D333B] border-[#F27D26] text-[#F27D26] shadow-inner' : 'border-[#444C56] text-[#7D8590] hover:text-[#E0E0E0]'}`}
+             className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded border transition-colors disabled:opacity-50 ${exportFormat === 'enhanced' ? 'bg-[var(--app-border-base)] border-[var(--app-accent)] text-[var(--app-accent)] shadow-inner' : 'border-[var(--app-border-light)] text-[var(--app-text-muted)] hover:text-[var(--app-text-secondary)]'}`}
            >
              增強型LRC (ESLyric)
            </button>
         </div>
         <button 
            onClick={handleSelectAll}
-           className="px-3 py-1 bg-[#2D333B] hover:bg-[#3D444D] text-[#E0E0E0] text-[10px] uppercase font-bold rounded border border-[#444C56] transition-colors"
+           className="px-3 py-1 bg-[var(--app-border-base)] hover:bg-[var(--app-bg-hover)] text-[var(--app-text-secondary)] text-[10px] uppercase font-bold rounded border border-[var(--app-border-light)] transition-colors"
         >
           Select All
         </button>

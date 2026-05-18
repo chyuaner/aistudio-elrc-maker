@@ -34,9 +34,9 @@ export function MediaPlayer() {
     if (!isVideo && fileUrl && containerRef.current && playerRef.current) {
        waveSurferRef.current = WaveSurfer.create({
           container: containerRef.current,
-          waveColor: '#7D8590',
-          progressColor: '#F27D26',
-          cursorColor: '#E0E0E0',
+          waveColor: 'var(--app-text-muted)',
+          progressColor: 'var(--app-accent)',
+          cursorColor: 'var(--app-text-secondary)',
           barWidth: 2,
           barGap: 1,
           barRadius: 2,
@@ -55,7 +55,7 @@ export function MediaPlayer() {
 
   if (!fileUrl) {
     return (
-      <div className="w-full h-48 bg-[#0F1115] rounded border border-[#2D333B] flex items-center justify-center text-[#7D8590] text-xs font-mono uppercase tracking-widest shadow-inner">
+      <div className="w-full h-48 bg-[var(--app-bg-base)] rounded border border-[var(--app-border-base)] flex items-center justify-center text-[var(--app-text-muted)] text-xs font-mono uppercase tracking-widest shadow-inner">
         No Media Loaded
       </div>
     );
@@ -64,7 +64,7 @@ export function MediaPlayer() {
   const commonProps = {
     src: fileUrl,
     controls: true,
-    className: 'w-full rounded shadow-sm bg-black object-contain ' + (isVideo ? 'h-48' : 'h-10'),
+    className: 'w-full rounded shadow-sm bg-[var(--app-text-primary)] text-[var(--app-bg-base)] object-contain ' + (isVideo ? 'h-48' : 'h-10'),
     onDurationChange: (e: React.SyntheticEvent<HTMLMediaElement>) => setDuration(e.currentTarget.duration),
     onPlay: () => setIsPlaying(true),
     onPause: () => setIsPlaying(false),

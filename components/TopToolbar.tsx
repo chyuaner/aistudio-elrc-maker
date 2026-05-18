@@ -1,16 +1,18 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { useEditor } from './EditorProvider';
 import { parseRawLyrics, exportLrc } from '@/lib/lyric-utils';
 import { Music, Download, ChevronDown, X } from 'lucide-react';
 import { UndoRedoControls } from './UndoRedo';
 import { useDialogs } from './DialogProvider';
+import { AppCommands } from '@/lib/app-commands';
 
-function extractVorbisComments(buffer: ArrayBuffer): Map<string, string> {
+function extractFlacMetadata(buffer: ArrayBuffer) {
     const view = new DataView(buffer);
     const decoder = new TextDecoder('utf-8');
     const tagsMap = new Map<string, string>();
+    const covers: { mime: string, url: string }[] = [];
 
     if (view.getUint32(0) !== 0x664C6143) {
         throw new Error("非標準 FLAC 檔案格式");
@@ -20,6 +22,7 @@ function extractVorbisComments(buffer: ArrayBuffer): Map<string, string> {
     let isLastBlock = false;
 
     while (!isLastBlock && offset < view.byteLength) {
+        if (offset + 4 > view.byteLength) break;
         const blockHeader = view.getUint8(offset);
         isLastBlock = (blockHeader & 0x80) !== 0;
         const blockType = blockHeader & 0x7F;
@@ -29,6 +32,8 @@ function extractVorbisComments(buffer: ArrayBuffer): Map<string, string> {
                        view.getUint8(offset + 3);
 
         offset += 4; // Shift to block content
+
+        if (offset + length > view.byteLength) break;
 
         if (blockType === 4) {
             let p = offset;
@@ -53,16 +58,47 @@ function extractVorbisComments(buffer: ArrayBuffer): Map<string, string> {
                     tagsMap.set(key, value);
                 }
             }
-            break; 
+        } else if (blockType === 6) {
+            let p = offset;
+
+            // Picture type (4 bytes)
+            const pictureType = view.getUint32(p);
+            p += 4;
+
+            const mimeLength = view.getUint32(p);
+            p += 4;
+
+            const mimeBytes = new Uint8Array(buffer, p, mimeLength);
+            const mimeTypeStr = decoder.decode(mimeBytes);
+            p += mimeLength;
+
+            const descLength = view.getUint32(p);
+            p += 4 + descLength;
+
+            p += 16;
+
+            const dataLength = view.getUint32(p);
+            p += 4;
+
+            if (p + dataLength <= view.byteLength) {
+                const pictureBytes = new Uint8Array(buffer, p, dataLength);
+                const base64String = Array.from(pictureBytes).map(byte => String.fromCharCode(byte)).join('');
+                const dataUrl = `data:${mimeTypeStr};base64,${window.btoa(base64String)}`;
+
+                covers.push({
+                   mime: mimeTypeStr,
+                   url: dataUrl
+                });
+            }
         }
         offset += length; 
     }
 
-    return tagsMap;
+    return { tags: tagsMap, covers };
 }
 
 export function TopToolbar() {
-  const { setFile, commitLines, resetHistory, lines, syncMode, setMetadata, metadata, audioFileName, lyricFileName, setLyricFileName, exportFormat, shiftTime } = useEditor();
+  const { undo, redo, pastActions, futureActions, setFile, commitLines, resetHistory, lines, syncMode, setMetadata, metadata, audioFileName, lyricFileName, setLyricFileName, exportFormat, shiftTime } = useEditor();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const lyricInputRef = useRef<HTMLInputElement>(null);
   const dialogs = useDialogs();
@@ -78,9 +114,9 @@ export function TopToolbar() {
     
     if (f.name.toLowerCase().endsWith('.flac') && typeof window !== 'undefined') {
        try {
-          const slice = f.slice(0, 10 * 1024 * 1024);
+          const slice = f.slice(0, 20 * 1024 * 1024); // Expand slice to 20MB for cover images
           const arrayBuffer = await slice.arrayBuffer();
-          const tags = extractVorbisComments(arrayBuffer);
+          const { tags, covers } = extractFlacMetadata(arrayBuffer);
           let foundLyrics = tags.get('LYRICS') || tags.get('UNSYNCEDLYRICS') || tags.get('UNSYNCED LYRICS');
           
           if (!foundLyrics) {
@@ -92,7 +128,7 @@ export function TopToolbar() {
              }
           }
           
-          if (foundLyrics || tags.size > 0) {
+          if (foundLyrics || tags.size > 0 || covers.length > 0) {
              setMetadata({
                 title: tags.get('TITLE'),
                 artist: tags.get('ARTIST'),
@@ -100,6 +136,8 @@ export function TopToolbar() {
                 year: tags.get('DATE'),
                 track: tags.get('TRACKNUMBER'),
                 lyric: foundLyrics,
+                picture: covers.length > 0 ? covers[0].url : null,
+                pictures: covers.map(c => c.url),
                 rawTags: Object.fromEntries(tags)
              });
              if (foundLyrics) {
@@ -180,6 +218,73 @@ export function TopToolbar() {
     reader.readAsText(f);
   }, [lines.length, dialogs, resetHistory, setLyricFileName]);
 
+  const handleExport = React.useCallback((format: 'standard' | 'enhanced') => {
+    if (lines.length === 0) return;
+    const lrcText = exportLrc(lines, format === 'enhanced');
+    const blob = new Blob([lrcText], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `lyrics_${format}.lrc`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    setExportDropdownOpen(false);
+  }, [lines]);
+
+  // AppCommands mapping extracted from useEditor hooks above
+
+  useEffect(() => {
+    AppCommands.register({
+      loadMedia: () => fileInputRef.current?.click(),
+      loadLyrics: () => lyricInputRef.current?.click(),
+      clearMedia: async () => {
+        if (audioFileName) {
+          if (await dialogs.confirm('Are you sure you want to discard current media?')) {
+            setFile(null);
+            setMetadata(null);
+          }
+        }
+      },
+      clearLyrics: async () => {
+        if (lines.length > 0) {
+          if (await dialogs.confirm('Are you sure you want to discard current lyrics?')) {
+            commitLines([], 'Clear Lyrics');
+            setLyricFileName(null);
+          }
+        }
+      },
+      loadEmbeddedLyrics: async () => {
+        if (metadata?.lyric) {
+           if (lines.length > 0) {
+               const confirmed = await dialogs.confirm('Loading embedded lyrics will discard your current ones. Continue?');
+               if (!confirmed) return;
+           }
+           resetHistory(parseRawLyrics(metadata.lyric));
+           setLyricFileName(null);
+        }
+      },
+      exportStandard: () => handleExport('standard'),
+      exportEnhanced: () => handleExport('enhanced'),
+      shiftTime: async () => {
+        const val = await dialogs.prompt('Shift all timings by X seconds (e.g., 0.5 or -1.2):', '0');
+        if (val !== null) {
+          const sec = parseFloat(val);
+          if (!isNaN(sec) && sec !== 0) {
+            shiftTime(sec);
+          }
+        }
+      },
+      undo: () => undo(1),
+      redo: () => redo(1),
+      undoToSequence: (steps: number) => undo(steps),
+      redoToSequence: (steps: number) => redo(steps),
+      getUndoList: () => pastActions.map((a, i) => ({ id: `undo-${i}`, name: a.action })),
+      getRedoList: () => futureActions.map((a, i) => ({ id: `redo-${i}`, name: a.action })),
+    });
+  }, [dialogs, audioFileName, lines.length, metadata, setFile, setMetadata, commitLines, setLyricFileName, resetHistory, shiftTime, undo, redo, pastActions, futureActions, handleExport]);
+
   const [dragOverlay, setDragOverlay] = useState<'media' | 'lyric' | 'file' | null>(null);
 
   React.useEffect(() => {
@@ -254,26 +359,11 @@ export function TopToolbar() {
     if (f) processLyricFile(f);
   };
 
-  const handleExport = (format: 'standard' | 'enhanced') => {
-    if (lines.length === 0) return;
-    const lrcText = exportLrc(lines, format === 'enhanced');
-    const blob = new Blob([lrcText], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `lyrics_${format}.lrc`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    setExportDropdownOpen(false);
-  };
-
   return (
     <>
       {dragOverlay && (
-         <div className="fixed inset-0 z-[100] bg-[#0F1115]/80 backdrop-blur-sm flex items-center justify-center border-[3px] border-dashed border-[#F27D26] m-4 rounded-xl pointer-events-none">
-             <div className="text-center flex flex-col items-center gap-4 text-[#F27D26] bg-[#1A1D23] px-12 py-8 rounded-2xl shadow-2xl animate-pulse">
+         <div className="fixed inset-0 z-[100] bg-[var(--app-bg-base)]/80 backdrop-blur-sm flex items-center justify-center border-[3px] border-dashed border-[var(--app-accent)] m-4 rounded-xl pointer-events-none">
+             <div className="text-center flex flex-col items-center gap-4 text-[var(--app-accent)] bg-[var(--app-bg-panel)] px-12 py-8 rounded-2xl shadow-2xl animate-pulse">
                 <Music className="w-16 h-16" />
                 <span className="text-3xl font-bold tracking-wide">
                    Load {dragOverlay === 'media' ? 'Media' : dragOverlay === 'lyric' ? 'Lyrics' : 'Media / Lyrics'}
@@ -281,10 +371,10 @@ export function TopToolbar() {
              </div>
          </div>
       )}
-    <header className="bg-[#1A1D23] border-b border-[#2D333B] p-2 flex items-center justify-between shrink-0 relative select-none">
+    <header className="bg-[var(--app-bg-panel)] border-b border-[var(--app-border-base)] p-2 flex items-center justify-between shrink-0 relative select-none">
       {/* Left Group */}
       <div className="flex items-center">
-        <div className="w-[0px] h-full app-region-drag pointer-events-none self-stretch" />
+        <div style={{ width: 'var(--titlebar-left-padding, 0px)' }} className="h-full app-region-drag pointer-events-none self-stretch shrink-0 transition-[width]" />
         <div className="flex items-center gap-2 z-10">
           <input 
             type="file" 
@@ -307,24 +397,24 @@ export function TopToolbar() {
             <div className="flex group shadow-sm rounded">
               <button 
                 onClick={() => fileInputRef.current?.click()}
-                className="px-3 py-1.5 bg-[#2D333B] hover:bg-[#3D444D] rounded-l text-xs font-medium border border-[#444C56] border-r-0 flex items-center gap-2 text-[#E0E0E0] transition-colors"
+                className="px-3 py-1.5 bg-[var(--app-border-base)] hover:bg-[var(--app-bg-hover)] rounded-l text-xs font-medium border border-[var(--app-border-light)] border-r-0 flex items-center gap-2 text-[var(--app-text-secondary)] transition-colors"
               >
                 <Music className="w-3.5 h-3.5 text-blue-400" /> Load Media
               </button>
               <button
                  onClick={() => setLoadMediaDropdownOpen(!loadMediaDropdownOpen)}
-                 className="px-1.5 py-1.5 bg-[#2D333B] hover:bg-[#3D444D] rounded-r border border-[#444C56] text-[#7D8590] transition-colors"
+                 className="px-1.5 py-1.5 bg-[var(--app-border-base)] hover:bg-[var(--app-bg-hover)] rounded-r border border-[var(--app-border-light)] text-[var(--app-text-muted)] transition-colors"
               >
                  <ChevronDown className="w-3 h-3" />
               </button>
             </div>
             
             {loadMediaDropdownOpen && (
-               <div className="absolute top-full left-0 mt-1 w-48 bg-[#1A1D23] border border-[#2D333B] rounded shadow-xl z-50 overflow-hidden py-1">
+               <div className="absolute top-full left-0 mt-1 w-48 bg-[var(--app-bg-panel)] border border-[var(--app-border-base)] rounded shadow-xl z-50 overflow-hidden py-1">
                   <button 
                     disabled={!audioFileName}
                     onClick={() => { clearMedia(); setLoadMediaDropdownOpen(false); }}
-                    className="w-full text-left px-3 py-2 text-xs text-red-400 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-red-400 hover:bg-red-500 hover:text-white transition-colors flex items-center gap-2"
+                    className="w-full text-left px-3 py-2 text-xs text-red-400 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-red-400 hover:bg-red-500 hover:text-[var(--app-text-primary)] transition-colors flex items-center gap-2"
                   >
                     <X className="w-3.5 h-3.5" /> Close Audio
                   </button>
@@ -336,26 +426,26 @@ export function TopToolbar() {
             <div className="flex group shadow-sm rounded">
               <button 
                 onClick={() => lyricInputRef.current?.click()}
-                className="px-3 py-1.5 bg-[#2D333B] hover:bg-[#3D444D] rounded-l text-xs font-medium border border-[#444C56] border-r-0 flex items-center gap-2 text-[#E0E0E0] transition-colors"
+                className="px-3 py-1.5 bg-[var(--app-border-base)] hover:bg-[var(--app-bg-hover)] rounded-l text-xs font-medium border border-[var(--app-border-light)] border-r-0 flex items-center gap-2 text-[var(--app-text-secondary)] transition-colors"
               >
                 <span className="w-2 h-2 bg-purple-400 rounded-full"></span> Load Lyrics
               </button>
               <button
                  onClick={() => setLoadDropdownOpen(!loadDropdownOpen)}
-                 className="px-1.5 py-1.5 bg-[#2D333B] hover:bg-[#3D444D] rounded-r border border-[#444C56] text-[#7D8590] transition-colors"
+                 className="px-1.5 py-1.5 bg-[var(--app-border-base)] hover:bg-[var(--app-bg-hover)] rounded-r border border-[var(--app-border-light)] text-[var(--app-text-muted)] transition-colors"
               >
                  <ChevronDown className="w-3 h-3" />
               </button>
             </div>
             
             {loadDropdownOpen && (
-               <div className="absolute top-full left-0 mt-1 w-56 bg-[#1A1D23] border border-[#2D333B] rounded shadow-xl z-50 overflow-hidden py-1">
-                  <button className="w-full text-left px-3 py-2 text-xs text-[#E0E0E0] hover:bg-[#F27D26] hover:text-black transition-colors" onClick={() => { lyricInputRef.current?.click(); setLoadDropdownOpen(false); }}>
+               <div className="absolute top-full left-0 mt-1 w-56 bg-[var(--app-bg-panel)] border border-[var(--app-border-base)] rounded shadow-xl z-50 overflow-hidden py-1">
+                  <button className="w-full text-left px-3 py-2 text-xs text-[var(--app-text-secondary)] hover:bg-[var(--app-accent)] hover:text-black transition-colors" onClick={() => { lyricInputRef.current?.click(); setLoadDropdownOpen(false); }}>
                     Load external .lrc file
                   </button>
                   <button 
                     disabled={!metadata?.lyric}
-                    className="w-full text-left px-3 py-2 text-xs text-[#E0E0E0] disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-[#E0E0E0] hover:bg-[#F27D26] hover:text-black transition-colors" 
+                    className="w-full text-left px-3 py-2 text-xs text-[var(--app-text-secondary)] disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-[var(--app-text-secondary)] hover:bg-[var(--app-accent)] hover:text-black transition-colors" 
                     onClick={async () => { 
                        if (metadata?.lyric) {
                           if (lines.length > 0) {
@@ -369,11 +459,11 @@ export function TopToolbar() {
                   >
                     From ID3 / Vorbis Tags
                   </button>
-                  <div className="h-px bg-[#2D333B] mx-2 my-1" />
+                  <div className="h-px bg-[var(--app-border-base)] mx-2 my-1" />
                   <button 
                     disabled={lines.length === 0}
                     onClick={() => { clearLyrics(); setLoadDropdownOpen(false); }}
-                    className="w-full text-left px-3 py-2 text-xs text-red-400 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-red-400 hover:bg-red-500 hover:text-white transition-colors flex items-center gap-2"
+                    className="w-full text-left px-3 py-2 text-xs text-red-400 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-red-400 hover:bg-red-500 hover:text-[var(--app-text-primary)] transition-colors flex items-center gap-2"
                   >
                     <X className="w-3.5 h-3.5" /> Clear Lyrics
                   </button>
@@ -381,18 +471,18 @@ export function TopToolbar() {
             )}
           </div>
 
-          <div className="h-6 w-px bg-[#2D333B] mx-1"></div>
+          <div className="h-6 w-px bg-[var(--app-border-base)] mx-1"></div>
           <UndoRedoControls />
         </div>
       </div>
       
       {/* Center items: Title and File Names */}
       <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none whitespace-nowrap overflow-hidden px-8 z-0">
-        <h1 className="text-sm font-bold tracking-tight uppercase text-[#E0E0E0]">LRC Maker <span className="text-[#7D8590] font-normal italic ml-1">Enhanced</span></h1>
-        <div className="text-[10px] text-[#7D8590] font-mono mt-0.5 truncate flex items-center justify-center gap-2 max-w-full">
-          {audioFileName ? <span>Audio: <span className="text-[#E0E0E0] truncate max-w-[200px] inline-block align-bottom">{audioFileName}</span></span> : <span>No Audio</span>}
+        <h1 className="text-sm font-bold tracking-tight uppercase text-[var(--app-text-secondary)]">LRC Maker <span className="text-[var(--app-text-muted)] font-normal italic ml-1">Enhanced</span></h1>
+        <div className="text-[10px] text-[var(--app-text-muted)] font-mono mt-0.5 truncate flex items-center justify-center gap-2 max-w-full">
+          {audioFileName ? <span>Audio: <span className="text-[var(--app-text-secondary)] truncate max-w-[200px] inline-block align-bottom">{audioFileName}</span></span> : <span>No Audio</span>}
           <span className="opacity-50 shrink-0">|</span>
-          {lyricFileName ? <span>Lyrics: <span className="text-[#E0E0E0] truncate max-w-[200px] inline-block align-bottom">{lyricFileName}</span></span> : metadata?.lyric ? <span>Lyrics: <span className="text-[#E0E0E0]">Embedded Tag</span></span> : <span>No Lyrics</span>}
+          {lyricFileName ? <span>Lyrics: <span className="text-[var(--app-text-secondary)] truncate max-w-[200px] inline-block align-bottom">{lyricFileName}</span></span> : metadata?.lyric ? <span>Lyrics: <span className="text-[var(--app-text-secondary)]">Embedded Tag</span></span> : <span>No Lyrics</span>}
         </div>
       </div>
       
@@ -406,7 +496,7 @@ export function TopToolbar() {
                  shiftTime(parseFloat(val));
               }
             }}
-            className="px-3 py-1.5 bg-[#2D333B] hover:bg-[#3D444D] rounded text-[10px] shadow-sm uppercase font-bold tracking-widest border border-[#444C56] flex items-center text-[#E0E0E0] transition-colors"
+            className="px-3 py-1.5 bg-[var(--app-border-base)] hover:bg-[var(--app-bg-hover)] rounded text-[10px] shadow-sm uppercase font-bold tracking-widest border border-[var(--app-border-light)] flex items-center text-[var(--app-text-secondary)] transition-colors"
           >
             ± Offset
           </button>
@@ -415,31 +505,31 @@ export function TopToolbar() {
              <div className="flex group shadow-sm rounded">
                 <button 
                   onClick={() => handleExport(exportFormat)}
-                  className="px-3 py-1.5 bg-[#F27D26] hover:bg-[#E26D16] text-black rounded-l text-xs font-bold uppercase flex items-center gap-2 transition-colors border border-transparent"
+                  className="px-3 py-1.5 bg-[var(--app-accent)] hover:bg-[var(--app-accent-hover)] text-black rounded-l text-xs font-bold uppercase flex items-center gap-2 transition-colors border border-transparent"
                 >
                   <Download className="w-4 h-4" /> Export .lrc
                 </button>
                 <button
                   onClick={() => setExportDropdownOpen(!exportDropdownOpen)}
-                  className="px-1.5 py-1.5 bg-[#F27D26] hover:bg-[#E26D16] text-black rounded-r text-xs font-bold uppercase flex items-center transition-colors border border-transparent border-l-black/20"
+                  className="px-1.5 py-1.5 bg-[var(--app-accent)] hover:bg-[var(--app-accent-hover)] text-black rounded-r text-xs font-bold uppercase flex items-center transition-colors border border-transparent border-l-black/20"
                 >
                    <ChevronDown className="w-3 h-3" />
                 </button>
              </div>
 
              {exportDropdownOpen && (
-               <div className="absolute top-full right-0 mt-1 w-56 bg-[#1A1D23] border border-[#2D333B] rounded shadow-xl z-50 overflow-hidden py-1">
-                  <button className="w-full text-left px-3 py-2 text-xs text-[#E0E0E0] hover:bg-[#F27D26] hover:text-black transition-colors flex flex-col gap-1" onClick={() => handleExport('standard')}>
+               <div className="absolute top-full right-0 mt-1 w-56 bg-[var(--app-bg-panel)] border border-[var(--app-border-base)] rounded shadow-xl z-50 overflow-hidden py-1">
+                  <button className="w-full text-left px-3 py-2 text-xs text-[var(--app-text-secondary)] hover:bg-[var(--app-accent)] hover:text-black transition-colors flex flex-col gap-1" onClick={() => handleExport('standard')}>
                     <span>Standard LRC (Line-by-line)</span>
                   </button>
-                  <button className="w-full text-left px-3 py-2 text-xs text-[#E0E0E0] hover:bg-[#F27D26] hover:text-black transition-colors flex flex-col gap-1" onClick={() => handleExport('enhanced')}>
+                  <button className="w-full text-left px-3 py-2 text-xs text-[var(--app-text-secondary)] hover:bg-[var(--app-accent)] hover:text-black transition-colors flex flex-col gap-1" onClick={() => handleExport('enhanced')}>
                     <span>Enhanced LRC (ESLyric)</span>
                   </button>
                </div>
             )}
           </div>
         </div>
-        <div className="w-[0px] h-full app-region-drag pointer-events-none self-stretch" />
+        <div style={{ width: 'var(--titlebar-right-padding, 0px)' }} className="h-full app-region-drag pointer-events-none self-stretch shrink-0 transition-[width]" />
       </div>
     </header>
     </>

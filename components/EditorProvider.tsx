@@ -90,6 +90,7 @@ export interface FileMetadata {
   lyric?: string;
   format?: string;
   picture?: any;
+  pictures?: string[];
   rawTags?: Record<string, any>;
 }
 
@@ -169,6 +170,25 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
   const [mode, setMode] = useState<EditorMode>('sync');
   const [syncMode, setSyncMode] = useState<SyncMode>('line');
   
+  useEffect(() => {
+    let titleParts = [];
+    if (audioFileName) {
+      if (lyricFileName) {
+         titleParts.push(`${audioFileName} (${lyricFileName})`);
+      } else {
+         titleParts.push(audioFileName);
+      }
+    } else if (lyricFileName) {
+      titleParts.push(lyricFileName);
+    }
+    
+    if (titleParts.length > 0) {
+      document.title = `${titleParts.join(' ')} - LRC MAKER ENHANCED`;
+    } else {
+      document.title = 'LRC MAKER ENHANCED';
+    }
+  }, [audioFileName, lyricFileName]);
+
   const [activeLineIndex, setActiveLineIndex] = useState(0);
   const [activeWordIndex, setActiveWordIndex] = useState(0);
   

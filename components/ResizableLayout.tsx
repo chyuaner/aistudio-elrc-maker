@@ -37,10 +37,10 @@ export function ResizableLayout() {
   }, []);
 
   return (
-    <div className="flex-1 flex flex-col lg:flex-row overflow-hidden border-t border-[#2D333B]">
+    <div className="flex-1 flex flex-col lg:flex-row overflow-hidden border-t border-[var(--app-border-base)]">
       {/* Left side: Media Player Component and Info Tabs */}
-      <div style={{ width: `calc(${leftWidth}% - 4px)` }} className="flex flex-col border-r border-[#2D333B] bg-[#16191E] shrink-0">
-        <div className="bg-[#08090C] border-b border-[#2D333B] p-4 flex flex-col justify-center shrink-0">
+      <div style={{ width: `calc(${leftWidth}% - 4px)` }} className="flex flex-col border-r border-[var(--app-border-base)] bg-[var(--app-bg-panel-alt)] shrink-0">
+        <div className="bg-[var(--app-bg-input)] border-b border-[var(--app-border-base)] p-4 flex flex-col justify-center shrink-0">
           <MediaPlayer />
         </div>
         <LeftPanelInfo />
@@ -49,13 +49,13 @@ export function ResizableLayout() {
       {/* Resizer */}
       <div 
         onMouseDown={startDragging}
-        className="w-[8px] bg-transparent hover:bg-[#F27D26] cursor-col-resize z-50 flex items-center justify-center transition-colors group mx-[-4px]"
+        className="w-[8px] bg-transparent hover:bg-[var(--app-accent)] cursor-col-resize z-50 flex items-center justify-center transition-colors group mx-[-4px]"
       >
-         <div className="w-0.5 h-8 bg-[#2D333B] group-hover:bg-black rounded-full" />
+         <div className="w-0.5 h-8 bg-[var(--app-border-base)] group-hover:bg-[var(--app-text-primary)] text-[var(--app-bg-base)] rounded-full" />
       </div>
         
       {/* Right side: Editor View */}
-      <div style={{ width: `calc(${100 - leftWidth}% - 4px)` }} className="h-full flex flex-col bg-[#0F1115] overflow-hidden shrink-0">
+      <div style={{ width: `calc(${100 - leftWidth}% - 4px)` }} className="h-full flex flex-col bg-[var(--app-bg-base)] overflow-hidden shrink-0">
          <EditorView />
       </div>
     </div>

@@ -35,7 +35,7 @@ function UndoRedoDropdown({
   return (
     <div className="relative flex items-center h-full" ref={ref}>
       <button 
-        className="px-2 h-full bg-[#2D333B] hover:bg-[#3D444D] rounded-l text-[#E0E0E0] disabled:opacity-30 disabled:hover:bg-[#2D333B] border border-[#444C56] border-r-0 flex items-center justify-center transition-colors"
+        className="px-2 h-full bg-[var(--app-border-base)] hover:bg-[var(--app-bg-hover)] rounded-l text-[var(--app-text-secondary)] disabled:opacity-30 disabled:hover:bg-[var(--app-border-base)] border border-[var(--app-border-light)] border-r-0 flex items-center justify-center transition-colors"
         onClick={() => { action(1); setOpen(false); }}
         disabled={count === 0}
         title={label}
@@ -43,7 +43,7 @@ function UndoRedoDropdown({
         <Icon className="w-4 h-4" />
       </button>
       <button
-        className="px-1 h-full bg-[#2D333B] hover:bg-[#3D444D] rounded-r text-[#E0E0E0] disabled:opacity-30 disabled:hover:bg-[#2D333B] border border-[#444C56] flex items-center justify-center transition-colors"
+        className="px-1 h-full bg-[var(--app-border-base)] hover:bg-[var(--app-bg-hover)] rounded-r text-[var(--app-text-secondary)] disabled:opacity-30 disabled:hover:bg-[var(--app-border-base)] border border-[var(--app-border-light)] flex items-center justify-center transition-colors"
         onClick={() => setOpen(!open)}
         disabled={count === 0}
       >
@@ -51,7 +51,7 @@ function UndoRedoDropdown({
       </button>
 
       {open && (
-        <div className="absolute top-full left-0 mt-1 w-48 bg-[#1A1D23] border border-[#2D333B] rounded shadow-xl z-50 overflow-hidden py-1">
+        <div className="absolute top-full left-0 mt-1 w-48 bg-[var(--app-bg-panel)] border border-[var(--app-border-base)] rounded shadow-xl z-50 overflow-hidden py-1">
           {Array.from({length: Math.min(count, 15)}, (_, i) => i + 1).map(n => {
             // For undo, list from latest to earliest (end of array backwards)
             // For redo, list from earliest to latest (start of array forwards)
@@ -60,7 +60,7 @@ function UndoRedoDropdown({
               <button
                  key={n}
                  onClick={() => { action(n); setOpen(false); }}
-                 className="w-full text-left px-3 py-1.5 text-xs text-[#E0E0E0] hover:bg-[#F27D26] hover:text-black transition-colors flex justify-between gap-2"
+                 className="w-full text-left px-3 py-1.5 text-xs text-[var(--app-text-secondary)] hover:bg-[var(--app-accent)] hover:text-black transition-colors flex justify-between gap-2"
               >
                  <span className="truncate flex-1">{type === 'undo' ? 'Undo' : 'Redo'} {item?.action}</span>
                  <span className="font-mono text-[10px] opacity-70">{n}</span>

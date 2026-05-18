@@ -1,1 +1,56 @@
 @import "tailwindcss";
+
+:root {
+  --app-bg-base: #0F1115;
+  --app-bg-panel: #1A1D23;
+  --app-bg-panel-alt: #16191E;
+  --app-bg-input: #08090C;
+  --app-bg-hover: #3D444D;
+  --app-border-base: #2D333B;
+  --app-border-light: #444C56;
+  --app-text-primary: #ffffff;
+  --app-text-secondary: #E0E0E0;
+  --app-text-muted: #7D8590;
+  --app-accent: #F27D26;
+  --app-accent-hover: #E26D16;
+
+  --titlebar-left-padding: 0px;
+  --titlebar-right-padding: 0px;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --app-bg-base: #f7f7f9;
+    --app-bg-panel: #ffffff;
+    --app-bg-panel-alt: #f0f2f5;
+    --app-bg-input: #ffffff;
+    --app-bg-hover: #e5e7eb;
+    --app-border-base: #d1d5db;
+    --app-border-light: #e5e7eb;
+    --app-text-primary: #111827;
+    --app-text-secondary: #374151;
+    --app-text-muted: #6b7280;
+    --app-accent: #F27D26; /* Kept same accent */
+    --app-accent-hover: #E26D16;
+  }
+}
+
+/* Custom scrollbar to match the new styles if needed, we'll keep the custom-scrollbar logic simple */
+@layer utilities {
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: var(--app-border-light);
+    border: 2px solid transparent;
+    background-clip: padding-box;
+    border-radius: 9999px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: var(--app-text-muted);
+  }
+}

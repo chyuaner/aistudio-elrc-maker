@@ -5,7 +5,7 @@ import { useEditor } from './EditorProvider';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 
 export function KaraokePreview() {
-  const { lines, activeLineIndex, activeWordIndex, trackAssignments, paragraphStarts, currentTime, dualLineGapSec, syncMode } = useEditor();
+  const { lines, activeLineIndex, activeWordIndex, trackAssignments, paragraphStarts, currentTime, dualLineGapSec, syncMode, autoScrollEnabled } = useEditor();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   let topIndex = -1;
@@ -77,27 +77,27 @@ export function KaraokePreview() {
 
   const getWordColor = (lineIdx: number, wordIdx: number) => {
       if (lineIdx < activeLineIndex) {
-          return "text-[#F27D26] drop-shadow-[0_0_8px_rgba(242,125,38,0.8)] transition-all";
+          return "text-[var(--app-accent)] drop-shadow-[0_0_8px_rgba(242,125,38,0.8)] transition-all";
       } else if (lineIdx === activeLineIndex) {
           const isLineSynced = lines[lineIdx].words.every(w => w.start === null);
           if (syncMode === 'line' || isLineSynced) {
-              return "text-white underline decoration-[#F27D26] decoration-4 underline-offset-8 transition-all relative transform scale-110 origin-bottom z-10";
+              return "text-[var(--app-text-primary)] underline decoration-[var(--app-accent)] decoration-4 underline-offset-8 transition-all relative transform scale-110 origin-bottom z-10";
           }
           if (wordIdx < activeWordIndex) {
-              return "text-[#F27D26] drop-shadow-[0_0_8px_rgba(242,125,38,0.8)] transition-all";
+              return "text-[var(--app-accent)] drop-shadow-[0_0_8px_rgba(242,125,38,0.8)] transition-all";
           } else if (wordIdx === activeWordIndex) {
-              return "text-white underline decoration-[#F27D26] decoration-4 underline-offset-8 transition-all relative transform scale-110 origin-bottom z-10";
+              return "text-[var(--app-text-primary)] underline decoration-[var(--app-accent)] decoration-4 underline-offset-8 transition-all relative transform scale-110 origin-bottom z-10";
           } else {
-              return "text-[#7D8590] transition-colors";
+              return "text-[var(--app-text-muted)] transition-colors";
           }
       } else {
-          return "text-[#7D8590] transition-colors";
+          return "text-[var(--app-text-muted)] transition-colors";
       }
   };
 
   let dotsCount = 0;
 
-  if (lines.length > 0 && lines[previewLineIndex]?.start !== null && paragraphStarts[previewLineIndex]) {
+  if (autoScrollEnabled && lines.length > 0 && lines[previewLineIndex]?.start !== null && paragraphStarts[previewLineIndex]) {
       const start = lines[previewLineIndex].start!;
       const timeLeft = start - currentTime;
       if (timeLeft > 0) {
@@ -105,25 +105,27 @@ export function KaraokePreview() {
       }
   }
 
+  const DotNode = <span style={{ WebkitTextStroke: '1px black', color: 'white' }}>●</span>;
+
   return (
-    <div className="flex flex-col border-b border-[#2D333B] bg-[#16191E] shrink-0">
+    <div className="flex flex-col border-b border-[var(--app-border-base)] bg-[var(--app-bg-panel-alt)] shrink-0">
       <div className="flex justify-center items-center px-4 py-2 relative">
-        <label className="text-[10px] text-[#7D8590] uppercase font-bold tracking-widest text-center cursor-pointer" onClick={() => setIsCollapsed(!isCollapsed)}>
+        <label className="text-[10px] text-[var(--app-text-muted)] uppercase font-bold tracking-widest text-center cursor-pointer" onClick={() => setIsCollapsed(!isCollapsed)}>
           Karaoke Preview
         </label>
-        <button onClick={() => setIsCollapsed(!isCollapsed)} className="absolute right-4 text-[#7D8590] hover:text-[#E0E0E0] transition-colors p-1">
+        <button onClick={() => setIsCollapsed(!isCollapsed)} className="absolute right-4 text-[var(--app-text-muted)] hover:text-[var(--app-text-secondary)] transition-colors p-1">
            {isCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
         </button>
       </div>
       
       {!isCollapsed && (
         <div className="p-4 pt-0 flex flex-col gap-4">
-          <div className={`bg-[#0F1115] px-4 py-3 rounded border relative shadow-inner min-h-[4.5rem] flex items-center ${isTopOnly ? 'justify-center' : 'justify-start'} ${topIsActive ? 'border-[#F27D26] shadow-[0_0_10px_rgba(242,125,38,0.2)]' : 'border-[#2D333B] opacity-70'}`}>
+          <div className={`bg-[var(--app-bg-base)] px-4 py-3 rounded border relative shadow-inner min-h-[4.5rem] flex items-center ${isTopOnly ? 'justify-center' : 'justify-start'} ${topIsActive ? 'border-[var(--app-accent)] shadow-[0_0_10px_rgba(242,125,38,0.2)]' : 'border-[var(--app-border-base)] opacity-70'}`}>
             {lines[topIndex] ? (
                <p className={`text-xl md:text-2xl font-bold tracking-wide flex gap-1 flex-wrap relative ${isTopOnly ? 'justify-center text-center' : 'text-left'}`}>
                  {topIsActive && dotsCount > 0 && (
-                     <span className={`absolute bottom-full mb-3 flex gap-2 ${isTopOnly ? 'left-1/2 -translate-x-1/2' : 'left-0'} text-white/80`}>
-                        {[...Array(dotsCount)].map((_, i) => <span key={i}>●</span>)}
+                     <span className={`absolute bottom-full mb-3 flex gap-2 ${isTopOnly ? 'left-1/2 -translate-x-1/2' : 'left-0'}`}>
+                        {[...Array(dotsCount)].map((_, i) => <React.Fragment key={i}>{DotNode}</React.Fragment>)}
                      </span>
                  )}
                  {lines[topIndex].words.map((w, i) => (
@@ -135,8 +137,8 @@ export function KaraokePreview() {
             ) : (
                <p className="text-xl md:text-2xl font-bold relative w-full h-full flex items-center justify-start">
                  {topIsActive && dotsCount > 0 && (
-                     <span className="absolute bottom-1/2 left-0 text-white/80 flex gap-2">
-                        {[...Array(dotsCount)].map((_, i) => <span key={i}>●</span>)}
+                     <span className="absolute bottom-1/2 left-0 flex gap-2">
+                        {[...Array(dotsCount)].map((_, i) => <React.Fragment key={i}>{DotNode}</React.Fragment>)}
                      </span>
                  )}
                  &nbsp;
@@ -144,12 +146,12 @@ export function KaraokePreview() {
             )}
           </div>
 
-          <div className={`bg-[#0F1115] px-4 py-3 rounded border relative shadow-inner min-h-[4.5rem] flex items-center ${isBottomOnly ? 'justify-center' : 'justify-end'} ${bottomIsActive ? 'border-[#F27D26] shadow-[0_0_10px_rgba(242,125,38,0.2)]' : 'border-[#2D333B] opacity-70'}`}>
+          <div className={`bg-[var(--app-bg-base)] px-4 py-3 rounded border relative shadow-inner min-h-[4.5rem] flex items-center ${isBottomOnly ? 'justify-center' : 'justify-end'} ${bottomIsActive ? 'border-[var(--app-accent)] shadow-[0_0_10px_rgba(242,125,38,0.2)]' : 'border-[var(--app-border-base)] opacity-70'}`}>
             {lines[bottomIndex] ? (
               <p className={`text-xl md:text-2xl font-bold tracking-wide flex gap-1 flex-wrap relative ${isBottomOnly ? 'justify-center text-center' : 'justify-end text-right'}`}>
                 {bottomIsActive && dotsCount > 0 && (
-                     <span className={`absolute bottom-full mb-3 flex gap-2 ${isBottomOnly ? 'left-1/2 -translate-x-1/2' : 'right-0'} text-white/80`}>
-                        {[...Array(dotsCount)].map((_, i) => <span key={i}>●</span>)}
+                     <span className={`absolute bottom-full mb-3 flex gap-2 ${isBottomOnly ? 'left-1/2 -translate-x-1/2' : 'right-0'}`}>
+                        {[...Array(dotsCount)].map((_, i) => <React.Fragment key={i}>{DotNode}</React.Fragment>)}
                      </span>
                 )}
                 {lines[bottomIndex].words.map((w, i) => (
@@ -161,8 +163,8 @@ export function KaraokePreview() {
             ) : (
                <p className={`text-xl md:text-2xl font-bold relative w-full h-full flex items-center ${isBottomOnly ? 'justify-center' : 'justify-end'}`}>
                  {bottomIsActive && dotsCount > 0 && (
-                     <span className={`absolute bottom-1/2 text-white/80 flex gap-2 ${isBottomOnly ? 'left-1/2 -translate-x-1/2' : 'right-0'}`}>
-                        {[...Array(dotsCount)].map((_, i) => <span key={i}>●</span>)}
+                     <span className={`absolute bottom-1/2 flex gap-2 ${isBottomOnly ? 'left-1/2 -translate-x-1/2' : 'right-0'}`}>
+                        {[...Array(dotsCount)].map((_, i) => <React.Fragment key={i}>{DotNode}</React.Fragment>)}
                      </span>
                  )}
                  &nbsp;

@@ -1,5 +1,5 @@
 'use client';
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 type DialogContextType = {
   confirm: (msg: string) => Promise<boolean>;
@@ -7,6 +7,17 @@ type DialogContextType = {
 };
 
 const DialogContext = createContext<DialogContextType | null>(null);
+
+// Safely call Tauri's invoke only in a Tauri context
+const invokeTauri = async (cmd: string, args?: Record<string, unknown>) => {
+  if (typeof window === 'undefined') return;
+  try {
+    const { invoke } = await import('@tauri-apps/api/core');
+    await invoke(cmd, args);
+  } catch {
+    // Not in Tauri context or command not found — silently ignore
+  }
+};
 
 export function useDialogs() {
   const ctx = useContext(DialogContext);
@@ -18,6 +29,13 @@ export function DialogProvider({ children }: { children: ReactNode }) {
   const [confirmState, setConfirmState] = useState<{ msg: string; resolve: (val: boolean) => void } | null>(null);
   const [promptState, setPromptState] = useState<{ msg: string; defaultVal: string; resolve: (val: string | null) => void } | null>(null);
   const [promptInput, setPromptInput] = useState('');
+
+  // Whenever a dialog opens or closes, sync the Linux GTK titlebar button sensitivity.
+  // On non-Linux or non-Tauri platforms this is a no-op (invokeTauri handles that gracefully).
+  useEffect(() => {
+    const dialogOpen = confirmState !== null || promptState !== null;
+    invokeTauri('set_titlebar_buttons_enabled', { enabled: !dialogOpen });
+  }, [confirmState, promptState]);
 
   const confirm = (msg: string) => {
     return new Promise<boolean>((resolve) => {

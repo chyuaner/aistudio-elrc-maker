@@ -32,6 +32,7 @@ export interface AppCommandsType {
   exportEnhanced: null | (() => void);
   exportCurrent: null | (() => void);
   shiftTime: null | (() => Promise<void>);
+  setTitlebarEnabled: null | ((enabled: boolean) => void);
   
   register: (handlers: Partial<Omit<AppCommandsType, "register">>) => void;
 }
@@ -63,6 +64,7 @@ export const AppCommands: AppCommandsType = {
   exportEnhanced: null,
   exportCurrent: null,
   shiftTime: null,
+  setTitlebarEnabled: null,
   
   register: (handlers: Partial<Omit<AppCommandsType, "register">>) => {
     for (const [key, value] of Object.entries(handlers)) {

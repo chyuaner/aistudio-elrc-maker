@@ -220,18 +220,32 @@ export function TopToolbar() {
     reader.readAsText(f);
   }, [lines.length, dialogs, resetHistory, setLyricFileName]);
 
-  const handleExport = React.useCallback((format: 'standard' | 'enhanced') => {
+  const handleExport = React.useCallback(async (format: 'standard' | 'enhanced') => {
     if (lines.length === 0) return;
     const lrcText = exportLrc(lines, format === 'enhanced');
-    const blob = new Blob([lrcText], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `lyrics_${format}.lrc`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+
+    const isTauri = typeof window !== 'undefined' && !!(window as any).__TAURI__;
+    if (isTauri) {
+      try {
+        const tauri = (window as any).__TAURI__;
+        await tauri.core.invoke('save_lyrics_dialog', { 
+          lyricsText: lrcText, 
+          defaultName: `lyrics_${format}.lrc` 
+        });
+      } catch (err) {
+        console.error("Tauri save_lyrics_dialog failed:", err);
+      }
+    } else {
+      const blob = new Blob([lrcText], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `lyrics_${format}.lrc`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
     setExportDropdownOpen(false);
   }, [lines]);
 

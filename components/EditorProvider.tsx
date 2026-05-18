@@ -117,6 +117,7 @@ interface EditorContextType {
   undo: (steps?: number) => void;
   redo: (steps?: number) => void;
   shiftTime: (offsetSec: number) => void;
+  shiftTimeFromIndex: (index: number, offsetSec: number) => void;
   canUndo: boolean;
   canRedo: boolean;
   pastCount: number;
@@ -350,6 +351,20 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
      }), `Shift Time ${offsetSec > 0 ? '+' : ''}${offsetSec}s`);
   };
 
+  const shiftTimeFromIndex = (index: number, offsetSec: number) => {
+     commitLines(prev => prev.map((line, i) => {
+       if (i < index) return line;
+       const start = line.start !== null ? Math.max(0, line.start + offsetSec) : null;
+       const end = line.end !== null ? Math.max(0, line.end + offsetSec) : null;
+       const words = line.words.map(w => ({
+         ...w,
+         start: w.start !== null ? Math.max(0, w.start + offsetSec) : null,
+         end: w.end !== null ? Math.max(0, w.end + offsetSec) : null,
+       }));
+       return { ...line, start, end, words };
+     }), `Shift ${offsetSec > 0 ? '+' : ''}${offsetSec}s From #${index + 1}`);
+  };
+
   const handleFormatWords = () => {
     commitLines(prev => prev.map(line => ({
       ...line,
@@ -360,7 +375,7 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
   return (
     <EditorContext.Provider value={{
       file, setFile, fileUrl, audioFileName, lyricFileName, setLyricFileName, metadata, setMetadata,
-      lines, setLines, resetHistory, commitLines, undo, redo, shiftTime, trackAssignments: trackAssignments.tracks, paragraphStarts: trackAssignments.pStarts, autoScrollEnabled, setAutoScrollEnabled,
+      lines, setLines, resetHistory, commitLines, undo, redo, shiftTime, shiftTimeFromIndex, trackAssignments: trackAssignments.tracks, paragraphStarts: trackAssignments.pStarts, autoScrollEnabled, setAutoScrollEnabled,
       canUndo: historyState.past.length > 0,
       canRedo: historyState.future.length > 0,
       pastCount: historyState.past.length,

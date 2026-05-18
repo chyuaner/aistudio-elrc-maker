@@ -2,9 +2,11 @@
 
 import React, { useState } from 'react';
 import { useEditor } from './EditorProvider';
+import { useI18n } from '@/hooks/useI18n';
 
 export function LeftPanelInfo() {
   const { metadata } = useEditor();
+  const i18n = useI18n();
   const [activeTab, setActiveTab] = useState<'instructions' | 'metadata'>('metadata');
   const [pictureIndex, setPictureIndex] = useState(0);
 
@@ -24,13 +26,13 @@ export function LeftPanelInfo() {
           onClick={() => setActiveTab('metadata')}
           className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-widest border-b-2 transition-colors ${activeTab === 'metadata' ? 'border-[var(--app-accent)] text-[var(--app-accent)]' : 'border-transparent text-[var(--app-text-muted)] hover:text-[var(--app-text-secondary)]'}`}
         >
-          Metadata
+          {i18n.tabMetadata}
         </button>
         <button
           onClick={() => setActiveTab('instructions')}
           className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-widest border-b-2 transition-colors ${activeTab === 'instructions' ? 'border-[var(--app-accent)] text-[var(--app-accent)]' : 'border-transparent text-[var(--app-text-muted)] hover:text-[var(--app-text-secondary)]'}`}
         >
-          Instructions
+          {i18n.tabInstructions}
         </button>
       </div>
       
@@ -38,50 +40,50 @@ export function LeftPanelInfo() {
         {activeTab === 'instructions' ? (
           <>
             <div>
-              <h3 className="font-bold text-[var(--app-text-secondary)] uppercase tracking-widest text-[10px] mb-3 border-b border-[var(--app-border-base)] pb-1">How to Sync</h3>
+              <h3 className="font-bold text-[var(--app-text-secondary)] uppercase tracking-widest text-[10px] mb-3 border-b border-[var(--app-border-base)] pb-1">{i18n.howToSyncTitle}</h3>
               <ul className="list-disc pl-4 space-y-2">
-                  <li><strong className="text-[var(--app-text-secondary)]">Step 1:</strong> Load your Audio/Video file.</li>
-                  <li><strong className="text-[var(--app-text-secondary)]">Step 2:</strong> Load your `.txt` or `.lrc` file manually or click &quot;TEXT Editor&quot; tab to paste them.</li>
-                  <li><strong className="text-[var(--app-text-secondary)]">Step 3:</strong> Switch to the <span className="text-[var(--app-accent)]">SYNC EDITOR</span>. Wait until formatting is done.</li>
-                  <li><strong className="text-[var(--app-text-secondary)]">Step 4:</strong> Play the audio. Press <kbd className="bg-[var(--app-border-base)] text-[var(--app-accent)] px-1.5 py-0.5 rounded text-[10px] font-mono border border-[var(--app-border-light)] mx-1">Space</kbd> to timestamp the active word or line.</li>
-                  <li><strong className="text-[var(--app-text-secondary)]">Step 5:</strong> Check the Dual-Line preview. Export when done!</li>
+                  <li><strong className="text-[var(--app-text-secondary)]">{i18n.step1}</strong> {i18n.step1Text}</li>
+                  <li><strong className="text-[var(--app-text-secondary)]">{i18n.step2}</strong> {i18n.step2Text}</li>
+                  <li><strong className="text-[var(--app-text-secondary)]">{i18n.step3}</strong> {i18n.step3Text} <span className="text-[var(--app-accent)]">{i18n.step3SyncEditor}</span>{i18n.step3Text2}</li>
+                  <li><strong className="text-[var(--app-text-secondary)]">{i18n.step4}</strong> {i18n.step4Text1} <kbd className="bg-[var(--app-border-base)] text-[var(--app-accent)] px-1.5 py-0.5 rounded text-[10px] font-mono border border-[var(--app-border-light)] mx-1">{i18n.step4Space}</kbd> {i18n.step4Text2}</li>
+                  <li><strong className="text-[var(--app-text-secondary)]">{i18n.step5}</strong> {i18n.step5Text}</li>
               </ul>
             </div>
             
             <div>
-              <h3 className="font-bold text-[var(--app-text-secondary)] uppercase tracking-widest text-[10px] mb-3 border-b border-[var(--app-border-base)] pb-1">Keyboard Shortcuts</h3>
+              <h3 className="font-bold text-[var(--app-text-secondary)] uppercase tracking-widest text-[10px] mb-3 border-b border-[var(--app-border-base)] pb-1">{i18n.keyboardShortcutsTitle}</h3>
               <table className="w-full text-left border-collapse">
                 <tbody>
                   <tr className="border-b border-[var(--app-border-base)]/50">
-                    <td className="py-2 pr-2">Undo</td>
+                    <td className="py-2 pr-2">{i18n.undoLabel}</td>
                     <td className="py-2 text-right"><kbd className="bg-[var(--app-border-base)] text-[var(--app-text-secondary)] px-1.5 py-0.5 rounded text-[10px] font-mono border border-[var(--app-border-light)]">Ctrl/Cmd + Z</kbd></td>
                   </tr>
                   <tr className="border-b border-[var(--app-border-base)]/50">
-                    <td className="py-2 pr-2">Redo</td>
+                    <td className="py-2 pr-2">{i18n.redoLabel}</td>
                     <td className="py-2 text-right"><kbd className="bg-[var(--app-border-base)] text-[var(--app-text-secondary)] px-1.5 py-0.5 rounded text-[10px] font-mono border border-[var(--app-border-light)]">Ctrl/Cmd + Y</kbd> / <kbd className="bg-[var(--app-border-base)] text-[var(--app-text-secondary)] px-1.5 py-0.5 rounded text-[10px] font-mono border border-[var(--app-border-light)]">Cmd + Shift + Z</kbd></td>
                   </tr>
                   <tr className="border-b border-[var(--app-border-base)]/50">
-                    <td className="py-2 pr-2">Play / Pause Audio</td>
+                    <td className="py-2 pr-2">{i18n.playPauseLabel}</td>
                     <td className="py-2 text-right"><kbd className="bg-[var(--app-border-base)] text-[var(--app-text-secondary)] px-1.5 py-0.5 rounded text-[10px] font-mono border border-[var(--app-border-light)]">P</kbd></td>
                   </tr>
                   <tr className="border-b border-[var(--app-border-base)]/50">
-                    <td className="py-2 pr-2">Seek Backward 5s</td>
-                    <td className="py-2 text-right"><kbd className="bg-[var(--app-border-base)] text-[var(--app-text-secondary)] px-1.5 py-0.5 rounded text-[10px] font-mono border border-[var(--app-border-light)]">← Left Arrow</kbd></td>
+                    <td className="py-2 pr-2">{i18n.seekBackwardLabel}</td>
+                    <td className="py-2 text-right"><kbd className="bg-[var(--app-border-base)] text-[var(--app-text-secondary)] px-1.5 py-0.5 rounded text-[10px] font-mono border border-[var(--app-border-light)]">←</kbd></td>
                   </tr>
                   <tr className="border-b border-[var(--app-border-base)]/50">
-                    <td className="py-2 pr-2">Seek Forward 5s</td>
-                    <td className="py-2 text-right"><kbd className="bg-[var(--app-border-base)] text-[var(--app-text-secondary)] px-1.5 py-0.5 rounded text-[10px] font-mono border border-[var(--app-border-light)]">Right Arrow →</kbd></td>
+                    <td className="py-2 pr-2">{i18n.seekForwardLabel}</td>
+                    <td className="py-2 text-right"><kbd className="bg-[var(--app-border-base)] text-[var(--app-text-secondary)] px-1.5 py-0.5 rounded text-[10px] font-mono border border-[var(--app-border-light)]">→</kbd></td>
                   </tr>
                   <tr className="border-b border-[var(--app-border-base)]/50">
-                    <td className="py-2 pr-2">Skip to 0%~90%</td>
+                    <td className="py-2 pr-2">{i18n.skipToLabel}</td>
                     <td className="py-2 text-right"><kbd className="bg-[var(--app-border-base)] text-[var(--app-text-secondary)] px-1.5 py-0.5 rounded text-[10px] font-mono border border-[var(--app-border-light)]">0</kbd> - <kbd className="bg-[var(--app-border-base)] text-[var(--app-text-secondary)] px-1.5 py-0.5 rounded text-[10px] font-mono border border-[var(--app-border-light)]">9</kbd></td>
                   </tr>
                   <tr className="border-b border-[var(--app-border-base)]/50">
-                    <td className="py-2 pr-2">Stamp Word/Line</td>
-                    <td className="py-2 text-right"><kbd className="bg-[var(--app-border-base)] text-[var(--app-accent)] px-1.5 py-0.5 rounded text-[10px] font-mono border border-[var(--app-accent)]/50">Space</kbd></td>
+                    <td className="py-2 pr-2">{i18n.stampLabel}</td>
+                    <td className="py-2 text-right"><kbd className="bg-[var(--app-border-base)] text-[var(--app-accent)] px-1.5 py-0.5 rounded text-[10px] font-mono border border-[var(--app-accent)]/50">{i18n.step4Space}</kbd></td>
                   </tr>
                   <tr className="border-b border-[var(--app-border-base)]/50">
-                    <td className="py-2 pr-2">Advance Line <span className="opacity-50">(Word Mode)</span></td>
+                    <td className="py-2 pr-2">{i18n.advanceLineLabel} <span className="opacity-50">{i18n.advanceLineSub}</span></td>
                     <td className="py-2 text-right"><kbd className="bg-[var(--app-border-base)] text-[var(--app-accent)] px-1.5 py-0.5 rounded text-[10px] font-mono border border-[var(--app-accent)]/50">M</kbd></td>
                   </tr>
                 </tbody>
@@ -119,16 +121,16 @@ export function LeftPanelInfo() {
                      )}
                    </div>
                  )}
-                 <p><span className="text-[var(--app-text-secondary)]">Title:</span> {metadata.title || 'Unknown'}</p>
-                 <p><span className="text-[var(--app-text-secondary)]">Artist:</span> {metadata.artist || 'Unknown'}</p>
-                 <p><span className="text-[var(--app-text-secondary)]">Album:</span> {metadata.album || 'Unknown'}</p>
-                 <p><span className="text-[var(--app-text-secondary)]">Year:</span> {metadata.year || 'Unknown'}</p>
-                 <p><span className="text-[var(--app-text-secondary)]">Track:</span> {metadata.track || 'Unknown'}</p>
-                 {metadata.comment && <p><span className="text-[var(--app-text-secondary)]">Comment:</span> <span className="italic">{metadata.comment}</span></p>}
+                 <p><span className="text-[var(--app-text-secondary)]">{i18n.titleInfo}:</span> {metadata.title || 'Unknown'}</p>
+                 <p><span className="text-[var(--app-text-secondary)]">{i18n.artistInfo}:</span> {metadata.artist || 'Unknown'}</p>
+                 <p><span className="text-[var(--app-text-secondary)]">{i18n.albumInfo}:</span> {metadata.album || 'Unknown'}</p>
+                 <p><span className="text-[var(--app-text-secondary)]">{i18n.yearInfo}:</span> {metadata.year || 'Unknown'}</p>
+                 <p><span className="text-[var(--app-text-secondary)]">{i18n.trackInfo}:</span> {metadata.track || 'Unknown'}</p>
+                 {metadata.comment && <p><span className="text-[var(--app-text-secondary)]">{i18n.commentInfo}:</span> <span className="italic">{metadata.comment}</span></p>}
                  
                  {metadata.rawTags && (
                    <div className="mt-4 pt-4 border-t border-[var(--app-border-base)] space-y-2">
-                     <h4 className="font-bold text-[var(--app-text-secondary)] uppercase tracking-widest text-[10px] mb-2">Other Tags</h4>
+                     <h4 className="font-bold text-[var(--app-text-secondary)] uppercase tracking-widest text-[10px] mb-2">{i18n.otherTagsInfo}</h4>
                      {Object.entries(metadata.rawTags).map(([k, v]) => {
                          const knownKeys = ['title', 'artist', 'album', 'year', 'track', 'picture', 'pictures', 'comment', 'lyrics'];
                          if (knownKeys.includes(k.toLowerCase()) || k.toLowerCase().startsWith('©lyr')) return null;
@@ -163,7 +165,7 @@ export function LeftPanelInfo() {
                  )}
                </div>
              ) : (
-               <p className="italic text-center mt-4">No metadata loaded. Load an audio file to read ID3 tags.</p>
+               <p className="italic text-center mt-4">{i18n.noMetadata}</p>
              )}
           </div>
         )}

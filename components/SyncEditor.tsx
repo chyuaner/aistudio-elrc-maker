@@ -6,10 +6,11 @@ import { useSyncHotkeys } from './useSyncHotkeys';
 import { formatTime } from '@/lib/lyric-utils';
 import { KaraokePreview } from './KaraokePreview';
 import { Tooltip } from './Tooltip';
-import { Edit2, Trash2, X } from 'lucide-react';
+import { Edit2, Trash2, X, ArrowRight } from 'lucide-react';
 
 import { useAutoScroll } from './useAutoScroll';
 import { useDialogs } from './DialogProvider';
+import { useI18n } from '@/hooks/useI18n';
 
 export function SyncEditor() {
   const {
@@ -17,12 +18,13 @@ export function SyncEditor() {
     activeWordIndex, setActiveWordIndex,
     syncMode, setSyncMode, setMode, hotkeys, commitLines, playerRef,
     dualLineGapSec, setDualLineGapSec,
-    autoScrollEnabled, setAutoScrollEnabled, trackAssignments, paragraphStarts
+    autoScrollEnabled, setAutoScrollEnabled, trackAssignments, paragraphStarts, shiftTimeFromIndex
   } = useEditor();
   
   const dialogs = useDialogs();
   const { handleLineStamp, handleWordStamp, handleWordNextLine } = useSyncHotkeys();
   useAutoScroll();
+  const i18n = useI18n();
   
   const containerRef = useRef<HTMLDivElement>(null);
   const activeLineRef = useRef<HTMLTableRowElement>(null);
@@ -35,6 +37,16 @@ export function SyncEditor() {
       });
     }
   }, [activeLineIndex, autoScrollEnabled]);
+
+  const handleOffsetFromHere = async (globalIndex: number) => {
+    const val = await dialogs.prompt(i18n.promptShiftTime, '0');
+    if (val !== null) {
+      const sec = parseFloat(val);
+      if (!isNaN(sec) && sec !== 0) {
+        shiftTimeFromIndex(globalIndex, sec);
+      }
+    }
+  };
 
   const handleEditText = async (globalIndex: number, currentText: string) => {
     const newText = await dialogs.prompt('Edit line text:', currentText);
@@ -75,13 +87,13 @@ export function SyncEditor() {
             }}
             className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded border transition-colors ${syncMode === 'line' ? 'bg-[var(--app-border-base)] border-[var(--app-accent)] text-[var(--app-accent)] shadow-inner' : 'border-[var(--app-border-light)] text-[var(--app-text-muted)] hover:text-[var(--app-text-secondary)]'}`}
           >
-            Line-by-Line
+            {i18n.lineByLine}
           </button>
           <button
             onClick={() => setSyncMode('word')}
              className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded border transition-colors ${syncMode === 'word' ? 'bg-[var(--app-border-base)] border-[var(--app-accent)] text-[var(--app-accent)] shadow-inner' : 'border-[var(--app-border-light)] text-[var(--app-text-muted)] hover:text-[var(--app-text-secondary)]'}`}
           >
-            Word-by-Word
+            {i18n.wordByWord}
           </button>
         </div>
 
@@ -93,11 +105,11 @@ export function SyncEditor() {
               onChange={(e) => setAutoScrollEnabled(e.target.checked)}
               className="accent-[var(--app-accent)]"
             />
-            <span className="uppercase font-bold tracking-widest">Auto Scroll</span>
+            <span className="uppercase font-bold tracking-widest">{i18n.autoScroll}</span>
           </label>
 
           <div className="flex items-center gap-2 bg-[var(--app-bg-panel)] p-1.5 rounded border border-[var(--app-border-base)] shadow-sm">
-             <span className="uppercase">Gap Toggled At:</span>
+             <span className="uppercase">{i18n.gapToggledAt}</span>
              <input 
                type="number"
                min="1" max="60"
@@ -105,16 +117,16 @@ export function SyncEditor() {
                onChange={(e) => setDualLineGapSec(Number(e.target.value) || 6)}
                className={`bg-[var(--app-border-base)] px-1 w-12 py-0.5 rounded outline-none border border-[var(--app-border-light)] text-center ${dualLineGapSec < 5.5 ? 'text-red-500' : 'text-[var(--app-accent)]'}`}
              />
-             <span>sec</span>
+             <span>{i18n.sec}</span>
           </div>
 
           <button onFocus={(e) => e.target.blur()} onClick={() => syncMode === 'line' ? handleLineStamp() : handleWordStamp()} className="bg-[var(--app-bg-panel)] hover:bg-[var(--app-border-base)] transition-colors p-1.5 rounded border border-[var(--app-border-base)] flex items-center gap-2 shadow-sm cursor-pointer select-none text-xs">
-              <span className="uppercase">{syncMode === 'line' ? 'Line Trigger' : 'Word Trigger'}</span>
+              <span className="uppercase">{syncMode === 'line' ? i18n.lineTrigger : i18n.wordTrigger}</span>
               <kbd className="bg-[var(--app-bg-base)] text-[var(--app-accent)] px-1.5 py-0.5 rounded font-mono border border-[var(--app-border-light)]">{hotkeys.stampWord === ' ' ? 'SPACE' : hotkeys.stampWord}</kbd>
           </button>
           {syncMode === 'word' && (
             <button onFocus={(e) => e.target.blur()} onClick={() => handleWordNextLine()} className="bg-[var(--app-bg-panel)] hover:bg-[var(--app-border-base)] transition-colors p-1.5 rounded border border-[var(--app-border-base)] flex items-center gap-2 shadow-sm cursor-pointer select-none text-xs">
-                <span className="uppercase">Line Advance</span>
+                <span className="uppercase">{i18n.lineAdvance}</span>
                 <kbd className="bg-[var(--app-bg-base)] text-[var(--app-accent)] px-1.5 py-0.5 rounded font-mono border border-[var(--app-border-light)]">{hotkeys.nextLine.toUpperCase()}</kbd>
             </button>
           )}
@@ -130,9 +142,9 @@ export function SyncEditor() {
         <table className="w-full text-left text-xs border-collapse">
           <thead className="sticky top-0 bg-[var(--app-bg-panel)] text-[var(--app-text-muted)] border-b border-[var(--app-border-base)] z-10 text-[10px] uppercase tracking-widest">
             <tr>
-              <th className="p-3 font-medium w-24 border-r border-[var(--app-border-base)] text-center">Time</th>
-              <th className="p-3 font-medium">Lyrics Content (Enhanced Mode)</th>
-              <th className="p-3 font-medium w-28 text-center border-l border-[var(--app-border-base)]">Action</th>
+              <th className="p-3 font-medium w-24 border-r border-[var(--app-border-base)] text-center">{i18n.time}</th>
+              <th className="p-3 font-medium">{i18n.lyricsContentEnhanced}</th>
+              <th className="p-3 font-medium w-28 text-center border-l border-[var(--app-border-base)]">{i18n.action}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#21262D]">
@@ -144,9 +156,9 @@ export function SyncEditor() {
             <tr 
               key={line.id || idx} 
               ref={isActiveLine ? activeLineRef : null}
-              className={`transition-colors cursor-pointer group ${
-                isActiveLine ? 'bg-[#1C2128] border-l-2 border-l-[var(--app-accent)]' : 
-                (paragraphStarts[idx] ? 'bg-[#293B33]/40 hover:bg-[#293B33]/60 border-l-2 border-l-[#41A87D]/50' : 'hover:bg-[var(--app-bg-panel-alt)]') +
+              className={`transition-colors cursor-pointer group border-b border-[var(--app-border-base)]/50 ${
+                isActiveLine ? 'bg-[var(--app-border-base)] text-[var(--app-text-primary)] shadow-[inset_2px_0_0_0_var(--app-accent)]' : 
+                (paragraphStarts[idx] ? 'bg-[#293B33]/40 hover:bg-[#293B33]/60 text-[var(--app-text-muted)] shadow-[inset_2px_0_0_0_rgba(65,168,125,0.5)]' : 'hover:bg-[var(--app-bg-panel-alt)] text-[var(--app-text-muted)]') +
                 (isPast && !isActiveLine && !paragraphStarts[idx] ? ' opacity-60' : '')
               }`}
               onClick={() => {
@@ -178,11 +190,12 @@ export function SyncEditor() {
                     return (
                       <Tooltip key={wIdx} title={word.start !== null ? formatTime(word.start) : 'Not synced'}>
                         <span 
-                          className={`px-1 rounded transition-colors cursor-pointer select-none ${
-                            isWordActive ? 'bg-[var(--app-border-base)] text-[var(--app-text-primary)] border border-dashed border-[var(--app-accent)] animate-pulse' : 
-                            isWordPast ? 'bg-[var(--app-accent)] text-black' : 
-                            'opacity-40 text-[var(--app-text-secondary)]'
-                          }`}
+                          className={`
+                            px-1 py-0.5 rounded transition-all select-none
+                            ${isWordActive ? 'bg-[var(--app-accent)] text-black font-bold ring-2 ring-[var(--app-accent)]/50 cursor-pointer' : 'cursor-pointer'}
+                            ${isWordPast && !isWordActive ? 'text-[var(--app-accent)] bg-[var(--app-border-base)]' : ''}
+                            ${!isWordPast && !isWordActive ? 'text-[var(--app-text-muted)] bg-[var(--app-bg-panel)]' : ''}
+                          `}
                           onClick={(e) => {
                              e.stopPropagation();
                              setActiveLineIndex(idx);
@@ -208,13 +221,16 @@ export function SyncEditor() {
               
               <td className="p-2 border-l border-[var(--app-border-base)]">
                 <div className="flex items-center justify-center gap-1 opacity-70 hover:opacity-100">
-                   <Tooltip title="Edit text" delay={1000}>
+                   <Tooltip title={i18n.editText} delay={1000}>
                      <button onClick={(e) => { e.stopPropagation(); handleEditText(idx, line.raw || ''); }} className="p-1 px-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-text-secondary)] hover:bg-[var(--app-bg-hover)] rounded transition-colors"><Edit2 className="w-3.5 h-3.5" /></button>
                    </Tooltip>
-                   <Tooltip title="Clear timestamps" delay={1000}>
+                   <Tooltip title={i18n.offsetSubsequent} delay={1000}>
+                     <button onClick={(e) => { e.stopPropagation(); handleOffsetFromHere(idx); }} className="p-1 px-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-text-secondary)] hover:bg-[var(--app-bg-hover)] rounded transition-colors"><ArrowRight className="w-3.5 h-3.5" /></button>
+                   </Tooltip>
+                   <Tooltip title={i18n.clearTimestamps} delay={1000}>
                      <button onClick={(e) => { e.stopPropagation(); handleClearTime(idx); }} className="p-1 px-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-accent)] hover:bg-[var(--app-bg-hover)] rounded transition-colors"><X className="w-3.5 h-3.5" /></button>
                    </Tooltip>
-                   <Tooltip title="Delete line" delay={1000}>
+                   <Tooltip title={i18n.deleteLine} delay={1000}>
                      <button onClick={(e) => { e.stopPropagation(); handleDeleteLine(idx); }} className="p-1 px-1.5 text-[var(--app-text-muted)] hover:text-red-500 hover:bg-[var(--app-bg-hover)] rounded transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
                    </Tooltip>
                 </div>

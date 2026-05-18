@@ -105,7 +105,7 @@ export function KaraokePreview() {
       }
   }
 
-  const DotNode = <span style={{ WebkitTextStroke: '1px black', color: 'white' }}>●</span>;
+  const DotNode = <span style={{ WebkitTextStroke: '1px var(--app-border-light)', color: 'white' }}>●</span>;
 
   return (
     <div className="flex flex-col border-b border-[var(--app-border-base)] bg-[var(--app-bg-panel-alt)] shrink-0">

@@ -7,6 +7,7 @@ import { Music, Download, ChevronDown, X } from 'lucide-react';
 import { UndoRedoControls } from './UndoRedo';
 import { useDialogs } from './DialogProvider';
 import { AppCommands } from '@/lib/app-commands';
+import { useI18n } from '@/hooks/useI18n';
 
 function extractFlacMetadata(buffer: ArrayBuffer) {
     const view = new DataView(buffer);
@@ -102,6 +103,7 @@ export function TopToolbar() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const lyricInputRef = useRef<HTMLInputElement>(null);
   const dialogs = useDialogs();
+  const i18n = useI18n();
   
   const [loadMediaDropdownOpen, setLoadMediaDropdownOpen] = useState(false);
   const [loadDropdownOpen, setLoadDropdownOpen] = useState(false);
@@ -399,7 +401,7 @@ export function TopToolbar() {
                 onClick={() => fileInputRef.current?.click()}
                 className="px-3 py-1.5 bg-[var(--app-border-base)] hover:bg-[var(--app-bg-hover)] rounded-l text-xs font-medium border border-[var(--app-border-light)] border-r-0 flex items-center gap-2 text-[var(--app-text-secondary)] transition-colors"
               >
-                <Music className="w-3.5 h-3.5 text-blue-400" /> Load Media
+                <Music className="w-3.5 h-3.5 text-blue-400" /> {i18n.loadMedia}
               </button>
               <button
                  onClick={() => setLoadMediaDropdownOpen(!loadMediaDropdownOpen)}
@@ -416,7 +418,7 @@ export function TopToolbar() {
                     onClick={() => { clearMedia(); setLoadMediaDropdownOpen(false); }}
                     className="w-full text-left px-3 py-2 text-xs text-red-400 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-red-400 hover:bg-red-500 hover:text-[var(--app-text-primary)] transition-colors flex items-center gap-2"
                   >
-                    <X className="w-3.5 h-3.5" /> Close Audio
+                    <X className="w-3.5 h-3.5" /> {i18n.clearMedia}
                   </button>
                </div>
             )}
@@ -428,7 +430,7 @@ export function TopToolbar() {
                 onClick={() => lyricInputRef.current?.click()}
                 className="px-3 py-1.5 bg-[var(--app-border-base)] hover:bg-[var(--app-bg-hover)] rounded-l text-xs font-medium border border-[var(--app-border-light)] border-r-0 flex items-center gap-2 text-[var(--app-text-secondary)] transition-colors"
               >
-                <span className="w-2 h-2 bg-purple-400 rounded-full"></span> Load Lyrics
+                <span className="w-2 h-2 bg-purple-400 rounded-full"></span> {i18n.loadLyrics}
               </button>
               <button
                  onClick={() => setLoadDropdownOpen(!loadDropdownOpen)}
@@ -441,7 +443,7 @@ export function TopToolbar() {
             {loadDropdownOpen && (
                <div className="absolute top-full left-0 mt-1 w-56 bg-[var(--app-bg-panel)] border border-[var(--app-border-base)] rounded shadow-xl z-50 overflow-hidden py-1">
                   <button className="w-full text-left px-3 py-2 text-xs text-[var(--app-text-secondary)] hover:bg-[var(--app-accent)] hover:text-black transition-colors" onClick={() => { lyricInputRef.current?.click(); setLoadDropdownOpen(false); }}>
-                    Load external .lrc file
+                    {i18n.loadLyrics}
                   </button>
                   <button 
                     disabled={!metadata?.lyric}
@@ -449,7 +451,7 @@ export function TopToolbar() {
                     onClick={async () => { 
                        if (metadata?.lyric) {
                           if (lines.length > 0) {
-                             const confirmed = await dialogs.confirm('Loading embedded lyrics will discard your current ones. Continue?');
+                             const confirmed = await dialogs.confirm(i18n.confirmEmbeddedLyrics);
                              if (!confirmed) return;
                           }
                           resetHistory(parseRawLyrics(metadata.lyric)); 
@@ -457,7 +459,7 @@ export function TopToolbar() {
                        setLoadDropdownOpen(false); 
                     }}
                   >
-                    From ID3 / Vorbis Tags
+                    {i18n.loadEmbeddedLyrics}
                   </button>
                   <div className="h-px bg-[var(--app-border-base)] mx-2 my-1" />
                   <button 
@@ -465,7 +467,7 @@ export function TopToolbar() {
                     onClick={() => { clearLyrics(); setLoadDropdownOpen(false); }}
                     className="w-full text-left px-3 py-2 text-xs text-red-400 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-red-400 hover:bg-red-500 hover:text-[var(--app-text-primary)] transition-colors flex items-center gap-2"
                   >
-                    <X className="w-3.5 h-3.5" /> Clear Lyrics
+                    <X className="w-3.5 h-3.5" /> {i18n.clearLyrics}
                   </button>
                </div>
             )}
@@ -480,9 +482,9 @@ export function TopToolbar() {
       <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none whitespace-nowrap overflow-hidden px-8 z-0">
         <h1 className="text-sm font-bold tracking-tight uppercase text-[var(--app-text-secondary)]">LRC Maker <span className="text-[var(--app-text-muted)] font-normal italic ml-1">Enhanced</span></h1>
         <div className="text-[10px] text-[var(--app-text-muted)] font-mono mt-0.5 truncate flex items-center justify-center gap-2 max-w-full">
-          {audioFileName ? <span>Audio: <span className="text-[var(--app-text-secondary)] truncate max-w-[200px] inline-block align-bottom">{audioFileName}</span></span> : <span>No Audio</span>}
+          {audioFileName ? <span>{i18n.audio}: <span className="text-[var(--app-text-secondary)] truncate max-w-[200px] inline-block align-bottom">{audioFileName}</span></span> : <span>{i18n.noAudio}</span>}
           <span className="opacity-50 shrink-0">|</span>
-          {lyricFileName ? <span>Lyrics: <span className="text-[var(--app-text-secondary)] truncate max-w-[200px] inline-block align-bottom">{lyricFileName}</span></span> : metadata?.lyric ? <span>Lyrics: <span className="text-[var(--app-text-secondary)]">Embedded Tag</span></span> : <span>No Lyrics</span>}
+          {lyricFileName ? <span>{i18n.lyrics}: <span className="text-[var(--app-text-secondary)] truncate max-w-[200px] inline-block align-bottom">{lyricFileName}</span></span> : metadata?.lyric ? <span>{i18n.lyrics}: <span className="text-[var(--app-text-secondary)]">{i18n.embeddedTag}</span></span> : <span>{i18n.noLyrics}</span>}
         </div>
       </div>
       
@@ -491,7 +493,7 @@ export function TopToolbar() {
         <div className="flex items-center gap-2 z-10">
           <button
             onClick={async () => {
-              const val = await dialogs.prompt('Shift all timings by X seconds (e.g., 0.5 or -1.2):', '0');
+              const val = await dialogs.prompt(i18n.promptShiftTime, '0');
               if (val && !isNaN(parseFloat(val))) {
                  shiftTime(parseFloat(val));
               }

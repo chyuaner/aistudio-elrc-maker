@@ -94,12 +94,12 @@ export function KaraokePreview() {
       } else if (lineIdx === activeLineIndex) {
           const isLineSynced = lines[lineIdx].words.every(w => w.start === null);
           if (syncMode === 'line' || isLineSynced) {
-              return "text-[var(--app-text-primary)] underline decoration-[var(--app-accent)] decoration-4 underline-offset-8 transition-all relative transform scale-110 origin-bottom z-10";
+              return "text-[var(--app-text-primary)] underline decoration-[var(--app-accent)] decoration-4 underline-offset-8 transition-all relative transform scale-[1.02] origin-bottom z-10";
           }
           if (wordIdx < activeWordIndex) {
               return "text-[var(--app-accent)] drop-shadow-[0_0_8px_rgba(242,125,38,0.8)] transition-all";
           } else if (wordIdx === activeWordIndex) {
-              return "text-[var(--app-text-primary)] underline decoration-[var(--app-accent)] decoration-4 underline-offset-8 transition-all relative transform scale-110 origin-bottom z-10";
+              return "text-[var(--app-text-primary)] underline decoration-[var(--app-accent)] decoration-4 underline-offset-8 transition-all relative transform scale-[1.02] origin-bottom z-10";
           } else {
               return "text-[var(--app-text-muted)] transition-colors";
           }

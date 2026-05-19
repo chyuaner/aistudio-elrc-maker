@@ -112,10 +112,15 @@ export function parseRawLyrics(text: string): LyricLine[] {
   return result;
 }
 
-export function exportLrc(lines: LyricLine[], isEnhanced = false): string {
+export function exportLrc(lines: LyricLine[], isEnhanced = false, isSimple = false): string {
   let lrc = '';
   
   for (const line of lines) {
+    if (isSimple) {
+      lrc += `${line.words.map(w => w.text).join('')}\n`;
+      continue;
+    }
+    
     if (line.start === null) {
       lrc += `${line.words.map(w => w.text).join('')}\n`;
       continue;

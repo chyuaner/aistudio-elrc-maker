@@ -18,6 +18,10 @@ export function Tooltip({ children, title, delay = 500 }: { children: ReactNode,
           left: rect.left + rect.width / 2,
         });
         setIsVisible(true);
+        // Auto dismiss after 5 seconds
+        setTimeout(() => {
+          setIsVisible(false);
+        }, 5000);
       }
     }, delay);
   };

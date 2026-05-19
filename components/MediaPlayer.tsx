@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useEditor } from './EditorProvider';
 import WaveSurfer from 'wavesurfer.js';
-import { Play, Pause, Square, Rewind, FastForward, ChevronLeft, ChevronRight, Volume2, VolumeX, Settings2 } from 'lucide-react';
+import { Play, Pause, Square, Rewind, FastForward, ChevronLeft, ChevronRight, Volume2, VolumeX, Settings2, SkipBack, StepForward, Music } from 'lucide-react';
 import { formatTime } from '@/lib/lyric-utils';
 import { Tooltip } from './Tooltip';
 
@@ -11,24 +11,82 @@ function TimeDisplay() {
   const { duration, playerRef } = useEditor();
   const [currentTime, setCurrentTime] = useState(0);
 
+  // Live frequency visualizer
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+
   useEffect(() => {
     let rafId: number;
-    const updateTime = () => {
-      if (playerRef.current) {
-        setCurrentTime(playerRef.current.currentTime);
+    let analyser: AnalyserNode | null = null;
+    let dataArray: Uint8Array | null = null;
+
+    const setupAudio = () => {
+      if (!playerRef.current || audioCtxRef.current) return;
+      try {
+        const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        audioCtxRef.current = audioCtx;
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 128;
+        const source = audioCtx.createMediaElementSource(playerRef.current);
+        source.connect(analyser);
+        analyser.connect(audioCtx.destination);
+        dataArray = new Uint8Array(analyser.frequencyBinCount);
+      } catch (err) {
+        console.error("Failed to init visualizer", err);
       }
-      rafId = requestAnimationFrame(updateTime);
     };
-    rafId = requestAnimationFrame(updateTime);
-    return () => cancelAnimationFrame(rafId);
+
+    const player = playerRef.current;
+    if (player) {
+      player.addEventListener('play', setupAudio, { once: true });
+    }
+
+    const updateTimeAndVisualizer = () => {
+      if (playerRef.current) {
+         setCurrentTime(playerRef.current.currentTime);
+      }
+      
+      if (analyser && dataArray && canvasRef.current && playerRef.current && !playerRef.current.paused) {
+         analyser.getByteFrequencyData(dataArray as any);
+         const canvas = canvasRef.current;
+         const ctx = canvas.getContext('2d');
+         if (ctx) {
+             ctx.clearRect(0, 0, canvas.width, canvas.height);
+             ctx.fillStyle = 'var(--app-border-light)';
+             const barWidth = (canvas.width / dataArray.length) * 1.5;
+             for (let i = 0; i < dataArray.length; i++) {
+                 // scale bar height: waveTopPercentage to 100 -> full height available
+                 const barHeight = (dataArray[i] / 255) * canvas.height;
+                 // "top peaks" -> draw from bottom up
+                 ctx.fillRect(i * barWidth, canvas.height - barHeight, barWidth - 1, barHeight);
+             }
+         }
+      }
+
+      rafId = requestAnimationFrame(updateTimeAndVisualizer);
+    };
+    rafId = requestAnimationFrame(updateTimeAndVisualizer);
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      if (player) player.removeEventListener('play', setupAudio);
+      // We don't close AudioContext on unmount to prevent tearing down the source mapping
+    };
   }, [playerRef]);
 
   return (
-    <div className="flex justify-between items-end px-1">
-        <span className="text-3xl font-mono text-[var(--app-accent)] tabular-nums tracking-tighter leading-none font-medium">
+    <div className="flex justify-between items-end px-1 relative overflow-hidden h-16 w-full pt-4">
+        <canvas 
+            ref={canvasRef} 
+            className="absolute inset-0 w-full h-full pointer-events-none opacity-10 waveform-visualizer" 
+            style={{ '--waveTopPercentage': '100%', '--opPeaks': 1 } as any}
+            width={800} 
+            height={64} 
+        />
+        <span className="text-3xl font-mono text-[var(--app-accent)] tabular-nums tracking-tighter leading-none font-medium z-10">
           {formatTime(currentTime)}
         </span>
-        <div className="flex flex-col items-end gap-0.5">
+        <div className="flex flex-col items-end gap-0.5 z-10">
           <span className="text-xs font-mono text-[var(--app-text-secondary)] tabular-nums leading-none">
             -{formatTime(Math.max(0, duration - currentTime))}
           </span>
@@ -41,12 +99,14 @@ function TimeDisplay() {
 }
 
 export function MediaPlayer() {
-  const { file, fileUrl, playerRef, duration, setDuration, isPlaying, setIsPlaying, audioLatency, setAudioLatency, playbackRate, setPlaybackRate, audioSpecs } = useEditor();
+  const { file, fileUrl, playerRef, duration, setDuration, isPlaying, setIsPlaying, audioLatency, setAudioLatency, playbackRate, setPlaybackRate, audioSpecs, lines, paragraphStarts, metadata } = useEditor();
   const containerRef = useRef<HTMLDivElement>(null);
   const waveSurferRef = useRef<WaveSurfer | null>(null);
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [isWaveReady, setIsWaveReady] = useState(false);
+  const [syncCurrTime, setSyncCurrTime] = useState(0);
 
   const isVideo = file?.type.startsWith('video/');
 
@@ -65,6 +125,8 @@ export function MediaPlayer() {
   const [hoverX, setHoverX] = useState(0);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setIsWaveReady(false);
     if (fileUrl && playerRef.current) {
        waveSurferRef.current = WaveSurfer.create({
           container: containerRef.current!,
@@ -77,6 +139,10 @@ export function MediaPlayer() {
           barRadius: 2,
           height: 48,
           media: playerRef.current as HTMLAudioElement,
+       });
+
+       waveSurferRef.current.on('ready', () => {
+           setIsWaveReady(true);
        });
 
        const handleMouseMove = (e: MouseEvent) => {
@@ -117,6 +183,16 @@ export function MediaPlayer() {
   }, [fileUrl, setDuration]);
 
   useEffect(() => {
+    let id: number;
+    const loop = () => {
+      if (playerRef.current) setSyncCurrTime(playerRef.current.currentTime);
+      id = requestAnimationFrame(loop);
+    };
+    id = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(id);
+  }, [playerRef]);
+
+  useEffect(() => {
     if (playerRef.current) {
       playerRef.current.volume = isMuted ? 0 : volume;
     }
@@ -127,29 +203,6 @@ export function MediaPlayer() {
       playerRef.current.playbackRate = playbackRate;
     }
   }, [playbackRate, playerRef]);
-
-  if (!fileUrl) {
-    return (
-      <div className="w-full h-48 bg-[var(--app-bg-base)] rounded border border-[var(--app-border-base)] flex items-center justify-center text-[var(--app-text-muted)] text-xs font-mono uppercase tracking-widest shadow-inner">
-        No Media Loaded
-      </div>
-    );
-  }
-
-  const commonProps = {
-    src: fileUrl,
-    controls: false,
-    crossOrigin: 'anonymous' as const,
-    className: 'w-full rounded bg-black object-contain ' + (isVideo ? 'h-48' : 'hidden'),
-    onDurationChange: (e: React.SyntheticEvent<HTMLMediaElement>) => {
-      const d = e.currentTarget.duration;
-      // Ignore Infinity/NaN (FLAC streaming quirk); real duration is pre-cached from Rust
-      if (isFinite(d) && !isNaN(d) && d > 0) setDuration(d);
-    },
-    onPlay: () => setIsPlaying(true),
-    onPause: () => setIsPlaying(false),
-    ref: playerRef as any,
-  };
 
   const togglePlay = () => {
     if (playerRef.current) {
@@ -171,13 +224,75 @@ export function MediaPlayer() {
     }
   };
 
+  const jumpToBeginning = () => {
+    if (playerRef.current) playerRef.current.currentTime = 0;
+  };
+
+  const jumpToNextSegment = () => {
+    if (!playerRef.current) return;
+    const curr = playerRef.current.currentTime;
+    for (let i = 0; i < lines.length; i++) {
+        if (paragraphStarts[i] && lines[i].start !== null && lines[i].start! > curr + 1.0) {
+            playerRef.current.currentTime = lines[i].start!;
+            break;
+        }
+    }
+  };
+
+  useEffect(() => {
+    if ('mediaSession' in navigator) {
+       navigator.mediaSession.metadata = new MediaMetadata({
+         title: metadata?.title || file?.name || 'Unknown Track',
+         artist: metadata?.artist || '',
+         album: metadata?.album || '',
+         artwork: metadata?.picture ? [{ src: metadata.picture, type: metadata.format }] : []
+       });
+
+       navigator.mediaSession.setActionHandler('play', () => {
+           if (playerRef.current) playerRef.current.play();
+       });
+       navigator.mediaSession.setActionHandler('pause', () => {
+           if (playerRef.current) playerRef.current.pause();
+       });
+       navigator.mediaSession.setActionHandler('seekbackward', (details) => seekBy(-(details.seekOffset || 5)));
+       navigator.mediaSession.setActionHandler('seekforward', (details) => seekBy(details.seekOffset || 5));
+       navigator.mediaSession.setActionHandler('previoustrack', jumpToBeginning);
+       navigator.mediaSession.setActionHandler('nexttrack', jumpToNextSegment);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [metadata, file, lines, paragraphStarts]);
+
+  if (!fileUrl) {
+    return (
+      <div className="w-full h-48 bg-[var(--app-bg-base)] rounded flex flex-col items-center justify-center text-[var(--app-text-muted)] group">
+        <Music className="w-16 h-16 mb-4 opacity-50 group-hover:opacity-80 transition-opacity" />
+        <span className="text-sm font-bold tracking-widest uppercase">媒體尚未載入</span>
+      </div>
+    );
+  }
+
+  const commonProps = {
+    src: fileUrl,
+    controls: false,
+    crossOrigin: 'anonymous' as const,
+    className: 'w-full rounded bg-black object-contain ' + (isVideo ? 'h-48' : 'hidden'),
+    onDurationChange: (e: React.SyntheticEvent<HTMLMediaElement>) => {
+      const d = e.currentTarget.duration;
+      // Ignore Infinity/NaN (FLAC streaming quirk); real duration is pre-cached from Rust
+      if (isFinite(d) && !isNaN(d) && d > 0) setDuration(d);
+    },
+    onPlay: () => setIsPlaying(true),
+    onPause: () => setIsPlaying(false),
+    ref: playerRef as any,
+  };
+
   return (
     <div className="flex flex-col gap-2 w-full">
       {isVideo ? <video {...commonProps} /> : <audio {...commonProps} />}
       
       <div className="flex flex-col">
         {/* Waveform */}
-        <div className="w-full rounded overflow-hidden bg-[var(--app-bg-input)] relative group/wave" ref={containerRef}>
+        <div className={`w-full rounded overflow-hidden bg-[var(--app-bg-input)] relative group/wave ${isWaveReady ? '' : 'hidden'}`} ref={containerRef}>
           {hoverTime !== null && (
             <div 
               className="absolute z-[60] top-0 pointer-events-none transform -translate-x-1/2 px-1.5 py-0.5 bg-[var(--app-text-primary)] text-[var(--app-bg-base)] text-[10px] font-mono font-bold rounded shadow-lg whitespace-nowrap"
@@ -187,6 +302,38 @@ export function MediaPlayer() {
             </div>
           )}
         </div>
+        
+        {/* Fallback Progress Bar */}
+        {!isWaveReady && (
+          <div 
+             className="w-full h-12 flex items-center px-2 cursor-pointer bg-[var(--app-bg-input)] rounded relative group/fb" 
+             onClick={(e) => {
+               if (duration <= 0) return;
+               const rect = e.currentTarget.getBoundingClientRect();
+               const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+               if (playerRef.current) playerRef.current.currentTime = ratio * duration;
+             }}
+             onMouseMove={(e) => {
+                if (duration <= 0) return;
+                const rect = e.currentTarget.getBoundingClientRect();
+                const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+                setHoverTime(ratio * duration);
+             }}
+             onMouseLeave={() => setHoverTime(null)}
+          >
+             <div className="w-full h-1.5 bg-[var(--app-border-base)] rounded-full overflow-hidden relative">
+                <div className="absolute top-0 bottom-0 left-0 bg-[var(--app-accent)]" style={{ width: `${(syncCurrTime / (duration || 1)) * 100}%` }}></div>
+             </div>
+             {hoverTime !== null && (
+              <div 
+                className="absolute z-[60] top-0 pointer-events-none transform -translate-x-1/2 px-1.5 py-0.5 bg-[var(--app-text-primary)] text-[var(--app-bg-base)] text-[10px] font-mono font-bold rounded shadow-lg whitespace-nowrap"
+                style={{ left: `${(hoverTime / (duration || 1)) * 100}%` }}
+              >
+                {formatTime(hoverTime)}
+              </div>
+            )}
+          </div>
+        )}
         
         {/* Specs */}
         <div className="text-[9px] font-mono text-[var(--app-text-muted)] text-right mt-1 px-1 tracking-widest uppercase truncate">
@@ -201,13 +348,13 @@ export function MediaPlayer() {
         {/* Playback controls row */}
         <div className="flex items-center justify-between gap-1">
           <div className="flex items-center gap-1.5">
-            <Tooltip title={<div className="flex items-center gap-2">Play / Pause <kbd className="bg-[var(--app-bg-base)] text-[var(--app-accent)] px-1.5 py-0.5 rounded text-[9px] font-mono border border-[var(--app-accent)]/50">P</kbd></div>} delay={500}>
+            <Tooltip title={<div className="flex items-center gap-2">播放 / 暫停 <kbd className="bg-[var(--app-bg-base)] text-[var(--app-accent)] px-1.5 py-0.5 rounded text-[9px] font-mono border border-[var(--app-accent)]/50">P</kbd></div>} delay={500}>
               <button onClick={togglePlay} className="flex items-center justify-center w-10 h-10 text-[var(--app-text-primary)] hover:bg-[var(--app-accent)] hover:text-white rounded-full transition-colors border border-[var(--app-border-light)] bg-[var(--app-bg-input)] shadow-sm">
                 {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-1" />}
               </button>
             </Tooltip>
             
-            <Tooltip title="Stop" delay={500}>
+            <Tooltip title="停止" delay={500}>
               <button onClick={stopPlay} className="p-2 text-[var(--app-text-muted)] hover:text-red-500 hover:bg-[var(--app-bg-hover)] rounded transition-colors">
                 <Square className="w-5 h-5 fill-current" />
               </button>
@@ -217,22 +364,34 @@ export function MediaPlayer() {
           <div className="h-6 w-px bg-[var(--app-border-base)] mx-1"></div>
 
           <div className="flex items-center gap-0.5 flex-1 justify-end">
-            <Tooltip title={<div className="flex items-center gap-2">Rewind -5s <kbd className="bg-[var(--app-bg-base)] text-[var(--app-text-secondary)] px-1.5 py-0.5 rounded text-[9px] font-mono border border-[var(--app-border-light)]">←</kbd></div>} delay={500}>
+            <Tooltip title={<div className="flex items-center gap-2">跳到開頭 <kbd className="bg-[var(--app-bg-base)] text-[var(--app-text-secondary)] px-1.5 py-0.5 rounded text-[9px] font-mono border border-[var(--app-border-light)]">0</kbd></div>} delay={500}>
+              <button onClick={jumpToBeginning} className="p-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-text-primary)] hover:bg-[var(--app-bg-hover)] rounded transition-colors">
+                <SkipBack className="w-4 h-4" />
+              </button>
+            </Tooltip>
+            {lines.length > 0 && (
+              <Tooltip title={<div className="flex items-center gap-2">跳到下一段歌詞開頭</div>} delay={500}>
+                <button onClick={jumpToNextSegment} className="p-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-text-primary)] hover:bg-[var(--app-bg-hover)] rounded transition-colors">
+                  <StepForward className="w-4 h-4" />
+                </button>
+              </Tooltip>
+            )}
+            <Tooltip title={<div className="flex items-center gap-2">倒轉 -5s <kbd className="bg-[var(--app-bg-base)] text-[var(--app-text-secondary)] px-1.5 py-0.5 rounded text-[9px] font-mono border border-[var(--app-border-light)]">←</kbd></div>} delay={500}>
               <button onClick={() => seekBy(-5)} className="p-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-text-primary)] hover:bg-[var(--app-bg-hover)] rounded transition-colors">
                 <Rewind className="w-4 h-4" />
               </button>
             </Tooltip>
-            <Tooltip title={<div className="flex items-center gap-2">Rewind -1s</div>} delay={500}>
+            <Tooltip title={<div className="flex items-center gap-2">倒轉 -1s</div>} delay={500}>
               <button onClick={() => seekBy(-1)} className="p-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-text-primary)] hover:bg-[var(--app-bg-hover)] rounded transition-colors">
                 <ChevronLeft className="w-5 h-5" />
               </button>
             </Tooltip>
-            <Tooltip title={<div className="flex items-center gap-2">Forward +1s</div>} delay={500}>
+            <Tooltip title={<div className="flex items-center gap-2">快進 +1s</div>} delay={500}>
               <button onClick={() => seekBy(1)} className="p-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-text-primary)] hover:bg-[var(--app-bg-hover)] rounded transition-colors">
                 <ChevronRight className="w-5 h-5" />
               </button>
             </Tooltip>
-            <Tooltip title={<div className="flex items-center gap-2">Forward +5s <kbd className="bg-[var(--app-bg-base)] text-[var(--app-text-secondary)] px-1.5 py-0.5 rounded text-[9px] font-mono border border-[var(--app-border-light)]">→</kbd></div>} delay={500}>
+            <Tooltip title={<div className="flex items-center gap-2">快進 +5s <kbd className="bg-[var(--app-bg-base)] text-[var(--app-text-secondary)] px-1.5 py-0.5 rounded text-[9px] font-mono border border-[var(--app-border-light)]">→</kbd></div>} delay={500}>
               <button onClick={() => seekBy(5)} className="p-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-text-primary)] hover:bg-[var(--app-bg-hover)] rounded transition-colors">
                 <FastForward className="w-4 h-4" />
               </button>
@@ -258,7 +417,7 @@ export function MediaPlayer() {
           </div>
 
           <div className="flex items-center gap-0.5 relative shrink-0">
-            <Tooltip title={<div className="flex items-center gap-2">Slower <kbd className="bg-[var(--app-bg-base)] text-[var(--app-text-secondary)] px-1.5 py-0.5 rounded text-[9px] font-mono border border-[var(--app-border-light)]">[</kbd></div>}>
+            <Tooltip title={<div className="flex items-center gap-2">減速 <kbd className="bg-[var(--app-bg-base)] text-[var(--app-text-secondary)] px-1.5 py-0.5 rounded text-[9px] font-mono border border-[var(--app-border-light)]">[</kbd></div>}>
               <button 
                 onClick={() => setPlaybackRate(Math.max(0.25, Number((playbackRate - 0.05).toFixed(2))))}
                 className="p-1 text-[var(--app-text-muted)] hover:text-[var(--app-text-primary)] hover:bg-[var(--app-bg-hover)] rounded transition-colors"
@@ -266,7 +425,7 @@ export function MediaPlayer() {
                 <ChevronLeft className="w-3.5 h-3.5" />
               </button>
             </Tooltip>
-            <Tooltip title="Playback Rate (Click to Reset)">
+            <Tooltip title="播放速度 (點擊重設)">
               <span 
                 className="text-xs font-mono text-[var(--app-text-secondary)] w-10 text-center cursor-pointer tracking-tighter hover:text-[var(--app-accent)]"
                 onClick={() => setPlaybackRate(1.0)}
@@ -274,7 +433,7 @@ export function MediaPlayer() {
                 {playbackRate.toFixed(2)}x
               </span>
             </Tooltip>
-            <Tooltip title={<div className="flex items-center gap-2">Faster <kbd className="bg-[var(--app-bg-base)] text-[var(--app-text-secondary)] px-1.5 py-0.5 rounded text-[9px] font-mono border border-[var(--app-border-light)]">]</kbd></div>}>
+            <Tooltip title={<div className="flex items-center gap-2">加速 <kbd className="bg-[var(--app-bg-base)] text-[var(--app-text-secondary)] px-1.5 py-0.5 rounded text-[9px] font-mono border border-[var(--app-border-light)]">]</kbd></div>}>
               <button 
                 onClick={() => setPlaybackRate(Math.min(2.0, Number((playbackRate + 0.05).toFixed(2))))}
                 className="p-1 text-[var(--app-text-muted)] hover:text-[var(--app-text-primary)] hover:bg-[var(--app-bg-hover)] rounded transition-colors"

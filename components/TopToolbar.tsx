@@ -3,10 +3,11 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useEditor } from './EditorProvider';
 import { parseRawLyrics, exportLrc } from '@/lib/lyric-utils';
-import { Music, Download, ChevronDown, X, FileText } from 'lucide-react';
+import { Music, Download, ChevronDown, X, FileText, Maximize } from 'lucide-react';
 import { UndoRedoControls } from './UndoRedo';
 import { useDialogs } from './DialogProvider';
 import { AppCommands } from '@/lib/app-commands';
+import { Tooltip } from './Tooltip';
 import { useI18n } from '@/hooks/useI18n';
 
 function extractFlacMetadata(buffer: ArrayBuffer) {
@@ -99,7 +100,7 @@ function extractFlacMetadata(buffer: ArrayBuffer) {
 }
 
 export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
-  const { undo, redo, pastActions, futureActions, setFile, commitLines, resetHistory, lines, syncMode, setMetadata, metadata, audioFileName, lyricFileName, setLyricFileName, exportFormat, shiftTime, setAudioSpecs } = useEditor();
+  const { undo, redo, pastActions, futureActions, setFile, commitLines, resetHistory, lines, syncMode, setMetadata, metadata, audioFileName, lyricFileName, setLyricFileName, exportFormat, shiftTime, setAudioSpecs, setIsPlaying, playerRef, setDuration, setPlaybackRate } = useEditor();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const lyricInputRef = useRef<HTMLInputElement>(null);
   const dialogs = useDialogs();
@@ -133,6 +134,13 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
   const titleColor = (isTauri && !isFocused) ? 'text-[var(--app-text-muted)]' : 'text-[var(--app-text-secondary)]';
 
   const processAudioFile = React.useCallback(async (f: File) => {
+    setIsPlaying(false);
+    if (playerRef.current) {
+        playerRef.current.pause();
+        playerRef.current.currentTime = 0;
+    }
+    setDuration(0);
+    setPlaybackRate(1.0);
     setFile(f);
     resetHistory([]);
     setLyricFileName(null);
@@ -244,7 +252,7 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
         }
       });
     }
-  }, [resetHistory, setFile, setLyricFileName, setMetadata, setAudioSpecs]);
+  }, [resetHistory, setFile, setLyricFileName, setMetadata, setAudioSpecs, setIsPlaying, playerRef, setDuration, setPlaybackRate]);
 
   const processLyricFile = React.useCallback(async (f: File) => {
     if (lines.length > 0) {
@@ -260,12 +268,14 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
     reader.readAsText(f);
   }, [lines.length, dialogs, resetHistory, setLyricFileName]);
 
-  const handleExport = React.useCallback(async (format: 'standard' | 'enhanced') => {
+  const handleExport = React.useCallback(async (format: 'standard' | 'enhanced' | 'simple') => {
     if (lines.length === 0) return;
-    const lrcText = exportLrc(lines, format === 'enhanced');
+    const lrcText = exportLrc(lines, format === 'enhanced', format === 'simple');
 
     let defaultName = 'lyrics.lrc';
-    if (lyricFileName && lyricFileName !== 'Embedded Tag' && lyricFileName !== 'New Lyrics') {
+    if (format === 'simple') {
+        defaultName = 'lyrics.txt';
+    } else if (lyricFileName && lyricFileName !== 'Embedded Tag' && lyricFileName !== 'New Lyrics') {
         defaultName = lyricFileName;
     } else if (audioFileName) {
         defaultName = audioFileName.replace(/\.[^/.]+$/, "") + ".lrc";
@@ -343,7 +353,7 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
       },
       exportStandard: () => handleExport('standard'),
       exportEnhanced: () => handleExport('enhanced'),
-      exportCurrent: () => handleExport(exportFormat),
+      exportCurrent: () => handleExport(exportFormat as 'standard' | 'enhanced' | 'simple'),
       shiftTime: async () => {
         const val = await dialogs.prompt('Shift all timings by X seconds (e.g., 0.5 or -1.2):', '0');
         if (val !== null) {
@@ -665,7 +675,7 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
             {loadDropdownOpen && (
                <div className="absolute top-full left-0 mt-1 w-56 bg-[var(--app-bg-panel)] border border-[var(--app-border-base)] rounded shadow-xl z-50 overflow-hidden py-1">
                   <button className="w-full text-left px-3 py-2 text-xs text-[var(--app-text-secondary)] hover:bg-[var(--app-accent)] hover:text-black transition-colors" onClick={() => { lyricInputRef.current?.click(); setLoadDropdownOpen(false); }}>
-                    {i18n.loadLyrics}
+                    {i18n.loadFileLyrics}
                   </button>
                   <button 
                     disabled={!metadata?.lyric}
@@ -701,10 +711,17 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
         
         {/* Right Group */}
         <div className="flex items-center gap-2 flex-wrap justify-center lg:justify-end mt-2 lg:mt-0">
+            <button 
+              onClick={() => AppCommands.toggleFullscreen?.()} 
+              title="全螢幕"
+              className="p-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-text-primary)] hover:bg-[var(--app-bg-hover)] rounded transition-colors mr-1"
+            >
+              <Maximize className="w-4 h-4" />
+            </button>
           <div className="relative">
              <div className="flex group shadow-sm rounded">
                 <button 
-                  onClick={() => handleExport(exportFormat)}
+                  onClick={() => handleExport(exportFormat as any)}
                   className="px-3 py-1.5 bg-[var(--app-accent)] hover:bg-[var(--app-accent-hover)] text-black rounded-l text-xs font-bold uppercase flex items-center gap-2 transition-colors border border-transparent"
                 >
                   <Download className="w-4 h-4" /> {i18n.exportLrc}
@@ -724,6 +741,9 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
                   </button>
                   <button className="w-full text-left px-3 py-2 text-xs text-[var(--app-text-secondary)] hover:bg-[var(--app-accent)] hover:text-black transition-colors flex flex-col gap-1" onClick={() => handleExport('enhanced')}>
                     <span>{i18n.exportEnhanced}</span>
+                  </button>
+                  <button className="w-full text-left px-3 py-2 text-xs text-[var(--app-text-secondary)] hover:bg-[var(--app-accent)] hover:text-black transition-colors flex flex-col gap-1" onClick={() => handleExport('simple')}>
+                    <span>{i18n.exportSimple}</span>
                   </button>
                </div>
             )}

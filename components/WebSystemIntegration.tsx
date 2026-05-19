@@ -3,23 +3,45 @@
 import { useEffect } from 'react';
 import { AppCommands } from '@/lib/app-commands';
 
+// ── Linux Tauri 全螢幕狀態追蹤 ──────────────────────────────────────
+// Tauri 在 Linux 上進入全螢幕時，GTK HeaderBar 會被 Wayland/X11 隱藏。
+// 此時必須恢復顯示 web 版 TopToolbar（--top-toolbar-display: flex），
+// 退出全螢幕後再還原隱藏（--top-toolbar-display: none）。
 export function WebSystemIntegration() {
   useEffect(() => {
     const isTauri = typeof window !== 'undefined' && (window as any).__TAURI__;
-    
-    // Register web fallbacks (will be overridden by Tauri if available)
+    const ua = typeof navigator !== 'undefined' ? navigator.userAgent.toLowerCase() : '';
+    const isLinuxTauri = isTauri && ua.includes('linux');
+
+    // ── toggleFullscreen：Tauri 使用原生視窗 API，瀏覽器使用 document API ──
     if (!AppCommands.toggleFullscreen) {
-      AppCommands.toggleFullscreen = () => {
-        if (!document.fullscreenElement) {
-          document.documentElement.requestFullscreen().catch(err => {
-            console.warn(`Error attempting to enable fullscreen: ${err.message}`);
-          });
-        } else {
-          if (document.exitFullscreen) {
-            document.exitFullscreen();
+      if (isTauri) {
+        // Tauri 全螢幕是視窗層級，必須透過 Tauri window API 切換，
+        // 不能用 document.requestFullscreen（那只影響 WebView 的 DOM 層）。
+        // 使用 dynamic import @tauri-apps/api/window 確保 Tauri v2 API 路徑正確
+        AppCommands.toggleFullscreen = async () => {
+          try {
+            const { getCurrentWindow } = await import('@tauri-apps/api/window');
+            const win = getCurrentWindow();
+            const isFs = await win.isFullscreen();
+            await win.setFullscreen(!isFs);
+          } catch (err) {
+            console.warn('Tauri setFullscreen failed:', err);
           }
-        }
-      };
+        };
+      } else {
+        AppCommands.toggleFullscreen = () => {
+          if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(err => {
+              console.warn(`Error attempting to enable fullscreen: ${err.message}`);
+            });
+          } else {
+            if (document.exitFullscreen) {
+              document.exitFullscreen();
+            }
+          }
+        };
+      }
     }
     
     function updateMetaThemeColor(color: string) {
@@ -86,7 +108,39 @@ export function WebSystemIntegration() {
         }
       };
     }
+
+    // ── Linux Tauri 全螢幕狀態監聽 ────────────────────────────────────
+    // Tauri v2 沒有專屬的 fullscreen window event，改用 tauri://resize 事件
+    // 觸發後呼叫 isFullscreen() 查詢當前狀態（Tauri 官方建議做法）。
+    // 進入全螢幕時：GTK HeaderBar 被系統隱藏 → 顯示 web TopToolbar
+    // 離開全螢幕時：GTK HeaderBar 恢復顯示 → 隱藏 web TopToolbar
+    let unlistenResize: (() => void) | null = null;
+    if (isLinuxTauri) {
+      (async () => {
+        try {
+          const tauri = (window as any).__TAURI__;
+          const { getCurrentWindow } = await import('@tauri-apps/api/window');
+          // tauri://resize 會在視窗大小任意變化（含進出全螢幕）時觸發
+          unlistenResize = await tauri.event.listen('tauri://resize', async () => {
+            try {
+              const isFs = await getCurrentWindow().isFullscreen();
+              document.documentElement.style.setProperty(
+                '--top-toolbar-display',
+                isFs ? 'flex' : 'none'
+              );
+            } catch (_) {}
+          });
+        } catch (err) {
+          console.warn('Failed to listen for Tauri resize events:', err);
+        }
+      })();
+    }
     
+    return () => {
+      if (unlistenResize) {
+        try { unlistenResize(); } catch (_) {}
+      }
+    };
   }, []);
 
   return null;

@@ -18,7 +18,21 @@ const InputRow = ({ label, mKey, placeholder, value, onChange }: { label: string
     </div>
 );
 
+const invokeTauri = async (cmd: string, args?: Record<string, unknown>) => {
+  if (typeof window !== 'undefined' && (window as any).__TAURI__) {
+      try {
+          const { invoke } = await import('@tauri-apps/api/core');
+          return await invoke(cmd, args);
+      } catch (e) {
+          console.error(e);
+      }
+  }
+};
 export function LrcMetadataDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+  useEffect(() => {
+    invokeTauri('set_titlebar_buttons_enabled', { enabled: !isOpen });
+  }, [isOpen]);
+  
   const { lrcMetadata, setLrcMetadata, metadata } = useEditor();
   const [formData, setFormData] = useState<LrcMetadata>({});
   

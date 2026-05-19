@@ -48,16 +48,16 @@ const SyncCell = memo(({
         setActiveWordIndex={setActiveWordIndex}
         actions={
           <>
-            <Tooltip title={i18n.editText} delay={1000}>
+            <Tooltip title={i18n.editText} delay={500}>
               <button onClick={(e) => { e.stopPropagation(); handleEditText(globalIndex, line.raw || ''); }} className="p-1 px-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-text-secondary)] hover:bg-[var(--app-bg-hover)] rounded transition-colors"><Edit2 className="w-3.5 h-3.5" /></button>
             </Tooltip>
-            <Tooltip title={i18n.offsetSubsequent} delay={1000}>
+            <Tooltip title={i18n.offsetSubsequent} delay={500}>
               <button onClick={(e) => { e.stopPropagation(); handleOffsetFromHere(globalIndex); }} className="p-1 px-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-text-secondary)] hover:bg-[var(--app-bg-hover)] rounded transition-colors"><ArrowRight className="w-3.5 h-3.5" /></button>
             </Tooltip>
-            <Tooltip title={i18n.clearTimestamps} delay={1000}>
+            <Tooltip title={i18n.clearTimestamps} delay={500}>
               <button onClick={(e) => { e.stopPropagation(); handleClearTime(globalIndex); }} className="p-1 px-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-accent)] hover:bg-[var(--app-bg-hover)] rounded transition-colors"><X className="w-3.5 h-3.5" /></button>
             </Tooltip>
-            <Tooltip title={i18n.deleteLine} delay={1000}>
+            <Tooltip title={i18n.deleteLine} delay={500}>
               <button onClick={(e) => { e.stopPropagation(); handleDeleteLine(globalIndex); }} className="p-1 px-1.5 text-[var(--app-text-muted)] hover:text-red-500 hover:bg-[var(--app-bg-hover)] rounded transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
             </Tooltip>
           </>

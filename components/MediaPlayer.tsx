@@ -65,7 +65,7 @@ export function MediaPlayer() {
     if (fileUrl && playerRef.current) {
        waveSurferRef.current = WaveSurfer.create({
           container: containerRef.current!,
-          waveColor: 'var(--app-border-light)',
+          waveColor: 'var(--app-text-muted)',
           progressColor: 'var(--app-accent)',
           cursorColor: 'var(--app-accent)',
           cursorWidth: 3,
@@ -236,12 +236,14 @@ export function MediaPlayer() {
                 <ChevronLeft className="w-3.5 h-3.5" />
               </button>
             </Tooltip>
-            <span 
-              className="text-xs font-mono text-[var(--app-text-secondary)] w-10 text-center cursor-default tracking-tighter"
-              title="Playback Rate"
-            >
-              {playbackRate.toFixed(2)}x
-            </span>
+            <Tooltip title="Playback Rate (Click to Reset)">
+              <span 
+                className="text-xs font-mono text-[var(--app-text-secondary)] w-10 text-center cursor-pointer tracking-tighter hover:text-[var(--app-accent)]"
+                onClick={() => setPlaybackRate(1.0)}
+              >
+                {playbackRate.toFixed(2)}x
+              </span>
+            </Tooltip>
             <Tooltip title={<div className="flex items-center gap-2">Faster <kbd className="bg-[var(--app-bg-base)] text-[var(--app-text-secondary)] px-1.5 py-0.5 rounded text-[9px] font-mono border border-[var(--app-border-light)]">]</kbd></div>}>
               <button 
                 onClick={() => setPlaybackRate(Math.min(2.0, Number((playbackRate + 0.05).toFixed(2))))}
@@ -253,13 +255,14 @@ export function MediaPlayer() {
 
             <div className="h-4 w-px bg-[var(--app-border-base)] mx-1"></div>
 
-            <button 
-              onClick={() => setShowSettings(!showSettings)} 
-              className={`p-1.5 rounded transition-colors border ${showSettings || audioLatency !== 0 ? 'bg-[var(--app-bg-border-light)] text-[var(--app-accent)] border-[var(--app-accent)]' : 'bg-[var(--app-bg-input)] text-[var(--app-text-muted)] border-[var(--app-border-light)] hover:text-[var(--app-text-primary)]'}`} 
-              title="音頻延遲補償"
-            >
-              <Settings2 className="w-4 h-4" />
-            </button>
+            <Tooltip title="音頻延遲補償">
+              <button 
+                onClick={() => setShowSettings(!showSettings)} 
+                className={`p-1.5 rounded transition-colors border ${showSettings || audioLatency !== 0 ? 'bg-[var(--app-bg-border-light)] text-[var(--app-accent)] border-[var(--app-accent)]' : 'bg-[var(--app-bg-input)] text-[var(--app-text-muted)] border-[var(--app-border-light)] hover:text-[var(--app-text-primary)]'}`} 
+              >
+                <Settings2 className="w-4 h-4" />
+              </button>
+            </Tooltip>
             
             {showSettings && (
               <div className="absolute bottom-full right-0 mb-2 p-3 bg-[var(--app-bg-panel)] border border-[var(--app-border-base)] shadow-[0_4px_12px_rgba(0,0,0,0.5)] rounded-lg z-50 flex flex-col gap-2 w-[240px]">

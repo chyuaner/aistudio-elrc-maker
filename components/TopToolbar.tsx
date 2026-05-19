@@ -3,7 +3,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useEditor } from './EditorProvider';
 import { parseRawLyrics, exportLrc } from '@/lib/lyric-utils';
-import { Music, Download, ChevronDown, X } from 'lucide-react';
+import { Music, Download, ChevronDown, X, FileText } from 'lucide-react';
 import { UndoRedoControls } from './UndoRedo';
 import { useDialogs } from './DialogProvider';
 import { AppCommands } from '@/lib/app-commands';
@@ -98,7 +98,7 @@ function extractFlacMetadata(buffer: ArrayBuffer) {
     return { tags: tagsMap, covers };
 }
 
-export function TopToolbar() {
+export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
   const { undo, redo, pastActions, futureActions, setFile, commitLines, resetHistory, lines, syncMode, setMetadata, metadata, audioFileName, lyricFileName, setLyricFileName, exportFormat, shiftTime, setAudioSpecs } = useEditor();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const lyricInputRef = useRef<HTMLInputElement>(null);
@@ -108,6 +108,27 @@ export function TopToolbar() {
   const [loadMediaDropdownOpen, setLoadMediaDropdownOpen] = useState(false);
   const [loadDropdownOpen, setLoadDropdownOpen] = useState(false);
   const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
+  const [isFocused, setIsFocused] = useState(true);
+
+  useEffect(() => {
+     const tauri = (window as any).__TAURI__;
+     if (!tauri) return;
+     
+     // For Tauri focus/blur
+     const handleBlur = () => setIsFocused(false);
+     const handleFocus = () => setIsFocused(true);
+     
+     window.addEventListener('blur', handleBlur);
+     window.addEventListener('focus', handleFocus);
+     
+     return () => {
+        window.removeEventListener('blur', handleBlur);
+        window.removeEventListener('focus', handleFocus);
+     }
+  }, []);
+  
+  const isTauri = typeof window !== 'undefined' && ((window as any).__TAURI__);
+  const titleColor = (isTauri && !isFocused) ? 'text-[var(--app-text-muted)]' : 'text-[var(--app-text-secondary)]';
 
   const processAudioFile = React.useCallback(async (f: File) => {
     setFile(f);
@@ -626,7 +647,7 @@ export function TopToolbar() {
                 onClick={() => lyricInputRef.current?.click()}
                 className="px-3 py-1.5 bg-[var(--app-border-base)] hover:bg-[var(--app-bg-hover)] rounded-l text-xs font-medium border border-[var(--app-border-light)] border-r-0 flex items-center gap-2 text-[var(--app-text-secondary)] transition-colors min-w-0"
               >
-                <span className="w-2 h-2 bg-purple-400 rounded-full shrink-0"></span>
+                <FileText className="w-3.5 h-3.5 text-purple-400 shrink-0" />
                 <span className="truncate">{i18n.loadLyrics}</span>
               </button>
               <button

@@ -52,7 +52,7 @@ export function LyricCellContent({
               const isWordActive = isActive && wIdx === activeWordIndex;
               const isWordStamped = word.start !== null;
               return (
-                <Tooltip key={wIdx} title={word.start !== null ? formatTime(word.start) : 'Not synced'} delay={500}>
+                <Tooltip key={wIdx} title={word.start !== null ? formatTime(word.start) : 'Not synced'} delay={50}>
                   <span 
                     className={`
                       px-1 py-0.5 rounded transition-all select-none

@@ -610,7 +610,7 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
   };
 
   const renderButtonsRow = (className: string) => (
-      <div className={`flex flex-row flex-wrap items-center justify-center lg:justify-between w-full px-2 py-2 gap-y-2 gap-x-4 ${className}`}>
+      <div className={`flex-row flex-wrap items-center justify-center lg:justify-between w-full px-2 py-2 gap-y-2 gap-x-4 ${className}`}>
         {/* Left Group */}
         <div className="flex items-center gap-2 flex-wrap justify-center lg:justify-start">
           <div style={{ width: 'var(--titlebar-left-padding, 0px)' }} className="h-8 app-region-drag pointer-events-none shrink-0 transition-[width] hidden lg:block" />
@@ -766,7 +766,7 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
       style={{ display: 'var(--top-toolbar-display, flex)' }}
     >
       {/* Desktop Title (Absolute centered) */}
-      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none whitespace-nowrap overflow-hidden px-8 z-0 hidden lg:flex">
+      <div className="absolute inset-0 flex-col items-center justify-center pointer-events-none whitespace-nowrap overflow-hidden px-8 z-0 hidden lg:flex">
         {!finalHideTitle && (
           <h1 className={`text-sm font-bold tracking-tight uppercase ${titleColor} transition-colors duration-300`}>
             LRC Maker <span className="text-[var(--app-text-muted)] font-normal italic ml-1">Enhanced</span>
@@ -780,7 +780,7 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
       </div>
 
       {/* Mobile Title Row */}
-      <div className="flex lg:hidden items-center justify-between w-full py-2 app-region-drag relative bg-[var(--app-bg-panel-alt)] z-10">
+      <div className="lg:hidden items-center justify-between w-full py-2 app-region-drag relative bg-[var(--app-bg-panel-alt)] z-10 flex">
          <div style={{ width: 'var(--titlebar-left-padding, 0px)' }} className="h-6 pointer-events-none shrink-0 transition-[width]" />
          <div className="flex flex-col items-center justify-center pointer-events-none whitespace-nowrap overflow-hidden px-2 z-0 flex-1">
              {!finalHideTitle && (

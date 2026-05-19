@@ -96,7 +96,7 @@ function TimeDisplay({ className = '' }: { className?: string }) {
   }, [playerRef]);
 
   return (
-    <div className={`flex justify-between items-end px-1 relative overflow-hidden h-20 w-full pt-2 pb2 -mb-2 ${className}`}>
+    <div className={`flex justify-between items-end relative overflow-hidden h-20 w-full pt-4 pb-4 px-3 py-2 -mb-2 ${className}`}>
         <canvas 
             ref={canvasRef} 
             className="absolute inset-0 w-full h-full pointer-events-none waveform-visualizer" 
@@ -401,7 +401,7 @@ export function MediaPlayer() {
     <div className="flex flex-col gap-2 w-full">
       {isVideo ? <video {...commonProps} /> : <audio {...commonProps} />}
       
-      <div className="flex flex-col">
+      <div className="flex flex-col p-2 lg:p-4">
         {/* Waveform */}
         <div className={`w-full rounded overflow-hidden bg-[var(--app-bg-input)] relative group/wave ${isWaveReady ? '' : 'hidden'}`} ref={containerRef}>
           {hoverTime !== null && (
@@ -455,7 +455,7 @@ export function MediaPlayer() {
       {/* Time Display */}
       <TimeDisplay className="-mb-2" />
       
-      <div className="@container flex flex-col gap-3 bg-[var(--app-bg-panel)] p-3 rounded shadow-sm border border-[var(--app-border-base)]">
+      <div className="@container flex flex-col gap-3 bg-[var(--app-bg-panel)] p-3 shadow-sm border-t border-[var(--app-border-base)]">
         {/* Playback controls row */}
         <div className="flex items-center justify-between gap-1">
           <div className="flex items-center gap-1.5">

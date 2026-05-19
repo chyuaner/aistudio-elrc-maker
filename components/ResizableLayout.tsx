@@ -51,7 +51,7 @@ export function ResizableLayout() {
         style={{ width: isMobile ? '100%' : `calc(${leftWidth}% - 4px)` }} 
         className="flex flex-col border-r border-[var(--app-border-base)] bg-[var(--app-bg-panel-alt)] shrink-0 lg:h-full lg:overflow-hidden"
       >
-        <div className="bg-[var(--app-bg-input)] border-b border-[var(--app-border-base)] p-2 lg:p-4 flex flex-col justify-center shrink-0">
+        <div className="bg-[var(--app-bg-input)] border-b border-[var(--app-border-base)] p-0 flex flex-col justify-center shrink-0">
           <MediaPlayer />
         </div>
         <div className="hidden lg:flex flex-col flex-1 overflow-hidden">

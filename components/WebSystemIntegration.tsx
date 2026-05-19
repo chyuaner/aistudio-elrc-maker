@@ -23,15 +23,14 @@ export function WebSystemIntegration() {
     }
     
     function updateMetaThemeColor(color: string) {
-        let metaThemeColor = document.querySelector("meta[name=theme-color]");
+        let metaThemeColor = document.querySelector('meta[name="theme-color"]:not([media])');
         if (!metaThemeColor) {
             metaThemeColor = document.createElement("meta");
             metaThemeColor.setAttribute("name", "theme-color");
             document.head.appendChild(metaThemeColor);
         }
         
-        // Remove media-specific theme colors as they will override our static one
-        document.querySelectorAll("meta[name=theme-color][media]").forEach(el => el.remove());
+        document.querySelectorAll('meta[name="theme-color"][media]').forEach(el => el.remove());
         
         metaThemeColor.setAttribute("content", color);
     }

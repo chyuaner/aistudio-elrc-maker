@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useEditor } from './EditorProvider';
+import { isTextEditable } from '@/lib/utils';
 
 export function useGlobalHotkeys() {
   const { undo, redo, playerRef, mode, isPlaying, setPlaybackRate } = useEditor();
@@ -7,8 +8,7 @@ export function useGlobalHotkeys() {
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       // Focus check (ignore if inside input/textarea)
-      const isInputFocused = document.activeElement?.tagName === 'INPUT' || 
-                             document.activeElement?.tagName === 'TEXTAREA';
+      const isInputFocused = isTextEditable(document.activeElement);
 
       // Ctrl + Z
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {

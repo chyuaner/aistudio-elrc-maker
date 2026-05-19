@@ -2,6 +2,7 @@
 
 import React, { useEffect, useCallback } from 'react';
 import { useEditor } from './EditorProvider';
+import { isTextEditable } from '@/lib/utils';
 
 export function useSyncHotkeys() {
   const {
@@ -88,7 +89,7 @@ export function useSyncHotkeys() {
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       // Ignore if user is typing in an input or textarea
-      if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) {
+      if (isTextEditable(e.target as Element)) {
         return;
       }
       

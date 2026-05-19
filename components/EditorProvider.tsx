@@ -357,7 +357,7 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
   const setLines = (payload: LyricLine[] | ((prev: LyricLine[]) => LyricLine[])) => {
     dispatchLines({ type: 'SET', payload });
   };
-  const resetHistory = (payload: LyricLine[] | ((prev: LyricLine[]) => LyricLine[])) => {
+  const resetHistory = React.useCallback((payload: LyricLine[] | ((prev: LyricLine[]) => LyricLine[])) => {
     const newLines = typeof payload === 'function' ? payload(historyState.present) : payload;
     dispatchLines({ type: 'RESET', payload: newLines });
     setActiveLineIndex(0);
@@ -369,7 +369,10 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
        setSyncMode('word');
        setExportFormat('enhanced');
     }
-  };
+    
+    const hasAnyTimestamps = newLines.some(l => l.start !== null || (l.words && l.words.some(w => w.start !== null)));
+    setAutoScrollEnabled(hasAnyTimestamps);
+  }, [historyState.present]);
   const commitLines = (payload: LyricLine[] | ((prev: LyricLine[]) => LyricLine[]), actionName?: string) => {
     dispatchLines({ type: 'COMMIT', payload, actionName });
   };

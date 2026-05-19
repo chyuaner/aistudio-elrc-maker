@@ -13,6 +13,7 @@ export interface AppStateType {
 
 export interface AppCommandsType {
   getState: () => AppStateType;
+  getExportOptions: () => { label: string; action: string }[];
   setAudioSpecs: null | ((specs: { format?: string, bitrate?: string, sampleRate?: string, bitsPerSample?: string }) => void);
   loadMedia: null | (() => void);
   loadLyrics: null | (() => void);
@@ -30,6 +31,10 @@ export interface AppCommandsType {
   
   exportStandard: null | (() => void);
   exportEnhanced: null | (() => void);
+  exportSimple: null | (() => void);
+  exportEmbeddedStandard: null | (() => void);
+  exportEmbeddedEnhanced: null | (() => void);
+  exportEmbeddedSimple: null | (() => void);
   exportCurrent: null | (() => void);
   shiftTime: null | (() => Promise<void>);
   setTitlebarEnabled: null | ((enabled: boolean) => void);
@@ -47,6 +52,7 @@ export const AppCommands: AppCommandsType = {
     canClearLyrics: false,
     canLoadEmbeddedLyrics: false,
   }),
+  getExportOptions: () => [],
   setAudioSpecs: null,
   loadMedia: null,
   loadLyrics: null,
@@ -64,6 +70,10 @@ export const AppCommands: AppCommandsType = {
   
   exportStandard: null,
   exportEnhanced: null,
+  exportSimple: null,
+  exportEmbeddedStandard: null,
+  exportEmbeddedEnhanced: null,
+  exportEmbeddedSimple: null,
   exportCurrent: null,
   shiftTime: null,
   setTitlebarEnabled: null,

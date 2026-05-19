@@ -101,9 +101,10 @@ function extractFlacMetadata(buffer: ArrayBuffer) {
 }
 
 export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
-  const { undo, redo, pastActions, futureActions, setFile, commitLines, resetHistory, lines, syncMode, setMetadata, metadata, audioFileName, lyricFileName, setLyricFileName, exportFormat, shiftTime, setAudioSpecs, setIsPlaying, playerRef, setDuration, setPlaybackRate, lrcMetadata, setLrcMetadata } = useEditor();
+  const { undo, redo, pastActions, futureActions, file, setFile, commitLines, resetHistory, lines, syncMode, setMetadata, metadata, audioFileName, lyricFileName, setLyricFileName, exportFormat, shiftTime, setAudioSpecs, setIsPlaying, playerRef, setDuration, setPlaybackRate, lrcMetadata, setLrcMetadata } = useEditor();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const lyricInputRef = useRef<HTMLInputElement>(null);
+  const mixedInputRef = useRef<HTMLInputElement>(null);
   const dialogs = useDialogs();
   const i18n = useI18n();
   
@@ -295,7 +296,7 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
     reader.readAsText(f);
   }, [lines.length, dialogs, resetHistory, setLyricFileName, setLrcMetadata]);
 
-  const handleExport = React.useCallback(async (format: 'standard' | 'enhanced' | 'simple') => {
+  const handleExport = React.useCallback(async (format: 'standard' | 'enhanced' | 'simple', saveType: 'file' | 'embedded' = 'file') => {
     if (lines.length === 0) return;
     const lrcText = exportLrc(lines, lrcMetadata, format === 'enhanced', format === 'simple');
 
@@ -311,14 +312,46 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
     const isTauri = typeof window !== 'undefined' && ((window as any).__TAURI__);
     if (isTauri) {
         try {
-            await (window as any).__TAURI__.core.invoke('save_lyrics_dialog', {
+            await (window as any).__TAURI__.core.invoke(saveType === 'embedded' ? 'embed_lyrics_dialog' : 'save_lyrics_dialog', {
                 lyricsText: lrcText,
-                defaultName: defaultName
+                defaultName: defaultName,
+                format: format,
             });
         } catch (err) {
-            console.error("Tauri save_lyrics_dialog failed", err);
+            console.error("Tauri save dialog failed", err);
         }
     } else {
+       if (saveType === 'embedded' && file) {
+             const lowerName = file.name.toLowerCase();
+             if (lowerName.endsWith('.flac') || lowerName.endsWith('.m4a') || lowerName.endsWith('.mp4')) {
+                 try {
+                     const arrayBuffer = await file.arrayBuffer();
+                     let blob: Blob;
+                     if (lowerName.endsWith('.flac')) {
+                         const { embedLyricsIntoFlac } = await import('@/lib/flac-utils');
+                         blob = embedLyricsIntoFlac(arrayBuffer, lrcText, format === 'enhanced');
+                     } else {
+                         const { embedLyricsIntoM4a } = await import('@/lib/m4a-utils');
+                         blob = embedLyricsIntoM4a(arrayBuffer, lrcText, format === 'enhanced');
+                     }
+                     
+                     const url = URL.createObjectURL(blob);
+                     const a = document.createElement('a');
+                     a.href = url;
+                     a.download = file.name;
+                     document.body.appendChild(a);
+                     a.click();
+                     document.body.removeChild(a);
+                     URL.revokeObjectURL(url);
+                 } catch (e) {
+                     console.error(e);
+                     alert("Failed to embed lyrics into media file");
+                 }
+                 setExportDropdownOpen(false);
+                 return;
+             }
+        }
+        
         const blob = new Blob([lrcText], { type: 'text/plain' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -330,9 +363,24 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
         URL.revokeObjectURL(url);
     }
     setExportDropdownOpen(false);
-  }, [lines, lyricFileName, audioFileName, lrcMetadata]);
+  }, [lines, lyricFileName, audioFileName, lrcMetadata, file]);
 
   // AppCommands mapping extracted from useEditor hooks above
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        handleExport('enhanced');
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'o') {
+        e.preventDefault();
+        mixedInputRef.current?.click();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleExport]);
 
   useEffect(() => {
     // Expose state for Tauri
@@ -382,7 +430,26 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
       },
       exportStandard: () => handleExport('standard'),
       exportEnhanced: () => handleExport('enhanced'),
-      exportCurrent: () => handleExport(exportFormat as 'standard' | 'enhanced' | 'simple'),
+      exportSimple: () => handleExport('simple'),
+      exportEmbeddedStandard: () => handleExport('standard', 'embedded'),
+      exportEmbeddedEnhanced: () => handleExport('enhanced', 'embedded'),
+      exportEmbeddedSimple: () => handleExport('simple', 'embedded'),
+     exportCurrent: () => handleExport(exportFormat as 'standard' | 'enhanced' | 'simple'),
+      getExportOptions: () => {
+         const ext = audioFileName ? audioFileName.substring(audioFileName.lastIndexOf('.')).toLowerCase() : '';
+         const options = [
+             { label: '.lrc 增強型LRC (ESLYRIC ﹣ 逐字同步)', action: 'exportEnhanced' },
+             { label: '.lrc 標準LRC (逐行同步)', action: 'exportStandard' },
+             { label: '.txt 簡易歌詞 (無時間戳)', action: 'exportSimple' }
+         ];
+         if (ext === '.flac' || ext === '.m4a' || ext === '.mp4') {
+             options.push({ label: '---', action: 'separator' });
+             options.push({ label: `${ext} 已嵌入歌詞的 增強型LRC (ESLYRIC ﹣ 逐字同步)`, action: 'exportEmbeddedEnhanced' });
+             options.push({ label: `${ext} 已嵌入歌詞的 標準LRC (逐行同步)`, action: 'exportEmbeddedStandard' });
+             options.push({ label: `${ext} 已嵌入歌詞的 簡易歌詞 (無時間戳)`, action: 'exportEmbeddedSimple' });
+         }
+         return options;
+      },
       shiftTime: async () => {
         const val = await dialogs.prompt('Shift all timings by X seconds (e.g., 0.5 or -1.2):', '0');
         if (val !== null) {
@@ -759,10 +826,11 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
           <div className="relative dropdown-container">
              <div className="flex group shadow-sm rounded">
                 <button 
-                  onClick={() => handleExport(exportFormat as any)}
+                  onClick={() => handleExport('enhanced')}
+                  title="儲存為 .LRC 檔案 (Ctrl+S)"
                   className="px-3 py-1.5 bg-[var(--app-accent)] hover:bg-[var(--app-accent-hover)] text-black rounded-l text-xs font-bold uppercase flex items-center gap-2 transition-colors border border-transparent"
                 >
-                  <Download className="w-4 h-4" /> {i18n.exportLrc}
+                  <Download className="w-4 h-4" /> 儲存
                 </button>
                 <button
                   onClick={() => setExportDropdownOpen(!exportDropdownOpen)}
@@ -773,16 +841,26 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
              </div>
 
              {exportDropdownOpen && (
-               <div className="absolute top-full right-0 mt-1 w-56 bg-[var(--app-bg-panel)] border border-[var(--app-border-base)] rounded shadow-xl z-50 overflow-hidden py-1">
-                  <button className="w-full text-left px-3 py-2 text-xs text-[var(--app-text-secondary)] hover:bg-[var(--app-accent)] hover:text-black transition-colors flex flex-col gap-1" onClick={() => handleExport('standard')}>
-                    <span>{i18n.exportStandard}</span>
-                  </button>
-                  <button className="w-full text-left px-3 py-2 text-xs text-[var(--app-text-secondary)] hover:bg-[var(--app-accent)] hover:text-black transition-colors flex flex-col gap-1" onClick={() => handleExport('enhanced')}>
-                    <span>{i18n.exportEnhanced}</span>
-                  </button>
-                  <button className="w-full text-left px-3 py-2 text-xs text-[var(--app-text-secondary)] hover:bg-[var(--app-accent)] hover:text-black transition-colors flex flex-col gap-1" onClick={() => handleExport('simple')}>
-                    <span>{i18n.exportSimple}</span>
-                  </button>
+               <div className="absolute top-full right-0 mt-1 w-max min-w-[14rem] bg-[var(--app-bg-panel)] border border-[var(--app-border-base)] rounded shadow-xl z-50 overflow-hidden py-1 whitespace-nowrap">
+                  {AppCommands.getExportOptions().map((opt, i) => (
+                      opt.action === 'separator' ? (
+                          <div key={i} className="my-1 border-t border-[var(--app-border-base)] mx-2"></div>
+                      ) : (
+                          <button key={i} className="w-full text-left px-3 py-2 text-xs text-[var(--app-text-secondary)] hover:bg-[var(--app-accent)] hover:text-black transition-colors flex flex-col gap-1" onClick={() => {
+                              const actionMap = {
+                                  exportEnhanced: () => handleExport('enhanced', 'file'),
+                                  exportStandard: () => handleExport('standard', 'file'),
+                                  exportSimple: () => handleExport('simple', 'file'),
+                                  exportEmbeddedEnhanced: () => handleExport('enhanced', 'embedded'),
+                                  exportEmbeddedStandard: () => handleExport('standard', 'embedded'),
+                                  exportEmbeddedSimple: () => handleExport('simple', 'embedded')
+                              };
+                              (actionMap as any)[opt.action]();
+                          }}>
+                              <span>{opt.label}</span>
+                          </button>
+                      )
+                  ))}
                </div>
             )}
           </div>
@@ -807,6 +885,23 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
         className="hidden" 
         ref={lyricInputRef} 
         onChange={handleLyricSelect}
+        onClick={(e) => { (e.target as HTMLInputElement).value = ''; }}
+      />
+      <input 
+        type="file" 
+        accept="audio/*,video/*,.flac,.txt,.lrc" 
+        className="hidden" 
+        ref={mixedInputRef} 
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if(f) {
+             if (f.type.startsWith('audio/') || f.type.startsWith('video/') || f.name.toLowerCase().endsWith('.flac')) {
+                processAudioFile(f);
+             } else if (f.name.toLowerCase().endsWith('.txt') || f.name.toLowerCase().endsWith('.lrc')) {
+                processLyricFile(f);
+             }
+          }
+        }}
         onClick={(e) => { (e.target as HTMLInputElement).value = ''; }}
       />
       {dragOverlay && (

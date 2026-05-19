@@ -382,7 +382,6 @@ export function MediaPlayer() {
     src: fileUrl,
     controls: false,
     loop: isLooping,
-    crossOrigin: 'anonymous' as const,
     className: 'w-full rounded bg-black object-contain ' + (isVideo ? 'h-48' : 'hidden'),
     onDurationChange: (e: React.SyntheticEvent<HTMLMediaElement>) => {
       const d = e.currentTarget.duration;

@@ -318,11 +318,33 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
     const isTauri = typeof window !== 'undefined' && ((window as any).__TAURI__);
     if (isTauri) {
         try {
-            await (window as any).__TAURI__.core.invoke(saveType === 'embedded' ? 'embed_lyrics_dialog' : 'save_lyrics_dialog', {
-                lyricsText: lrcText,
-                defaultName: defaultName,
-                format: format,
-            });
+            if (saveType === 'embedded' && file) {
+                // Tauri 的 embedded 匯出：先在前端嵌入歌詞到媒體 binary，
+                // 再透過 save_binary_dialog 讓使用者選擇儲存路徑並寫入磁碟。
+                const lowerName = file.name.toLowerCase();
+                if (lowerName.endsWith('.flac') || lowerName.endsWith('.m4a') || lowerName.endsWith('.mp4')) {
+                    const arrayBuffer = await file.arrayBuffer();
+                    let blob: Blob;
+                    if (lowerName.endsWith('.flac')) {
+                        const { embedLyricsIntoFlac } = await import('@/lib/flac-utils');
+                        blob = embedLyricsIntoFlac(arrayBuffer, lrcText, format === 'enhanced');
+                    } else {
+                        const { embedLyricsIntoM4a } = await import('@/lib/m4a-utils');
+                        blob = embedLyricsIntoM4a(arrayBuffer, lrcText, format === 'enhanced');
+                    }
+                    const bytes = Array.from(new Uint8Array(await blob.arrayBuffer()));
+                    await (window as any).__TAURI__.core.invoke('save_binary_dialog', {
+                        bytes,
+                        defaultName: file.name,
+                    });
+                }
+            } else {
+                await (window as any).__TAURI__.core.invoke('save_lyrics_dialog', {
+                    lyricsText: lrcText,
+                    defaultName: defaultName,
+                    format: format,
+                });
+            }
         } catch (err) {
             console.error("Tauri save dialog failed", err);
         }

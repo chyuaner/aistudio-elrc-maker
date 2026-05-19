@@ -113,6 +113,11 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
   const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
   const [metadataDialogOpen, setMetadataDialogOpen] = useState(false);
   const [isFocused, setIsFocused] = useState(true);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -810,13 +815,15 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
         
         {/* Right Group */}
         <div className="flex items-center gap-2 flex-wrap justify-center lg:justify-end mt-2 lg:mt-0">
-            <button 
-              onClick={() => AppCommands.toggleTheme?.()} 
-              title="切換深淺色"
-              className="p-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-text-primary)] hover:bg-[var(--app-bg-hover)] rounded transition-colors mr-1"
-            >
-              <Moon className="w-4 h-4" />
-            </button>
+            {mounted && !isTauri && (
+              <button 
+                onClick={() => AppCommands.toggleTheme?.()} 
+                title="切換深淺色"
+                className="p-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-text-primary)] hover:bg-[var(--app-bg-hover)] rounded transition-colors mr-1"
+              >
+                <Moon className="w-4 h-4" />
+              </button>
+            )}
             <button 
               onClick={() => AppCommands.toggleFullscreen?.()} 
               title="全螢幕"

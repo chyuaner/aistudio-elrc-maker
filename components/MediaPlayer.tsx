@@ -325,6 +325,25 @@ export function MediaPlayer() {
     }
   };
 
+  // Sync Media Session playbackState and positionState whenever isPlaying/time changes
+  useEffect(() => {
+    if (!('mediaSession' in navigator)) return;
+    navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
+  }, [isPlaying]);
+
+  useEffect(() => {
+    if (!('mediaSession' in navigator)) return;
+    if (duration > 0 && isFinite(duration)) {
+      try {
+        navigator.mediaSession.setPositionState({
+          duration,
+          playbackRate,
+          position: Math.min(syncCurrTime, duration),
+        });
+      } catch (e) {}
+    }
+  }, [syncCurrTime, duration, playbackRate]);
+
   useEffect(() => {
     if ('mediaSession' in navigator) {
        navigator.mediaSession.metadata = new MediaMetadata({
@@ -333,12 +352,20 @@ export function MediaPlayer() {
          album: metadata?.album || '',
          artwork: metadata?.picture ? [{ src: metadata.picture, type: metadata.format }] : []
        });
+       // Reset playbackState when metadata changes (new track)
+       navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
 
        navigator.mediaSession.setActionHandler('play', () => {
            if (playerRef.current) playerRef.current.play();
        });
        navigator.mediaSession.setActionHandler('pause', () => {
            if (playerRef.current) playerRef.current.pause();
+       });
+       navigator.mediaSession.setActionHandler('stop', () => {
+           if (playerRef.current) {
+               playerRef.current.pause();
+               playerRef.current.currentTime = 0;
+           }
        });
        navigator.mediaSession.setActionHandler('seekbackward', (details) => seekBy(-(details.seekOffset || 5)));
        navigator.mediaSession.setActionHandler('seekforward', (details) => seekBy(details.seekOffset || 5));
@@ -389,8 +416,18 @@ export function MediaPlayer() {
       // Ignore Infinity/NaN (FLAC streaming quirk); real duration is pre-cached from Rust
       if (isFinite(d) && !isNaN(d) && d > 0) setDuration(d);
     },
-    onPlay: () => setIsPlaying(true),
-    onPause: () => setIsPlaying(false),
+    onPlay: () => {
+      setIsPlaying(true);
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.playbackState = 'playing';
+      }
+    },
+    onPause: () => {
+      setIsPlaying(false);
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.playbackState = 'paused';
+      }
+    },
     onRateChange: (e: React.SyntheticEvent<HTMLMediaElement>) => {
       setPlaybackRate(e.currentTarget.playbackRate);
     },

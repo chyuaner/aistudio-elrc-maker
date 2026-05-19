@@ -372,6 +372,7 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
     
     const hasAnyTimestamps = newLines.some(l => l.start !== null || (l.words && l.words.some(w => w.start !== null)));
     setAutoScrollEnabled(hasAnyTimestamps);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [historyState.present]);
   const commitLines = (payload: LyricLine[] | ((prev: LyricLine[]) => LyricLine[]), actionName?: string) => {
     dispatchLines({ type: 'COMMIT', payload, actionName });

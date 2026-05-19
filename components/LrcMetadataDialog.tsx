@@ -62,7 +62,6 @@ export function LrcMetadataDialog({ isOpen, onClose }: { isOpen: boolean; onClos
               currentCustom.push({ key, value });
           }
       }
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCustomKeys(currentCustom);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

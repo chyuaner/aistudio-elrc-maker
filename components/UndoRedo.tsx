@@ -3,7 +3,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown, Undo2, Redo2 } from 'lucide-react';
 import { useEditor } from './EditorProvider';
-import { Tooltip } from './Tooltip';
 
 function UndoRedoDropdown({
   label,
@@ -79,26 +78,22 @@ export function UndoRedoControls() {
 
   return (
     <div className="flex items-center gap-1 h-[30px]">
-      <Tooltip title="Undo (Ctrl+Z)" delay={500}>
-        <UndoRedoDropdown 
-          label="Undo (Ctrl+Z)" 
-          icon={Undo2} 
-          action={undo} 
-          count={pastCount} 
-          type="undo" 
-          actionsList={pastActions}
-        />
-      </Tooltip>
-      <Tooltip title="Redo (Ctrl+Y)" delay={500}>
-        <UndoRedoDropdown 
-          label="Redo (Ctrl+Y)" 
-          icon={Redo2} 
-          action={redo} 
-          count={futureCount} 
-          type="redo" 
-          actionsList={futureActions}
-        />
-      </Tooltip>
+      <UndoRedoDropdown 
+        label="Undo (Ctrl+Z)" 
+        icon={Undo2} 
+        action={undo} 
+        count={pastCount} 
+        type="undo" 
+        actionsList={pastActions}
+      />
+      <UndoRedoDropdown 
+        label="Redo (Ctrl+Y)" 
+        icon={Redo2} 
+        action={redo} 
+        count={futureCount} 
+        type="redo" 
+        actionsList={futureActions}
+      />
     </div>
   );
 }

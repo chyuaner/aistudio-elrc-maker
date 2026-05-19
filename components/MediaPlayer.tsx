@@ -61,11 +61,14 @@ export function MediaPlayer() {
     return [formatDisplay, sampleRateDisplay, bitrateDisplay].filter(Boolean).join(' · ');
   };
 
+  const [hoverTime, setHoverTime] = useState<number | null>(null);
+  const [hoverX, setHoverX] = useState(0);
+
   useEffect(() => {
     if (fileUrl && playerRef.current) {
        waveSurferRef.current = WaveSurfer.create({
           container: containerRef.current!,
-          waveColor: 'var(--app-text-muted)',
+          waveColor: 'var(--app-border-light)',
           progressColor: 'var(--app-accent)',
           cursorColor: 'var(--app-accent)',
           cursorWidth: 3,
@@ -76,14 +79,32 @@ export function MediaPlayer() {
           media: playerRef.current as HTMLAudioElement,
        });
 
+       const handleMouseMove = (e: MouseEvent) => {
+          if (containerRef.current && duration > 0) {
+             const rect = containerRef.current.getBoundingClientRect();
+             const x = e.clientX - rect.left;
+             const ratio = Math.max(0, Math.min(1, x / rect.width));
+             setHoverTime(ratio * duration);
+             setHoverX(e.clientX);
+          }
+       };
+
+       const handleMouseLeave = () => setHoverTime(null);
+
+       const container = containerRef.current;
+       container?.addEventListener('mousemove', handleMouseMove);
+       container?.addEventListener('mouseleave', handleMouseLeave);
+
        return () => {
+          container?.removeEventListener('mousemove', handleMouseMove);
+          container?.removeEventListener('mouseleave', handleMouseLeave);
           if (waveSurferRef.current) {
              waveSurferRef.current.destroy();
              waveSurferRef.current = null;
           }
        };
     }
-  }, [fileUrl, playerRef]);
+  }, [fileUrl, playerRef, duration]);
 
   // When a new file is loaded, read the duration pre-parsed by Rust (via window.__mediaDurations__).
   // This bypasses the Chromium/GStreamer issue where FLAC files report Infinity for duration.
@@ -156,7 +177,16 @@ export function MediaPlayer() {
       
       <div className="flex flex-col">
         {/* Waveform */}
-        <div className="w-full rounded overflow-hidden bg-[var(--app-bg-input)]" ref={containerRef}></div>
+        <div className="w-full rounded overflow-hidden bg-[var(--app-bg-input)] relative group/wave" ref={containerRef}>
+          {hoverTime !== null && (
+            <div 
+              className="absolute z-[60] top-0 pointer-events-none transform -translate-x-1/2 px-1.5 py-0.5 bg-[var(--app-text-primary)] text-[var(--app-bg-base)] text-[10px] font-mono font-bold rounded shadow-lg whitespace-nowrap"
+              style={{ left: `${(hoverTime / duration) * 100}%` }}
+            >
+              {formatTime(hoverTime)}
+            </div>
+          )}
+        </div>
         
         {/* Specs */}
         <div className="text-[9px] font-mono text-[var(--app-text-muted)] text-right mt-1 px-1 tracking-widest uppercase truncate">

@@ -356,7 +356,7 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
       undoToSequence: (steps: number) => undo(steps),
       redoToSequence: (steps: number) => redo(steps),
       getUndoList: () => pastActions.map((a, i) => ({ id: `undo-${i}`, name: a.action })),
-      getRedoList: () => futureActions.map((a, i) => ({ id: `redo-${i}`, name: a.action })),
+      getRedoList: () => futureActions.map((a) => ({ id: `redo-${Math.random()}`, name: a.action })),
     });
     const isTauri = typeof window !== 'undefined' && ((window as any).__TAURI__);
     if (isTauri) {
@@ -378,7 +378,7 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
             }).catch(() => {});
         } catch (e) {}
     }
-  }, [dialogs, audioFileName, lyricFileName, lines.length, metadata, setFile, setMetadata, commitLines, setLyricFileName, resetHistory, shiftTime, undo, redo, pastActions, futureActions, handleExport, setAudioSpecs]);
+  }, [dialogs, audioFileName, lyricFileName, lines.length, metadata, setFile, setMetadata, commitLines, setLyricFileName, resetHistory, shiftTime, undo, redo, pastActions, futureActions, handleExport, setAudioSpecs, exportFormat]);
 
   const [dragOverlay, setDragOverlay] = useState<'media' | 'lyric' | 'file' | null>(null);
 
@@ -556,7 +556,7 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
           }
         });
         if (active) unlisteners.push(uDrop);
-        else try { uDrop(); } catch(e){}
+        else try { (uDrop as any)(); } catch(e){}
       } catch (err) {
         console.error('Error setting up Tauri drag listeners:', err);
       }
@@ -568,12 +568,14 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
       active = false;
       unlisteners.forEach(u => {
         try {
-          if (typeof u === 'function') u();
+          if (typeof u === 'function') (u as any)();
         } catch (e) {
           console.warn("Caught unlisten error:", e);
         }
       });
     };
+    // processAudioRef and processLyricRef are stable refs, but we should include them anyway if we want to be strict.
+    // However, the lint warning was specifically about exportFormat in another effect.
   }, []);
 
   const handleAudioSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -762,9 +764,13 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
       style={{ display: 'var(--top-toolbar-display, flex)' }}
     >
       {/* Desktop Title (Absolute centered) */}
-      <div className="absolute inset-0 flex-col items-center justify-center pointer-events-none whitespace-nowrap overflow-hidden px-8 z-0 hidden lg:flex">
-        <h1 className="text-sm font-bold tracking-tight uppercase text-[var(--app-text-secondary)]">LRC Maker <span className="text-[var(--app-text-muted)] font-normal italic ml-1">Enhanced</span></h1>
-        <div className="text-[10px] text-[var(--app-text-muted)] font-mono mt-0.5 truncate flex items-center justify-center gap-2 max-w-full">
+      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none whitespace-nowrap overflow-hidden px-8 z-0 hidden lg:flex">
+        {!hideTitle && (
+          <h1 className={`text-sm font-bold tracking-tight uppercase ${titleColor} transition-colors duration-300`}>
+            LRC Maker <span className="text-[var(--app-text-muted)] font-normal italic ml-1">Enhanced</span>
+          </h1>
+        )}
+        <div className={`${hideTitle ? 'text-sm' : 'text-[10px] mt-0.5'} text-[var(--app-text-muted)] font-mono truncate flex items-center justify-center gap-2 max-w-full transition-all`}>
           {audioFileName ? <span>{i18n.audio}: <span className="text-[var(--app-text-secondary)] truncate max-w-[200px] inline-block align-bottom">{audioFileName}</span></span> : <span>{i18n.noAudio}</span>}
           <span className="opacity-50 shrink-0">|</span>
           {lyricFileName ? <span>{i18n.lyrics}: <span className="text-[var(--app-text-secondary)] truncate max-w-[200px] inline-block align-bottom">{lyricFileName}</span></span> : metadata?.lyric ? <span>{i18n.lyrics}: <span className="text-[var(--app-text-secondary)]">{i18n.embeddedTag}</span></span> : <span>{i18n.noLyrics}</span>}
@@ -775,8 +781,12 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
       <div className="flex lg:hidden items-center justify-between w-full py-2 app-region-drag relative bg-[var(--app-bg-panel-alt)] z-10">
          <div style={{ width: 'var(--titlebar-left-padding, 0px)' }} className="h-6 pointer-events-none shrink-0 transition-[width]" />
          <div className="flex flex-col items-center justify-center pointer-events-none whitespace-nowrap overflow-hidden px-2 z-0 flex-1">
-             <h1 className="text-sm font-bold tracking-tight uppercase text-[var(--app-text-secondary)]">LRC Maker <span className="text-[var(--app-text-muted)] font-normal italic ml-1">Enhanced</span></h1>
-             <div className="text-[10px] text-[var(--app-text-muted)] font-mono truncate flex items-center justify-center gap-2 max-w-full mt-0.5">
+             {!hideTitle && (
+                <h1 className={`text-sm font-bold tracking-tight uppercase ${titleColor} transition-colors duration-300`}>
+                  LRC Maker <span className="text-[var(--app-text-muted)] font-normal italic ml-1">Enhanced</span>
+                </h1>
+             )}
+             <div className={`${hideTitle ? 'text-sm' : 'text-[10px] mt-0.5'} text-[var(--app-text-muted)] font-mono truncate flex items-center justify-center gap-2 max-w-full transition-all`}>
                 {audioFileName ? <span className="truncate max-w-[160px] text-[var(--app-text-secondary)]">{audioFileName}</span> : <span>{i18n.noAudio}</span>}
              </div>
          </div>

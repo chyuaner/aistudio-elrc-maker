@@ -12,6 +12,7 @@
   "dependencies": {
     "@google/genai": "^1.17.0",
     "@hookform/resolvers": "^5.2.1",
+    "@tauri-apps/api": "^2.11.0",
     "@types/jsmediatags": "^3.9.6",
     "autoprefixer": "^10.4.21",
     "class-variance-authority": "^0.7.1",

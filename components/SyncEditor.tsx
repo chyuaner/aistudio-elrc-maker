@@ -66,6 +66,7 @@ const SyncCell = memo(({
     </td>
   );
 });
+SyncCell.displayName = 'SyncCell';
 
 export function SyncEditor() {
   const {
@@ -214,9 +215,9 @@ export function SyncEditor() {
                  shiftTime(parseFloat(val));
               }
             }}
-            className="px-3 py-1.5 bg-[var(--app-bg-panel)] hover:bg-[var(--app-bg-hover)] rounded shadow-sm uppercase font-bold tracking-widest border border-[var(--app-border-light)] flex items-center text-[var(--app-text-secondary)] transition-colors h-[26px]"
+            className="px-3 py-1.5 bg-[var(--app-bg-panel)] hover:bg-[var(--app-bg-hover)] rounded shadow-sm uppercase font-bold tracking-widest border border-[var(--app-border-light)] flex items-center text-[var(--app-text-secondary)] transition-colors h-[30px]"
           >
-            ± Offset
+            整份歌詞時間平移
           </button>
 
           <label className="flex items-center gap-2 cursor-pointer hover:text-[var(--app-text-primary)] transition-colors">
@@ -241,13 +242,13 @@ export function SyncEditor() {
              <span>{i18n.sec}</span>
           </div>
 
-          <button onFocus={(e) => e.target.blur()} onClick={() => syncMode === 'line' ? handleLineStamp() : handleWordStamp()} className="bg-[var(--app-bg-panel)] hover:bg-[var(--app-border-base)] transition-colors p-1.5 rounded border border-[var(--app-border-base)] flex items-center gap-2 shadow-sm cursor-pointer select-none text-xs h-[26px]">
+          <button onFocus={(e) => e.target.blur()} onClick={() => syncMode === 'line' ? handleLineStamp() : handleWordStamp()} className="bg-[var(--app-bg-panel)] hover:bg-[var(--app-border-base)] transition-colors p-1.5 rounded border border-[var(--app-border-base)] flex items-center gap-2 shadow-sm cursor-pointer select-none text-xs h-[30px]">
               <span className="uppercase">{i18n.timestampWords}</span>
               <kbd className="bg-[var(--app-bg-base)] text-[var(--app-accent)] px-1.5 py-0.5 rounded font-mono border border-[var(--app-border-light)]">{hotkeys.stampWord === ' ' ? 'SPACE' : hotkeys.stampWord}</kbd>
           </button>
           
           {syncMode === 'word' && (
-            <button onFocus={(e) => e.target.blur()} onClick={() => handleWordNextLine()} className="bg-[var(--app-bg-panel)] hover:bg-[var(--app-border-base)] transition-colors p-1.5 rounded border border-[var(--app-border-base)] flex items-center gap-2 shadow-sm cursor-pointer select-none text-xs h-[26px]">
+            <button onFocus={(e) => e.target.blur()} onClick={() => handleWordNextLine()} className="bg-[var(--app-bg-panel)] hover:bg-[var(--app-border-base)] transition-colors p-1.5 rounded border border-[var(--app-border-base)] flex items-center gap-2 shadow-sm cursor-pointer select-none text-xs h-[30px]">
                 <span className="uppercase">{i18n.nextLine}</span>
                 <kbd className="bg-[var(--app-bg-base)] text-[var(--app-accent)] px-1.5 py-0.5 rounded font-mono border border-[var(--app-border-light)]">{hotkeys.nextLine.toUpperCase()}</kbd>
             </button>

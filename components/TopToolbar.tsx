@@ -128,6 +128,8 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
   }, []);
   
   const isTauri = typeof window !== 'undefined' && ((window as any).__TAURI__);
+  const isWindows = typeof navigator !== 'undefined' && navigator.userAgent.includes('Windows');
+  const finalHideTitle = hideTitle || (isTauri && isWindows);
   const titleColor = (isTauri && !isFocused) ? 'text-[var(--app-text-muted)]' : 'text-[var(--app-text-secondary)]';
 
   const processAudioFile = React.useCallback(async (f: File) => {
@@ -709,7 +711,7 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
                 </button>
                 <button
                   onClick={() => setExportDropdownOpen(!exportDropdownOpen)}
-                  className="className='px-1.5 py-1.5 bg-[var(--app-accent)] hover:bg-[var(--app-accent-hover)] text-black rounded-r text-xs font-bold uppercase flex items-center transition-colors border border-transparent border-l-black/20"
+                  className="px-1.5 py-1.5 bg-[var(--app-accent)] hover:bg-[var(--app-accent-hover)] text-black rounded-r text-xs font-bold uppercase flex items-center transition-colors border border-transparent border-l-black/20"
                 >
                    <ChevronDown className="w-3 h-3" />
                 </button>
@@ -765,12 +767,12 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
     >
       {/* Desktop Title (Absolute centered) */}
       <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none whitespace-nowrap overflow-hidden px-8 z-0 hidden lg:flex">
-        {!hideTitle && (
+        {!finalHideTitle && (
           <h1 className={`text-sm font-bold tracking-tight uppercase ${titleColor} transition-colors duration-300`}>
             LRC Maker <span className="text-[var(--app-text-muted)] font-normal italic ml-1">Enhanced</span>
           </h1>
         )}
-        <div className={`${hideTitle ? 'text-sm' : 'text-[10px] mt-0.5'} text-[var(--app-text-muted)] font-mono truncate flex items-center justify-center gap-2 max-w-full transition-all`}>
+        <div className={`${finalHideTitle ? 'text-sm' : 'text-[10px] mt-0.5'} text-[var(--app-text-muted)] font-mono truncate flex items-center justify-center gap-2 max-w-full transition-all`}>
           {audioFileName ? <span>{i18n.audio}: <span className="text-[var(--app-text-secondary)] truncate max-w-[200px] inline-block align-bottom">{audioFileName}</span></span> : <span>{i18n.noAudio}</span>}
           <span className="opacity-50 shrink-0">|</span>
           {lyricFileName ? <span>{i18n.lyrics}: <span className="text-[var(--app-text-secondary)] truncate max-w-[200px] inline-block align-bottom">{lyricFileName}</span></span> : metadata?.lyric ? <span>{i18n.lyrics}: <span className="text-[var(--app-text-secondary)]">{i18n.embeddedTag}</span></span> : <span>{i18n.noLyrics}</span>}
@@ -781,12 +783,12 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
       <div className="flex lg:hidden items-center justify-between w-full py-2 app-region-drag relative bg-[var(--app-bg-panel-alt)] z-10">
          <div style={{ width: 'var(--titlebar-left-padding, 0px)' }} className="h-6 pointer-events-none shrink-0 transition-[width]" />
          <div className="flex flex-col items-center justify-center pointer-events-none whitespace-nowrap overflow-hidden px-2 z-0 flex-1">
-             {!hideTitle && (
+             {!finalHideTitle && (
                 <h1 className={`text-sm font-bold tracking-tight uppercase ${titleColor} transition-colors duration-300`}>
                   LRC Maker <span className="text-[var(--app-text-muted)] font-normal italic ml-1">Enhanced</span>
                 </h1>
              )}
-             <div className={`${hideTitle ? 'text-sm' : 'text-[10px] mt-0.5'} text-[var(--app-text-muted)] font-mono truncate flex items-center justify-center gap-2 max-w-full transition-all`}>
+             <div className={`${finalHideTitle ? 'text-sm' : 'text-[10px] mt-0.5'} text-[var(--app-text-muted)] font-mono truncate flex items-center justify-center gap-2 max-w-full transition-all`}>
                 {audioFileName ? <span className="truncate max-w-[160px] text-[var(--app-text-secondary)]">{audioFileName}</span> : <span>{i18n.noAudio}</span>}
              </div>
          </div>

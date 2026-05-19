@@ -3,12 +3,13 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useEditor } from './EditorProvider';
 import { parseRawLyrics, exportLrc } from '@/lib/lyric-utils';
-import { Music, Download, ChevronDown, X, FileText, Maximize } from 'lucide-react';
+import { Music, Download, ChevronDown, X, FileText, Maximize, Moon, Settings2 } from 'lucide-react';
 import { UndoRedoControls } from './UndoRedo';
 import { useDialogs } from './DialogProvider';
 import { AppCommands } from '@/lib/app-commands';
 import { Tooltip } from './Tooltip';
 import { useI18n } from '@/hooks/useI18n';
+import { LrcMetadataDialog } from './LrcMetadataDialog';
 
 function extractFlacMetadata(buffer: ArrayBuffer) {
     const view = new DataView(buffer);
@@ -100,7 +101,7 @@ function extractFlacMetadata(buffer: ArrayBuffer) {
 }
 
 export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
-  const { undo, redo, pastActions, futureActions, setFile, commitLines, resetHistory, lines, syncMode, setMetadata, metadata, audioFileName, lyricFileName, setLyricFileName, exportFormat, shiftTime, setAudioSpecs, setIsPlaying, playerRef, setDuration, setPlaybackRate } = useEditor();
+  const { undo, redo, pastActions, futureActions, setFile, commitLines, resetHistory, lines, syncMode, setMetadata, metadata, audioFileName, lyricFileName, setLyricFileName, exportFormat, shiftTime, setAudioSpecs, setIsPlaying, playerRef, setDuration, setPlaybackRate, lrcMetadata, setLrcMetadata } = useEditor();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const lyricInputRef = useRef<HTMLInputElement>(null);
   const dialogs = useDialogs();
@@ -109,6 +110,7 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
   const [loadMediaDropdownOpen, setLoadMediaDropdownOpen] = useState(false);
   const [loadDropdownOpen, setLoadDropdownOpen] = useState(false);
   const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
+  const [metadataDialogOpen, setMetadataDialogOpen] = useState(false);
   const [isFocused, setIsFocused] = useState(true);
 
   useEffect(() => {
@@ -192,7 +194,9 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
              });
              if (foundLyrics) {
                  setLyricFileName('Embedded Tag');
-                 resetHistory(parseRawLyrics(foundLyrics));
+                 const parsed = parseRawLyrics(foundLyrics);
+                 setLrcMetadata(parsed.metadata);
+                 resetHistory(parsed.lines);
              }
              return;
           }
@@ -243,7 +247,9 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
            
            if (foundLyrics) {
                setLyricFileName('Embedded Tag');
-               resetHistory(parseRawLyrics(foundLyrics));
+               const parsed = parseRawLyrics(foundLyrics);
+               setLrcMetadata(parsed.metadata);
+               resetHistory(parsed.lines);
            }
         },
         onError: function(error: any) {
@@ -252,7 +258,7 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
         }
       });
     }
-  }, [resetHistory, setFile, setLyricFileName, setMetadata, setAudioSpecs, setIsPlaying, playerRef, setDuration, setPlaybackRate]);
+  }, [resetHistory, setFile, setLyricFileName, setMetadata, setAudioSpecs, setIsPlaying, playerRef, setDuration, setPlaybackRate, setLrcMetadata]);
 
   const processLyricFile = React.useCallback(async (f: File) => {
     if (lines.length > 0) {
@@ -263,14 +269,16 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
     const reader = new FileReader();
     reader.onload = (evt) => {
       const text = evt.target?.result as string;
-      resetHistory(parseRawLyrics(text));
+      const parsed = parseRawLyrics(text);
+      setLrcMetadata(parsed.metadata);
+      resetHistory(parsed.lines);
     };
     reader.readAsText(f);
-  }, [lines.length, dialogs, resetHistory, setLyricFileName]);
+  }, [lines.length, dialogs, resetHistory, setLyricFileName, setLrcMetadata]);
 
   const handleExport = React.useCallback(async (format: 'standard' | 'enhanced' | 'simple') => {
     if (lines.length === 0) return;
-    const lrcText = exportLrc(lines, format === 'enhanced', format === 'simple');
+    const lrcText = exportLrc(lines, lrcMetadata, format === 'enhanced', format === 'simple');
 
     let defaultName = 'lyrics.lrc';
     if (format === 'simple') {
@@ -303,7 +311,7 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
         URL.revokeObjectURL(url);
     }
     setExportDropdownOpen(false);
-  }, [lines, lyricFileName, audioFileName]);
+  }, [lines, lyricFileName, audioFileName, lrcMetadata]);
 
   // AppCommands mapping extracted from useEditor hooks above
 
@@ -347,7 +355,9 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
                const confirmed = await dialogs.confirm('Loading embedded lyrics will discard your current ones. Continue?');
                if (!confirmed) return;
            }
-           resetHistory(parseRawLyrics(metadata.lyric));
+           const parsed = parseRawLyrics(metadata.lyric);
+           setLrcMetadata(parsed.metadata);
+           resetHistory(parsed.lines);
            setLyricFileName(null);
         }
       },
@@ -390,7 +400,7 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
             }).catch(() => {});
         } catch (e) {}
     }
-  }, [dialogs, audioFileName, lyricFileName, lines.length, metadata, setFile, setMetadata, commitLines, setLyricFileName, resetHistory, shiftTime, undo, redo, pastActions, futureActions, handleExport, setAudioSpecs, exportFormat]);
+  }, [dialogs, audioFileName, lyricFileName, lines.length, metadata, setFile, setMetadata, commitLines, setLyricFileName, resetHistory, shiftTime, undo, redo, pastActions, futureActions, handleExport, setAudioSpecs, exportFormat, setLrcMetadata]);
 
   const [dragOverlay, setDragOverlay] = useState<'media' | 'lyric' | 'file' | null>(null);
 
@@ -686,7 +696,9 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
                              const confirmed = await dialogs.confirm(i18n.confirmEmbeddedLyrics);
                              if (!confirmed) return;
                           }
-                          resetHistory(parseRawLyrics(metadata.lyric)); 
+                          const parsed = parseRawLyrics(metadata.lyric);
+                          setLrcMetadata(parsed.metadata);
+                          resetHistory(parsed.lines);
                        }
                        setLoadDropdownOpen(false); 
                     }}
@@ -711,6 +723,20 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
         
         {/* Right Group */}
         <div className="flex items-center gap-2 flex-wrap justify-center lg:justify-end mt-2 lg:mt-0">
+            <button
+              onClick={() => setMetadataDialogOpen(true)}
+              title="歌詞屬性"
+              className="p-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-text-primary)] hover:bg-[var(--app-bg-hover)] rounded transition-colors mr-1"
+            >
+              <Settings2 className="w-4 h-4" />
+            </button>
+            <button 
+              onClick={() => AppCommands.toggleTheme?.()} 
+              title="切換深淺色"
+              className="p-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-text-primary)] hover:bg-[var(--app-bg-hover)] rounded transition-colors mr-1"
+            >
+              <Moon className="w-4 h-4" />
+            </button>
             <button 
               onClick={() => AppCommands.toggleFullscreen?.()} 
               title="全螢幕"
@@ -822,6 +848,11 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
     <div style={{ display: 'var(--top-toolbar-display, flex)' }}>
       {renderButtonsRow('flex lg:hidden bg-[var(--app-bg-panel-alt)] border-b border-[var(--app-border-base)] shrink-0')}
     </div>
+    
+    <LrcMetadataDialog 
+        isOpen={metadataDialogOpen} 
+        onClose={() => setMetadataDialogOpen(false)} 
+    />
     </>
   );
 }

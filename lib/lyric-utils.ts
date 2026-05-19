@@ -54,14 +54,36 @@ export function splitWordsAegisub(text: string): LyricWord[] {
   return words;
 }
 
-export function parseRawLyrics(text: string): LyricLine[] {
+export interface LrcMetadata {
+  ti?: string;
+  ar?: string;
+  al?: string;
+  au?: string;
+  by?: string;
+  offset?: string;
+  re?: string;
+  ve?: string;
+  [key: string]: string | undefined;
+}
+
+export function parseRawLyrics(text: string): { lines: LyricLine[], metadata: LrcMetadata } {
   const lines = text.split(/\r?\n/);
   const result: LyricLine[] = [];
+  const metadata: LrcMetadata = {};
   
   const lineTimeRegex = /^\[(\d+:\d+\.\d+)\]/;
+  const metaRegex = /^\[([a-zA-Z]+):(.*)\]$/;
   const wordTimeRegex = /<(\d+:\d+\.\d+)>([^<]*)/g;
   
   for (const line of lines) {
+    if (!line.trim()) continue;
+    
+    const metaMatch = metaRegex.exec(line);
+    if (metaMatch && !lineTimeRegex.test(line)) {
+      metadata[metaMatch[1].toLowerCase()] = metaMatch[2];
+      continue;
+    }
+    
     let start: number | null = null;
     let cleanText = line;
     let isEnhanced = false;
@@ -109,11 +131,19 @@ export function parseRawLyrics(text: string): LyricLine[] {
     }
   }
   
-  return result;
+  return { lines: result, metadata };
 }
 
-export function exportLrc(lines: LyricLine[], isEnhanced = false, isSimple = false): string {
+export function exportLrc(lines: LyricLine[], metadata?: LrcMetadata, isEnhanced = false, isSimple = false): string {
   let lrc = '';
+  
+  if (!isSimple && metadata) {
+    for (const [key, value] of Object.entries(metadata)) {
+      if (value) {
+        lrc += `[${key}:${value}]\n`;
+      }
+    }
+  }
   
   for (const line of lines) {
     if (isSimple) {

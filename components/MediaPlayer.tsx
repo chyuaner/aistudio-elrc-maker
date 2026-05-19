@@ -369,13 +369,6 @@ export function MediaPlayer() {
                 <SkipBack className="w-4 h-4" />
               </button>
             </Tooltip>
-            {lines.length > 0 && (
-              <Tooltip title={<div className="flex items-center gap-2">跳到下一段歌詞開頭</div>} delay={500}>
-                <button onClick={jumpToNextSegment} className="p-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-text-primary)] hover:bg-[var(--app-bg-hover)] rounded transition-colors">
-                  <StepForward className="w-4 h-4" />
-                </button>
-              </Tooltip>
-            )}
             <Tooltip title={<div className="flex items-center gap-2">倒轉 -5s <kbd className="bg-[var(--app-bg-base)] text-[var(--app-text-secondary)] px-1.5 py-0.5 rounded text-[9px] font-mono border border-[var(--app-border-light)]">←</kbd></div>} delay={500}>
               <button onClick={() => seekBy(-5)} className="p-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-text-primary)] hover:bg-[var(--app-bg-hover)] rounded transition-colors">
                 <Rewind className="w-4 h-4" />
@@ -396,25 +389,34 @@ export function MediaPlayer() {
                 <FastForward className="w-4 h-4" />
               </button>
             </Tooltip>
+            {lines.length > 0 && (
+              <Tooltip title={<div className="flex items-center gap-2">跳到下一段歌詞開頭</div>} delay={500}>
+                <button onClick={jumpToNextSegment} className="p-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-text-primary)] hover:bg-[var(--app-bg-hover)] rounded transition-colors">
+                  <StepForward className="w-4 h-4" />
+                </button>
+              </Tooltip>
+            )}
           </div>
         </div>
         
         {/* Volume and Settings Row */}
         <div className="flex items-center justify-between gap-2 pt-2 border-t border-[var(--app-border-light)]">
-          <div className="flex items-center gap-1.5 flex-1 min-w-0">
-            <button onClick={() => setIsMuted(!isMuted)} className="p-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-text-primary)] hover:bg-[var(--app-bg-hover)] rounded transition-colors shrink-0">
-              {isMuted || volume === 0 ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-            </button>
-            <input 
-              type="range" min="0" max="1" step="0.05" 
-              value={isMuted ? 0 : volume} 
-              onChange={(e) => {
-                setVolume(parseFloat(e.target.value));
-                if (isMuted && parseFloat(e.target.value) > 0) setIsMuted(false);
-              }}
-              className="w-full min-w-[50px] accent-[var(--app-accent)] h-1.5 rounded-lg outline-none bg-[var(--app-bg-input)]"
-            />
-          </div>
+          <Tooltip title={`音量: ${Math.round((isMuted ? 0 : volume) * 100)}%`}>
+            <div className="flex items-center gap-1.5 flex-1 min-w-[100px] max-w-[180px]">
+              <button onClick={() => setIsMuted(!isMuted)} className="p-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-text-primary)] hover:bg-[var(--app-bg-hover)] rounded transition-colors shrink-0">
+                {isMuted || volume === 0 ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+              </button>
+              <input 
+                type="range" min="0" max="1" step="0.05" 
+                value={isMuted ? 0 : volume} 
+                onChange={(e) => {
+                  setVolume(parseFloat(e.target.value));
+                  if (isMuted && parseFloat(e.target.value) > 0) setIsMuted(false);
+                }}
+                className="w-full min-w-[50px] accent-[var(--app-accent)] h-1.5 rounded-lg outline-none bg-[var(--app-bg-input)]"
+              />
+            </div>
+          </Tooltip>
 
           <div className="flex items-center gap-0.5 relative shrink-0">
             <Tooltip title={<div className="flex items-center gap-2">減速 <kbd className="bg-[var(--app-bg-base)] text-[var(--app-text-secondary)] px-1.5 py-0.5 rounded text-[9px] font-mono border border-[var(--app-border-light)]">[</kbd></div>}>

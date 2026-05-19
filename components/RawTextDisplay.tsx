@@ -6,7 +6,7 @@ import { exportLrc } from '@/lib/lyric-utils';
 import { useI18n } from '@/hooks/useI18n';
 
 export function RawTextDisplay() {
-  const { lines, exportFormat, setExportFormat } = useEditor();
+  const { lines, lrcMetadata, exportFormat, setExportFormat } = useEditor();
   const i18n = useI18n();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   
@@ -19,7 +19,7 @@ export function RawTextDisplay() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const text = exportLrc(lines, exportFormat === 'enhanced', exportFormat === 'simple');
+  const text = exportLrc(lines, lrcMetadata, exportFormat === 'enhanced', exportFormat === 'simple');
 
   const handleSelectAll = () => {
     if (textareaRef.current) {

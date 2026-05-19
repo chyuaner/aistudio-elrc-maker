@@ -18,7 +18,7 @@ export function TextEditor() {
       let newText = '';
       if (viewMode === 'raw') {
          const hasAnyWordTimes = lines.some(l => l.words.some(w => w.start !== null));
-         newText = exportLrc(lines, hasAnyWordTimes || exportFormat === 'enhanced');
+         newText = exportLrc(lines, undefined, hasAnyWordTimes || exportFormat === 'enhanced');
       } else {
          newText = lines.map(l => l.words.map(w=>w.text).join('')).join('\n');
       }
@@ -41,7 +41,8 @@ export function TextEditor() {
     
     let resultLines;
     if (viewMode === 'raw') {
-      resultLines = parseRawLyrics(text);
+      const parsed = parseRawLyrics(text);
+      resultLines = parsed.lines;
       commitLines(resultLines, 'Edit Raw Lyrics');
     } else {
       const newLinesText = text.split(/\r?\n/);

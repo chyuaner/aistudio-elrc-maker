@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useRef, useEffect, useReducer } from 'react';
-import { LyricLine, LyricWord, parseRawLyrics, splitWordsAegisub } from '@/lib/lyric-utils';
+import { LyricLine, LyricWord, parseRawLyrics, splitWordsAegisub, LrcMetadata } from '@/lib/lyric-utils';
 
 interface Hotkeys {
   stampWord: string;
@@ -103,6 +103,8 @@ interface EditorContextType {
   setFile: (file: File | null) => void;
   metadata: FileMetadata | null;
   setMetadata: (meta: FileMetadata | null) => void;
+  lrcMetadata: LrcMetadata;
+  setLrcMetadata: (meta: LrcMetadata) => void;
 
   trackAssignments: number[];
   paragraphStarts: boolean[];
@@ -173,6 +175,7 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
   const [dualLineGapSec, setDualLineGapSec] = useState<number>(6);
   const [autoScrollEnabled, setAutoScrollEnabled] = useState<boolean>(false);
   const [metadata, setMetadata] = useState<FileMetadata | null>(null);
+  const [lrcMetadata, setLrcMetadata] = useState<LrcMetadata>({});
   const [rawMode, setRawMode] = useState<EditorMode>('sync');
   const [syncMode, setSyncMode] = useState<SyncMode>('line');
 
@@ -410,6 +413,7 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
   return (
     <EditorContext.Provider value={{
       file, setFile, fileUrl, audioFileName, lyricFileName, setLyricFileName, metadata, setMetadata,
+      lrcMetadata, setLrcMetadata,
       lines, setLines, resetHistory, commitLines, undo, redo, shiftTime, shiftTimeFromIndex, trackAssignments: trackAssignments.tracks, paragraphStarts: trackAssignments.pStarts, autoScrollEnabled, setAutoScrollEnabled,
       canUndo: historyState.past.length > 0,
       canRedo: historyState.future.length > 0,

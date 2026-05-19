@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useEditor } from './EditorProvider';
-import { X, Plus, Trash2 } from 'lucide-react';
+import { X, Plus, Trash2, Download } from 'lucide-react';
 import { LrcMetadata } from '@/lib/lyric-utils';
 
 const InputRow = ({ label, mKey, placeholder, value, onChange }: { label: string, mKey: keyof LrcMetadata, placeholder?: string, value: string, onChange: (key: string, val: string) => void }) => (
@@ -19,11 +19,22 @@ const InputRow = ({ label, mKey, placeholder, value, onChange }: { label: string
 );
 
 export function LrcMetadataDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
-  const { lrcMetadata, setLrcMetadata } = useEditor();
+  const { lrcMetadata, setLrcMetadata, metadata } = useEditor();
   const [formData, setFormData] = useState<LrcMetadata>({});
   
   // Custom keys that users have added
   const [customKeys, setCustomKeys] = useState<{key: string, value: string}[]>([]);
+
+  const importFromAudio = () => {
+     if (metadata) {
+         setFormData(prev => ({
+             ...prev,
+             ti: metadata.title || prev.ti,
+             ar: metadata.artist || prev.ar,
+             al: metadata.album || prev.al
+         }));
+     }
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -101,9 +112,18 @@ export function LrcMetadataDialog({ isOpen, onClose }: { isOpen: boolean; onClos
         </div>
         
         <div className="p-6 overflow-y-auto flex-1 custom-scrollbar space-y-4">
-            <p className="text-sm text-[var(--app-text-muted)] leading-relaxed">
-                這些標籤將會寫入 LRC 檔案首部，做為整首歌的通用資訊。
-            </p>
+            <div className="flex items-start justify-between gap-4">
+                <p className="text-sm text-[var(--app-text-muted)] leading-relaxed flex-1">
+                    這些標籤將會寫入 LRC 檔案首部，做為整首歌的通用資訊。
+                </p>
+                <button 
+                  onClick={importFromAudio}
+                  disabled={!metadata}
+                  className={`text-xs shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded transition-colors border ${metadata ? 'bg-[var(--app-bg-input)] hover:bg-[var(--app-bg-hover)] border-[var(--app-border-light)] text-[var(--app-text-secondary)]' : 'bg-transparent border-[var(--app-border-base)] text-[var(--app-text-muted)] opacity-50 cursor-not-allowed'}`}
+                >
+                  <Download className="w-3.5 h-3.5" /> 由音檔 ID3/Vorbis 標籤匯入
+                </button>
+            </div>
             
             <div className="bg-[var(--app-bg-base)] p-4 rounded-lg border border-[var(--app-border-base)] space-y-2">
                 <InputRow label="標題 [ti]" mKey="ti" placeholder="歌名" value={(formData.ti as string) || ''} onChange={handleChange} />

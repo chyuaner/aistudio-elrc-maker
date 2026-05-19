@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-:root {
+:root, html.dark {
   --app-bg-base: #0F1115;
   --app-bg-panel: #1A1D23;
   --app-bg-panel-alt: #16191E;
@@ -13,6 +13,7 @@
   --app-text-muted: #7D8590;
   --app-accent: #F27D26;
   --app-accent-hover: #E26D16;
+  --app-visualizer-color: #3D444D;
 
   --titlebar-left-padding: 0px;
   --titlebar-right-padding: 0px;
@@ -20,7 +21,7 @@
 }
 
 @media (prefers-color-scheme: light) {
-  :root {
+  :root:not(.dark) {
     --app-bg-base: #f7f7f9;
     --app-bg-panel: #ffffff;
     --app-bg-panel-alt: #f0f2f5;
@@ -33,7 +34,24 @@
     --app-text-muted: #6b7280;
     --app-accent: #F27D26; /* Kept same accent */
     --app-accent-hover: #E26D16;
+    --app-visualizer-color: #F0F1F2;
   }
+}
+
+html.light {
+  --app-bg-base: #f7f7f9;
+  --app-bg-panel: #ffffff;
+  --app-bg-panel-alt: #f0f2f5;
+  --app-bg-input: #ffffff;
+  --app-bg-hover: #e5e7eb;
+  --app-border-base: #d1d5db;
+  --app-border-light: #e5e7eb;
+  --app-text-primary: #111827;
+  --app-text-secondary: #374151;
+  --app-text-muted: #6b7280;
+  --app-accent: #F27D26;
+  --app-accent-hover: #E26D16;
+  --app-visualizer-color: #F0F1F2;
 }
 
 /* Custom scrollbar to match the new styles if needed, we'll keep the custom-scrollbar logic simple */

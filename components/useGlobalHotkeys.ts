@@ -12,6 +12,7 @@ export function useGlobalHotkeys() {
 
       // Ctrl + Z
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+        if (isInputFocused) return; // Let browser natively handle undo in textarea
         if (e.shiftKey) {
           redo();
         } else {
@@ -23,6 +24,7 @@ export function useGlobalHotkeys() {
       
       // Ctrl + Y
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
+        if (isInputFocused) return; // Let browser natively handle redo in textarea
         redo();
         e.preventDefault();
         return;

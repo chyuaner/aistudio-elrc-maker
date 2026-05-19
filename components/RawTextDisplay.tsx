@@ -4,6 +4,7 @@ import React, { useRef, useEffect } from 'react';
 import { useEditor } from './EditorProvider';
 import { exportLrc } from '@/lib/lyric-utils';
 import { useI18n } from '@/hooks/useI18n';
+import { LineNumberedTextarea } from './LineNumberedTextarea';
 
 export function RawTextDisplay() {
   const { lines, lrcMetadata, exportFormat, setExportFormat } = useEditor();
@@ -77,10 +78,10 @@ export function RawTextDisplay() {
           </button>
         </div>
       </div>
-      <textarea
+      <LineNumberedTextarea
         ref={textareaRef}
         readOnly
-        className="flex-1 w-full p-6 bg-transparent outline-none font-mono text-sm leading-relaxed resize-none custom-scrollbar text-green-400"
+        className="flex-1 rounded-none border-0 border-t border-[var(--app-border-base)] shadow-inner text-green-400"
         value={text}
         onClick={handleSelectAll}
       />

@@ -22,43 +22,6 @@ export function WebSystemIntegration() {
       };
     }
     
-    if (!AppCommands.toggleTheme) {
-      AppCommands.toggleTheme = (forceTheme?: 'dark' | 'light') => {
-        const root = document.documentElement;
-        if (forceTheme) {
-            if (forceTheme === 'dark') {
-                root.classList.add('dark');
-                root.style.colorScheme = 'dark';
-                updateMetaThemeColor('#16191E');
-            } else {
-                root.classList.remove('dark');
-                root.style.colorScheme = 'light';
-                updateMetaThemeColor('#f0f2f5');
-            }
-        } else {
-            // Toggle
-            if (root.classList.contains('dark')) {
-                root.classList.remove('dark');
-                root.style.colorScheme = 'light';
-                updateMetaThemeColor('#f0f2f5');
-            } else {
-                // Determine if we are currently light by media query if no class
-                const isSystemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                if (!root.classList.contains('dark') && isSystemDark) {
-                    // It was system dark, but we want to toggle to light
-                    root.classList.remove('dark');
-                    root.style.colorScheme = 'light';
-                    updateMetaThemeColor('#f0f2f5');
-                } else {
-                    root.classList.add('dark');
-                    root.style.colorScheme = 'dark';
-                    updateMetaThemeColor('#16191E');
-                }
-            }
-        }
-      };
-    }
-
     function updateMetaThemeColor(color: string) {
         let metaThemeColor = document.querySelector("meta[name=theme-color]");
         if (!metaThemeColor) {
@@ -71,6 +34,46 @@ export function WebSystemIntegration() {
         document.querySelectorAll("meta[name=theme-color][media]").forEach(el => el.remove());
         
         metaThemeColor.setAttribute("content", color);
+    }
+    
+    // Initialize Theme Meta Color
+    const root = document.documentElement;
+    const isSystemDarkQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    
+    // Initial sync
+    let isCurrentlyDarkInit = root.classList.contains('dark') || (!root.classList.contains('light') && isSystemDarkQuery.matches);
+    updateMetaThemeColor(isCurrentlyDarkInit ? '#16191E' : '#f0f2f5');
+    
+    // Also listen to system theme changes dynamically if no forced theme!
+    isSystemDarkQuery.addEventListener('change', (e) => {
+        if (!root.classList.contains('dark') && !root.classList.contains('light')) {
+             updateMetaThemeColor(e.matches ? '#16191E' : '#f0f2f5');
+        }
+    });
+
+    if (!AppCommands.toggleTheme) {
+      AppCommands.toggleTheme = (forceTheme?: 'dark' | 'light') => {
+        const isSystemDark = isSystemDarkQuery.matches;
+        
+        let isCurrentlyDark = false;
+        if (root.classList.contains('dark')) isCurrentlyDark = true;
+        else if (root.classList.contains('light')) isCurrentlyDark = false;
+        else isCurrentlyDark = isSystemDark;
+
+        let willBeDark = forceTheme ? (forceTheme === 'dark') : !isCurrentlyDark;
+
+        if (willBeDark) {
+            root.classList.remove('light');
+            root.classList.add('dark');
+            root.style.colorScheme = 'dark';
+            updateMetaThemeColor('#16191E');
+        } else {
+            root.classList.remove('dark');
+            root.classList.add('light');
+            root.style.colorScheme = 'light';
+            updateMetaThemeColor('#f0f2f5');
+        }
+      };
     }
     
   }, []);

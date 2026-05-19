@@ -4,9 +4,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useEditor } from './EditorProvider';
 import { parseRawLyrics, exportLrc, splitWordsAegisub } from '@/lib/lyric-utils';
 import { ChevronDown } from 'lucide-react';
+import { LineNumberedTextarea } from './LineNumberedTextarea';
 
 export function TextEditor() {
-  const { lines, setLines, commitLines, exportFormat, setActiveLineIndex, setActiveWordIndex } = useEditor();
+  const { lines, setLines, commitLines, exportFormat, setActiveLineIndex, setActiveWordIndex, lrcMetadata, setLrcMetadata } = useEditor();
   const [text, setText] = useState('');
   const [viewMode, setViewMode] = useState<'raw' | 'clean'>('raw');
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -18,7 +19,7 @@ export function TextEditor() {
       let newText = '';
       if (viewMode === 'raw') {
          const hasAnyWordTimes = lines.some(l => l.words.some(w => w.start !== null));
-         newText = exportLrc(lines, undefined, hasAnyWordTimes || exportFormat === 'enhanced');
+         newText = exportLrc(lines, lrcMetadata, hasAnyWordTimes || exportFormat === 'enhanced');
       } else {
          newText = lines.map(l => l.words.map(w=>w.text).join('')).join('\n');
       }
@@ -29,7 +30,7 @@ export function TextEditor() {
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lines, viewMode, exportFormat]);
+  }, [lines, viewMode, exportFormat, lrcMetadata]);
 
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setText(e.target.value);
@@ -43,6 +44,7 @@ export function TextEditor() {
     if (viewMode === 'raw') {
       const parsed = parseRawLyrics(text);
       resultLines = parsed.lines;
+      setLrcMetadata(parsed.metadata);
       commitLines(resultLines, 'Edit Raw Lyrics');
     } else {
       const newLinesText = text.split(/\r?\n/);
@@ -111,12 +113,13 @@ export function TextEditor() {
           )}
         </div>
       </div>
-      <textarea
-        className="flex-1 w-full p-6 bg-transparent text-[var(--app-text-secondary)] outline-none font-mono text-sm leading-relaxed resize-none custom-scrollbar"
+      <LineNumberedTextarea
+        className="flex-1 rounded-none border-0 border-t border-[var(--app-border-base)] shadow-inner text-[var(--app-text-secondary)]"
         placeholder={viewMode === 'raw' ? "Paste your raw LRC with timestamps here..." : "Paste your clean lyrics here..."}
         value={text}
         onChange={handleTextChange}
         onBlur={handleTextBlur}
+        startLineNumber={viewMode === 'raw' ? 1 : (Object.values(lrcMetadata || {}).filter(Boolean).length + 1)}
       />
     </div>
   );

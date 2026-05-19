@@ -3,17 +3,38 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useEditor } from './EditorProvider';
 import WaveSurfer from 'wavesurfer.js';
-import { Play, Pause, Square, Rewind, FastForward, ChevronLeft, ChevronRight, Volume2, VolumeX, Settings2, SkipBack, StepForward, Music } from 'lucide-react';
+import { Play, Pause, Square, Rewind, FastForward, ChevronLeft, ChevronRight, Volume2, VolumeX, Settings2, SkipBack, StepForward, Music, Repeat } from 'lucide-react';
 import { formatTime } from '@/lib/lyric-utils';
 import { Tooltip } from './Tooltip';
 
-function TimeDisplay() {
+function TimeDisplay({ className = '' }: { className?: string }) {
   const { duration, playerRef } = useEditor();
   const [currentTime, setCurrentTime] = useState(0);
 
   // Live frequency visualizer
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
+  const colorRef = useRef<string>('#444C56');
+
+  useEffect(() => {
+    const updateColor = () => {
+      const tempDiv = document.createElement('div');
+      tempDiv.style.color = 'var(--app-visualizer-color)';
+      document.body.appendChild(tempDiv);
+      const computedColor = getComputedStyle(tempDiv).color;
+      document.body.removeChild(tempDiv);
+      colorRef.current = computedColor;
+    };
+    updateColor();
+    const observer = new MutationObserver(updateColor);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    mq.addEventListener('change', updateColor);
+    return () => {
+      observer.disconnect();
+      mq.removeEventListener('change', updateColor);
+    };
+  }, []);
 
   useEffect(() => {
     let rafId: number;
@@ -52,7 +73,7 @@ function TimeDisplay() {
          const ctx = canvas.getContext('2d');
          if (ctx) {
              ctx.clearRect(0, 0, canvas.width, canvas.height);
-             ctx.fillStyle = 'var(--app-border-light)';
+             ctx.fillStyle = colorRef.current;
              const barWidth = (canvas.width / dataArray.length) * 1.5;
              for (let i = 0; i < dataArray.length; i++) {
                  // scale bar height: waveTopPercentage to 100 -> full height available
@@ -75,18 +96,18 @@ function TimeDisplay() {
   }, [playerRef]);
 
   return (
-    <div className="flex justify-between items-end px-1 relative overflow-hidden h-16 w-full pt-4">
+    <div className={`flex justify-between items-end px-1 relative overflow-hidden h-20 w-full pt-2 pb2 -mb-2 ${className}`}>
         <canvas 
             ref={canvasRef} 
-            className="absolute inset-0 w-full h-full pointer-events-none opacity-10 waveform-visualizer" 
+            className="absolute inset-0 w-full h-full pointer-events-none waveform-visualizer" 
             style={{ '--waveTopPercentage': '100%', '--opPeaks': 1 } as any}
             width={800} 
-            height={64} 
+            height={80} 
         />
-        <span className="text-3xl font-mono text-[var(--app-accent)] tabular-nums tracking-tighter leading-none font-medium z-10">
+        <span className="text-3xl font-mono text-[var(--app-accent)] tabular-nums tracking-tighter leading-none font-medium z-10 mb-1">
           {formatTime(currentTime)}
         </span>
-        <div className="flex flex-col items-end gap-0.5 z-10">
+        <div className="flex flex-col items-end gap-0.5 z-10 mb-2">
           <span className="text-xs font-mono text-[var(--app-text-secondary)] tabular-nums leading-none">
             -{formatTime(Math.max(0, duration - currentTime))}
           </span>
@@ -123,16 +144,81 @@ export function MediaPlayer() {
 
   const [hoverTime, setHoverTime] = useState<number | null>(null);
   const [hoverX, setHoverX] = useState(0);
+  const [isLooping, setIsLooping] = useState(false);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.settings-dropdown-container')) {
+        setShowSettings(false);
+      }
+    };
+    if (showSettings) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showSettings]);
+
+  useEffect(() => {
+    // Theme change observer for WaveSurfer
+    const updateColors = () => {
+      if (waveSurferRef.current) {
+        const tempDiv = document.createElement('div');
+        tempDiv.style.color = 'var(--app-visualizer-color)';
+        tempDiv.style.backgroundColor = 'var(--app-accent)';
+        document.body.appendChild(tempDiv);
+        const computedStyles = getComputedStyle(tempDiv);
+        const waveColor = computedStyles.color;
+        const progressColor = computedStyles.backgroundColor;
+        document.body.removeChild(tempDiv);
+        
+        waveSurferRef.current.setOptions({
+          waveColor: waveColor || '#444C56',
+          progressColor: progressColor || '#F27D26',
+          cursorColor: progressColor || '#F27D26',
+        });
+      }
+    };
+    
+    // Call once to ensure sync in case it differs at mount
+    updateColors();
+    
+    const observer = new MutationObserver((mutations) => {
+      for (const m of mutations) {
+         if (m.attributeName === 'class') updateColors();
+      }
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    mq.addEventListener('change', updateColors);
+    
+    return () => {
+      observer.disconnect();
+      mq.removeEventListener('change', updateColors);
+    };
+  }, []);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsWaveReady(false);
     if (fileUrl && playerRef.current) {
+       // Get computed colors initially since Canvas 2D context does not support CSS var() strings
+       const tempDiv = document.createElement('div');
+       tempDiv.style.color = 'var(--app-visualizer-color)';
+       tempDiv.style.backgroundColor = 'var(--app-accent)';
+       document.body.appendChild(tempDiv);
+       const computedStyles = getComputedStyle(tempDiv);
+       const initialWaveColor = computedStyles.color || '#444C56';
+       const initialProgressColor = computedStyles.backgroundColor || '#F27D26';
+       document.body.removeChild(tempDiv);
+
        waveSurferRef.current = WaveSurfer.create({
           container: containerRef.current!,
-          waveColor: 'var(--app-border-light)',
-          progressColor: 'var(--app-accent)',
-          cursorColor: 'var(--app-accent)',
+          waveColor: initialWaveColor,
+          progressColor: initialProgressColor,
+          cursorColor: initialProgressColor,
           cursorWidth: 3,
           barWidth: 2,
           barGap: 1,
@@ -199,7 +285,7 @@ export function MediaPlayer() {
   }, [volume, isMuted, playerRef]);
 
   useEffect(() => {
-    if (playerRef.current) {
+    if (playerRef.current && playerRef.current.playbackRate !== playbackRate) {
       playerRef.current.playbackRate = playbackRate;
     }
   }, [playbackRate, playerRef]);
@@ -258,6 +344,27 @@ export function MediaPlayer() {
        navigator.mediaSession.setActionHandler('seekforward', (details) => seekBy(details.seekOffset || 5));
        navigator.mediaSession.setActionHandler('previoustrack', jumpToBeginning);
        navigator.mediaSession.setActionHandler('nexttrack', jumpToNextSegment);
+       try {
+           navigator.mediaSession.setActionHandler('seekto', (details) => {
+               if (details.seekTime !== undefined && playerRef.current) {
+                   playerRef.current.currentTime = details.seekTime;
+               }
+           });
+           // @ts-ignore: TypeScript might not recognize playbackratechange Action Handler
+           navigator.mediaSession.setActionHandler('playbackratechange', (details: any) => {
+               if (details.playbackRate) {
+                   setPlaybackRate(details.playbackRate);
+               }
+           });
+           // @ts-ignore: TypeScript might not recognize setrepeatmode
+           navigator.mediaSession.setActionHandler('setrepeatmode', (details: any) => {
+               if (details.repeatMode === 'none') {
+                   setIsLooping(false);
+               } else {
+                   setIsLooping(true);
+               }
+           });
+       } catch(e) {}
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [metadata, file, lines, paragraphStarts]);
@@ -274,6 +381,7 @@ export function MediaPlayer() {
   const commonProps = {
     src: fileUrl,
     controls: false,
+    loop: isLooping,
     crossOrigin: 'anonymous' as const,
     className: 'w-full rounded bg-black object-contain ' + (isVideo ? 'h-48' : 'hidden'),
     onDurationChange: (e: React.SyntheticEvent<HTMLMediaElement>) => {
@@ -283,6 +391,9 @@ export function MediaPlayer() {
     },
     onPlay: () => setIsPlaying(true),
     onPause: () => setIsPlaying(false),
+    onRateChange: (e: React.SyntheticEvent<HTMLMediaElement>) => {
+      setPlaybackRate(e.currentTarget.playbackRate);
+    },
     ref: playerRef as any,
   };
 
@@ -342,9 +453,9 @@ export function MediaPlayer() {
       </div>
 
       {/* Time Display */}
-      <TimeDisplay />
+      <TimeDisplay className="-mb-2" />
       
-      <div className="flex flex-col gap-3 bg-[var(--app-bg-panel)] p-3 rounded shadow-sm border border-[var(--app-border-base)]">
+      <div className="@container flex flex-col gap-3 bg-[var(--app-bg-panel)] p-3 rounded shadow-sm border border-[var(--app-border-base)]">
         {/* Playback controls row */}
         <div className="flex items-center justify-between gap-1">
           <div className="flex items-center gap-1.5">
@@ -365,12 +476,12 @@ export function MediaPlayer() {
 
           <div className="flex items-center gap-0.5 flex-1 justify-end">
             <Tooltip title={<div className="flex items-center gap-2">跳到開頭 <kbd className="bg-[var(--app-bg-base)] text-[var(--app-text-secondary)] px-1.5 py-0.5 rounded text-[9px] font-mono border border-[var(--app-border-light)]">0</kbd></div>} delay={500}>
-              <button onClick={jumpToBeginning} className="p-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-text-primary)] hover:bg-[var(--app-bg-hover)] rounded transition-colors">
+              <button onClick={jumpToBeginning} className="hidden @[300px]:block p-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-text-primary)] hover:bg-[var(--app-bg-hover)] rounded transition-colors">
                 <SkipBack className="w-4 h-4" />
               </button>
             </Tooltip>
             <Tooltip title={<div className="flex items-center gap-2">倒轉 -5s <kbd className="bg-[var(--app-bg-base)] text-[var(--app-text-secondary)] px-1.5 py-0.5 rounded text-[9px] font-mono border border-[var(--app-border-light)]">←</kbd></div>} delay={500}>
-              <button onClick={() => seekBy(-5)} className="p-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-text-primary)] hover:bg-[var(--app-bg-hover)] rounded transition-colors">
+              <button onClick={() => seekBy(-5)} className="hidden @[300px]:block p-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-text-primary)] hover:bg-[var(--app-bg-hover)] rounded transition-colors">
                 <Rewind className="w-4 h-4" />
               </button>
             </Tooltip>
@@ -385,17 +496,25 @@ export function MediaPlayer() {
               </button>
             </Tooltip>
             <Tooltip title={<div className="flex items-center gap-2">快進 +5s <kbd className="bg-[var(--app-bg-base)] text-[var(--app-text-secondary)] px-1.5 py-0.5 rounded text-[9px] font-mono border border-[var(--app-border-light)]">→</kbd></div>} delay={500}>
-              <button onClick={() => seekBy(5)} className="p-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-text-primary)] hover:bg-[var(--app-bg-hover)] rounded transition-colors">
+              <button onClick={() => seekBy(5)} className="hidden @[300px]:block p-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-text-primary)] hover:bg-[var(--app-bg-hover)] rounded transition-colors">
                 <FastForward className="w-4 h-4" />
               </button>
             </Tooltip>
             {lines.length > 0 && (
               <Tooltip title={<div className="flex items-center gap-2">跳到下一段歌詞開頭</div>} delay={500}>
-                <button onClick={jumpToNextSegment} className="p-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-text-primary)] hover:bg-[var(--app-bg-hover)] rounded transition-colors">
+                <button onClick={jumpToNextSegment} className="hidden @[300px]:block p-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-text-primary)] hover:bg-[var(--app-bg-hover)] rounded transition-colors">
                   <StepForward className="w-4 h-4" />
                 </button>
               </Tooltip>
             )}
+            <Tooltip title="重複播放" delay={500}>
+              <button 
+                onClick={() => setIsLooping(!isLooping)} 
+                className={`p-1.5 rounded transition-colors ${isLooping ? 'text-[var(--app-accent)] bg-[var(--app-bg-hover)]' : 'text-[var(--app-text-muted)] hover:text-[var(--app-text-primary)] hover:bg-[var(--app-bg-hover)]'}`}
+              >
+                <Repeat className="w-4 h-4" />
+              </button>
+            </Tooltip>
           </div>
         </div>
         
@@ -418,7 +537,7 @@ export function MediaPlayer() {
             </div>
           </Tooltip>
 
-          <div className="flex items-center gap-0.5 relative shrink-0">
+          <div className="flex items-center gap-0.5 relative shrink-0 settings-dropdown-container">
             <Tooltip title={<div className="flex items-center gap-2">減速 <kbd className="bg-[var(--app-bg-base)] text-[var(--app-text-secondary)] px-1.5 py-0.5 rounded text-[9px] font-mono border border-[var(--app-border-light)]">[</kbd></div>}>
               <button 
                 onClick={() => setPlaybackRate(Math.max(0.25, Number((playbackRate - 0.05).toFixed(2))))}

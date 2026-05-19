@@ -210,6 +210,23 @@ export function SyncEditor() {
         <div className="flex flex-wrap items-center gap-4 text-[10px] text-[var(--app-text-muted)]">
           <button
             onClick={async () => {
+              const confirmed = await dialogs.confirm('確定要移除所有時間戳嗎？');
+              if (confirmed) {
+                  const newLines = lines.map(line => ({
+                      ...line,
+                      start: null,
+                      words: line.words.map(w => ({ ...w, start: null, end: null }))
+                  }));
+                  commitLines(newLines, '移除所有時間戳');
+              }
+            }}
+            className="px-3 py-1.5 bg-[var(--app-bg-panel)] hover:bg-[var(--app-bg-hover)] hover:text-red-400 rounded shadow-sm uppercase font-bold tracking-widest border border-[var(--app-border-light)] flex items-center text-[var(--app-text-secondary)] transition-colors h-[30px]"
+          >
+            移除所有時間戳
+          </button>
+          
+          <button
+            onClick={async () => {
               const val = await dialogs.prompt(i18n.promptShiftTime, '0');
               if (val && !isNaN(parseFloat(val))) {
                  shiftTime(parseFloat(val));

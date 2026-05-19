@@ -3,7 +3,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useEditor } from './EditorProvider';
 import { parseRawLyrics, exportLrc } from '@/lib/lyric-utils';
-import { Music, Download, ChevronDown, X, FileText, Maximize, Moon, Settings2 } from 'lucide-react';
+import { Music, Download, ChevronDown, X, FileText, Maximize, Moon, Tag, Edit2 } from 'lucide-react';
 import { UndoRedoControls } from './UndoRedo';
 import { useDialogs } from './DialogProvider';
 import { AppCommands } from '@/lib/app-commands';
@@ -112,6 +112,25 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
   const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
   const [metadataDialogOpen, setMetadataDialogOpen] = useState(false);
   const [isFocused, setIsFocused] = useState(true);
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.dropdown-container')) {
+        setLoadMediaDropdownOpen(false);
+        setLoadDropdownOpen(false);
+        setExportDropdownOpen(false);
+      }
+    };
+    
+    if (loadMediaDropdownOpen || loadDropdownOpen || exportDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [loadMediaDropdownOpen, loadDropdownOpen, exportDropdownOpen]);
 
   useEffect(() => {
      const tauri = (window as any).__TAURI__;
@@ -635,7 +654,7 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
         <div className="flex items-center gap-2 flex-wrap justify-center lg:justify-start">
           <div style={{ width: 'var(--titlebar-left-padding, 0px)' }} className="h-8 app-region-drag pointer-events-none shrink-0 transition-[width] hidden lg:block" />
           
-          <div className="relative">
+          <div className="relative dropdown-container">
             <div className="flex group shadow-sm rounded">
               <button 
                 onClick={() => fileInputRef.current?.click()}
@@ -665,7 +684,7 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
             )}
           </div>
           
-          <div className="relative">
+          <div className="relative dropdown-container">
             <div className="flex group shadow-sm rounded">
               <button 
                 onClick={() => lyricInputRef.current?.click()}
@@ -723,13 +742,6 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
         
         {/* Right Group */}
         <div className="flex items-center gap-2 flex-wrap justify-center lg:justify-end mt-2 lg:mt-0">
-            <button
-              onClick={() => setMetadataDialogOpen(true)}
-              title="歌詞屬性"
-              className="p-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-text-primary)] hover:bg-[var(--app-bg-hover)] rounded transition-colors mr-1"
-            >
-              <Settings2 className="w-4 h-4" />
-            </button>
             <button 
               onClick={() => AppCommands.toggleTheme?.()} 
               title="切換深淺色"
@@ -744,7 +756,7 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
             >
               <Maximize className="w-4 h-4" />
             </button>
-          <div className="relative">
+          <div className="relative dropdown-container">
              <div className="flex group shadow-sm rounded">
                 <button 
                   onClick={() => handleExport(exportFormat as any)}
@@ -812,30 +824,54 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
       style={{ display: 'var(--top-toolbar-display, flex)' }}
     >
       {/* Desktop Title (Absolute centered) */}
-      <div className="absolute inset-0 flex-col items-center justify-center pointer-events-none whitespace-nowrap overflow-hidden px-8 z-0 hidden lg:flex">
-        {!finalHideTitle && (
-          <h1 className={`text-sm font-bold tracking-tight uppercase ${titleColor} transition-colors duration-300`}>
-            LRC Maker <span className="text-[var(--app-text-muted)] font-normal italic ml-1">Enhanced</span>
-          </h1>
-        )}
-        <div className={`${finalHideTitle ? 'text-sm' : 'text-[10px] mt-0.5'} text-[var(--app-text-muted)] font-mono truncate flex items-center justify-center gap-2 max-w-full transition-all`}>
-          {audioFileName ? <span>{i18n.audio}: <span className="text-[var(--app-text-secondary)] truncate max-w-[200px] inline-block align-bottom">{audioFileName}</span></span> : <span>{i18n.noAudio}</span>}
-          <span className="opacity-50 shrink-0">|</span>
-          {lyricFileName ? <span>{i18n.lyrics}: <span className="text-[var(--app-text-secondary)] truncate max-w-[200px] inline-block align-bottom">{lyricFileName}</span></span> : metadata?.lyric ? <span>{i18n.lyrics}: <span className="text-[var(--app-text-secondary)]">{i18n.embeddedTag}</span></span> : <span>{i18n.noLyrics}</span>}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none whitespace-nowrap overflow-hidden px-8 z-20 hidden lg:flex gap-4">
+        <button 
+          onClick={() => setMetadataDialogOpen(true)}
+          title="歌詞屬性"
+          className="app-region-no-drag pointer-events-auto p-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-accent)] hover:bg-[var(--app-bg-hover)] rounded transition-colors relative group shrink-0"
+        >
+          <Tag className="w-5 h-5" />
+          <div className="absolute bottom-1 right-1 bg-[var(--app-bg-panel-alt)] group-hover:bg-[var(--app-bg-hover)] rounded-sm p-[1px] transition-colors border border-transparent group-hover:border-[var(--app-accent)]/30">
+            <Edit2 className="w-2 h-2" />
+          </div>
+        </button>
+        <div className="flex flex-col items-center">
+          {!finalHideTitle && (
+            <h1 className={`text-sm font-bold tracking-tight uppercase ${titleColor} transition-colors duration-300`}>
+              LRC Maker <span className="text-[var(--app-text-muted)] font-normal italic ml-1">Enhanced</span>
+            </h1>
+          )}
+          <div className={`${finalHideTitle ? 'text-sm' : 'text-[10px] mt-0.5'} text-[var(--app-text-muted)] font-mono truncate flex items-center justify-center gap-2 max-w-full transition-all`}>
+            {audioFileName ? <span>{i18n.audio}: <span className="text-[var(--app-text-secondary)] truncate max-w-[200px] inline-block align-bottom">{audioFileName}</span></span> : <span>{i18n.noAudio}</span>}
+            <span className="opacity-50 shrink-0">|</span>
+            {lyricFileName ? <span>{i18n.lyrics}: <span className="text-[var(--app-text-secondary)] truncate max-w-[200px] inline-block align-bottom">{lyricFileName}</span></span> : metadata?.lyric ? <span>{i18n.lyrics}: <span className="text-[var(--app-text-secondary)]">{i18n.embeddedTag}</span></span> : <span>{i18n.noLyrics}</span>}
+          </div>
         </div>
       </div>
 
       {/* Mobile Title Row */}
       <div className="lg:hidden items-center justify-between w-full py-2 app-region-drag relative bg-[var(--app-bg-panel-alt)] z-10 flex">
          <div style={{ width: 'var(--titlebar-left-padding, 0px)' }} className="h-6 pointer-events-none shrink-0 transition-[width]" />
-         <div className="flex flex-col items-center justify-center pointer-events-none whitespace-nowrap overflow-hidden px-2 z-0 flex-1">
-             {!finalHideTitle && (
-                <h1 className={`text-sm font-bold tracking-tight uppercase ${titleColor} transition-colors duration-300`}>
-                  LRC Maker <span className="text-[var(--app-text-muted)] font-normal italic ml-1">Enhanced</span>
-                </h1>
-             )}
-             <div className={`${finalHideTitle ? 'text-sm' : 'text-[10px] mt-0.5'} text-[var(--app-text-muted)] font-mono truncate flex items-center justify-center gap-2 max-w-full transition-all`}>
-                {audioFileName ? <span className="truncate max-w-[160px] text-[var(--app-text-secondary)]">{audioFileName}</span> : <span>{i18n.noAudio}</span>}
+         <div className="flex items-center justify-center pointer-events-none whitespace-nowrap overflow-hidden px-2 z-0 flex-1 gap-2">
+             <button 
+               onClick={() => setMetadataDialogOpen(true)}
+               title="歌詞屬性"
+               className="app-region-no-drag pointer-events-auto p-1 text-[var(--app-text-muted)] hover:text-[var(--app-accent)] hover:bg-[var(--app-bg-hover)] rounded transition-colors relative group shrink-0"
+             >
+               <Tag className="w-4 h-4" />
+               <div className="absolute bottom-0 right-0 bg-[var(--app-bg-panel-alt)] group-hover:bg-[var(--app-bg-hover)] rounded-sm p-[1px] transition-colors border border-transparent group-hover:border-[var(--app-accent)]/30">
+                 <Edit2 className="w-[8px] h-[8px]" />
+               </div>
+             </button>
+             <div className="flex flex-col items-start justify-center">
+                 {!finalHideTitle && (
+                    <h1 className={`text-sm font-bold tracking-tight uppercase ${titleColor} transition-colors duration-300`}>
+                      LRC Maker <span className="text-[var(--app-text-muted)] font-normal italic ml-1">Enhanced</span>
+                    </h1>
+                 )}
+                 <div className={`${finalHideTitle ? 'text-sm' : 'text-[10px] mt-0.5'} text-[var(--app-text-muted)] font-mono truncate flex items-center justify-start gap-2 max-w-full transition-all`}>
+                    {audioFileName ? <span className="truncate max-w-[160px] text-[var(--app-text-secondary)]">{audioFileName}</span> : <span>{i18n.noAudio}</span>}
+                 </div>
              </div>
          </div>
          <div style={{ width: 'var(--titlebar-right-padding, 0px)' }} className="h-6 pointer-events-none shrink-0 transition-[width]" />

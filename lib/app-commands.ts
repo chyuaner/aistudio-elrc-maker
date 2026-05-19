@@ -20,6 +20,7 @@ export interface AppCommandsType {
   clearMedia: null | (() => Promise<void>);
   clearLyrics: null | (() => Promise<void>);
   loadEmbeddedLyrics: null | (() => Promise<void>);
+  showLrcMetadata: null | (() => void);
   
   undo: null | (() => void);
   redo: null | (() => void);
@@ -59,6 +60,7 @@ export const AppCommands: AppCommandsType = {
   clearMedia: null,
   clearLyrics: null,
   loadEmbeddedLyrics: null,
+  showLrcMetadata: null,
   
   undo: null,
   redo: null,

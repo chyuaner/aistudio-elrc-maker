@@ -43,11 +43,17 @@ export function WebSystemIntegration() {
     // Initial sync
     let isCurrentlyDarkInit = root.classList.contains('dark') || (!root.classList.contains('light') && isSystemDarkQuery.matches);
     updateMetaThemeColor(isCurrentlyDarkInit ? '#16191E' : '#f0f2f5');
-    
+    if (isTauri) {
+        (window as any).__TAURI__.core.invoke('set_gtk_theme', { theme: isCurrentlyDarkInit ? 'dark' : 'light' }).catch(() => {});
+    }
+
     // Also listen to system theme changes dynamically if no forced theme!
     isSystemDarkQuery.addEventListener('change', (e) => {
         if (!root.classList.contains('dark') && !root.classList.contains('light')) {
              updateMetaThemeColor(e.matches ? '#16191E' : '#f0f2f5');
+             if (isTauri) {
+                 (window as any).__TAURI__.core.invoke('set_gtk_theme', { theme: e.matches ? 'dark' : 'light' }).catch(() => {});
+             }
         }
     });
 
@@ -67,11 +73,17 @@ export function WebSystemIntegration() {
             root.classList.add('dark');
             root.style.colorScheme = 'dark';
             updateMetaThemeColor('#16191E');
+            if (isTauri) {
+                (window as any).__TAURI__.core.invoke('set_gtk_theme', { theme: 'dark' }).catch(() => {});
+            }
         } else {
             root.classList.remove('dark');
             root.classList.add('light');
             root.style.colorScheme = 'light';
             updateMetaThemeColor('#f0f2f5');
+            if (isTauri) {
+                (window as any).__TAURI__.core.invoke('set_gtk_theme', { theme: 'light' }).catch(() => {});
+            }
         }
       };
     }

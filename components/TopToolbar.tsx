@@ -428,6 +428,7 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
            setLyricFileName(null);
         }
       },
+      showLrcMetadata: () => setMetadataDialogOpen(true),
       exportStandard: () => handleExport('standard'),
       exportEnhanced: () => handleExport('enhanced'),
       exportSimple: () => handleExport('simple'),

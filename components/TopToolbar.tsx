@@ -198,9 +198,19 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
 
   useEffect(() => {
      const tauri = (window as any).__TAURI__;
-     if (!tauri) return;
-     
-     // For Tauri focus/blur
+     const electronAPI = (window as any).electronAPI;
+     // Focus/blur detection: Tauri and Electron modes only
+     if (!tauri && !electronAPI?.isElectron) return;
+
+     // Electron: prefer IPC-based focus events (more reliable on Wayland/X11)
+     if (electronAPI?.isElectron && typeof electronAPI.onFocusChanged === 'function') {
+       const unlisten = electronAPI.onFocusChanged((focused: boolean) => {
+         setIsFocused(focused);
+       });
+       return unlisten;
+     }
+
+     // Tauri / fallback: use window blur/focus events
      const handleBlur = () => setIsFocused(false);
      const handleFocus = () => setIsFocused(true);
      
@@ -210,7 +220,7 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
      return () => {
         window.removeEventListener('blur', handleBlur);
         window.removeEventListener('focus', handleFocus);
-     }
+     };
   }, []);
   
   const isTauri = typeof window !== 'undefined' && ((window as any).__TAURI__);
@@ -223,7 +233,11 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
   const isElectronCustomControls = !!electronAPI?.shell?.useCustomWindowControls;
   const isWindows = typeof navigator !== 'undefined' && navigator.userAgent.includes('Windows');
   const finalHideTitle = hideTitle || (isTauri && isWindows);
-  const titleColor = (isTauri && !isFocused) ? 'text-[var(--app-text-muted)]' : 'text-[var(--app-text-secondary)]';
+  // Unfocused dimming: only in Electron or Tauri desktop modes
+  const isDesktopShell = isTauri || isElectron;
+  const isUnfocused = isDesktopShell && !isFocused;
+  const titleColor = isUnfocused ? 'text-[var(--app-text-muted)]' : 'text-[var(--app-text-secondary)]';
+  const unfocusedClass = isUnfocused ? 'toolbar-unfocused' : '';
 
   const processAudioFile = React.useCallback(async (f: File) => {
     setIsPlaying(false);
@@ -1045,7 +1059,7 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
          </div>
       )}
     <header 
-      className={`bg-[var(--app-bg-panel-alt)] border-b border-[var(--app-border-base)] shrink-0 relative select-none flex flex-col lg:flex-row lg:items-center lg:justify-between sticky top-0 z-50 w-full${isElectron ? ' app-region-drag' : ''}`}
+      className={`bg-[var(--app-bg-panel-alt)] border-b border-[var(--app-border-base)] shrink-0 relative select-none flex flex-col lg:flex-row lg:items-center lg:justify-between sticky top-0 z-50 w-full transition-opacity duration-300 ${isElectron ? 'app-region-drag' : ''} ${unfocusedClass}`}
       style={{ display: 'var(--top-toolbar-display, flex)' }}
       onDoubleClick={(e) => {
         if (!isElectron) return;
@@ -1119,7 +1133,7 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
       {renderButtonsRow('hidden lg:flex flex-1 z-10')}
     </header>
     {/* Mobile Buttons — wrapped so --top-toolbar-display: none also hides this row on Linux Tauri */}
-    <div style={{ display: 'var(--top-toolbar-display, flex)' }}>
+    <div style={{ display: 'var(--top-toolbar-display, flex)' }} className={`transition-opacity duration-300 ${unfocusedClass}`}>
       {renderButtonsRow('flex lg:hidden bg-[var(--app-bg-panel-alt)] border-b border-[var(--app-border-base)] shrink-0')}
     </div>
     

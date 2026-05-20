@@ -70,6 +70,25 @@ html.electron-shell .titlebar-drag-spacer {
   pointer-events: auto;
 }
 
+/* 桌面殼層圓角（僅無框視窗，如 Linux Electron / Wayland） */
+html.electron-shell body {
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+/* 圓角視窗輔助：確保 html 根節點背景與圓角吻合 */
+html.rounded-window,
+html.rounded-window body {
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+/* 視窗失去焦點時 TopToolbar 淡化 */
+.toolbar-unfocused {
+  opacity: 0.55;
+  transition: opacity 0.2s ease;
+}
+
 html.light {
   --app-bg-base: #f7f7f9;
   --app-bg-panel: #ffffff;

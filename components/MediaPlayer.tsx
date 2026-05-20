@@ -131,6 +131,12 @@ export function MediaPlayer() {
 
   const isVideo = file?.type.startsWith('video/');
 
+  // [LINUX WORKAROUND] WebKitGTK 的 MPRIS D-Bus 介面在高頻 setPositionState 呼叫下會 crash，
+  // 在 Linux Tauri 環境下完全停用 Media Session，避免 WebKitWebProcess 崩潰。
+  const isLinuxTauri = typeof window !== 'undefined' &&
+    !!(window as any).__TAURI__ &&
+    navigator.userAgent.toLowerCase().includes('linux');
+
   const computeAudioSpecsText = () => {
     let formatDisplay = audioSpecs?.format || (file ? file.name.split('.').pop()?.toUpperCase() : '') || 'UNKNOWN';
     let bitrateDisplay = audioSpecs?.bitrate ? `${audioSpecs.bitrate} kb/s` : '';
@@ -325,15 +331,22 @@ export function MediaPlayer() {
     }
   };
 
-  // Sync Media Session playbackState and positionState whenever isPlaying/time changes
+  // ── Media Session：位置狀態節流更新 ────────────────────────────────
+  // [LINUX WORKAROUND] WebKitGTK 的 MPRIS D-Bus 介面不穩定：
+  // 若以 rAF 頻率（~60fps）呼叫 setPositionState，D-Bus 訊息佇列會爆炸，
+  // 導致「Failed to emit MPRIS properties changed」連環警告並 crash WebKitWebProcess。
+  // 修復：在 Linux Tauri 環境下完全跳過 Media Session；其他平台節流至每秒 1 次。
+  const lastPositionUpdateRef = useRef<number>(0);
   useEffect(() => {
     if (!('mediaSession' in navigator)) return;
-    navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
-  }, [isPlaying]);
+    // [LINUX WORKAROUND] Linux Tauri：完全跳過，避免 MPRIS D-Bus crash
+    if (isLinuxTauri) return;
 
-  useEffect(() => {
-    if (!('mediaSession' in navigator)) return;
     if (duration > 0 && isFinite(duration)) {
+      const now = performance.now();
+      // 節流：每秒最多更新一次，避免 D-Bus 訊息過多
+      if (now - lastPositionUpdateRef.current < 1000) return;
+      lastPositionUpdateRef.current = now;
       try {
         navigator.mediaSession.setPositionState({
           duration,
@@ -345,54 +358,49 @@ export function MediaPlayer() {
   }, [syncCurrTime, duration, playbackRate]);
 
   useEffect(() => {
-    if ('mediaSession' in navigator) {
-       navigator.mediaSession.metadata = new MediaMetadata({
-         title: metadata?.title || file?.name || 'Unknown Track',
-         artist: metadata?.artist || '',
-         album: metadata?.album || '',
-         artwork: metadata?.picture ? [{ src: metadata.picture, type: metadata.format }] : []
-       });
-       // Reset playbackState when metadata changes (new track)
-       navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
+    if (!('mediaSession' in navigator)) return;
+    // [LINUX WORKAROUND] Linux Tauri 下 WebKitGTK MPRIS D-Bus 不穩定，跳過 Media Session 設定
+    if (isLinuxTauri) return;
 
-       navigator.mediaSession.setActionHandler('play', () => {
-           if (playerRef.current) playerRef.current.play();
-       });
-       navigator.mediaSession.setActionHandler('pause', () => {
-           if (playerRef.current) playerRef.current.pause();
-       });
-       navigator.mediaSession.setActionHandler('stop', () => {
-           if (playerRef.current) {
-               playerRef.current.pause();
-               playerRef.current.currentTime = 0;
-           }
-       });
-       navigator.mediaSession.setActionHandler('seekbackward', (details) => seekBy(-(details.seekOffset || 5)));
-       navigator.mediaSession.setActionHandler('seekforward', (details) => seekBy(details.seekOffset || 5));
-       navigator.mediaSession.setActionHandler('previoustrack', jumpToBeginning);
-       navigator.mediaSession.setActionHandler('nexttrack', jumpToNextSegment);
-       try {
-           navigator.mediaSession.setActionHandler('seekto', (details) => {
-               if (details.seekTime !== undefined && playerRef.current) {
-                   playerRef.current.currentTime = details.seekTime;
-               }
-           });
-           // @ts-ignore: TypeScript might not recognize playbackratechange Action Handler
-           navigator.mediaSession.setActionHandler('playbackratechange', (details: any) => {
-               if (details.playbackRate) {
-                   setPlaybackRate(details.playbackRate);
-               }
-           });
-           // @ts-ignore: TypeScript might not recognize setrepeatmode
-           navigator.mediaSession.setActionHandler('setrepeatmode', (details: any) => {
-               if (details.repeatMode === 'none') {
-                   setIsLooping(false);
-               } else {
-                   setIsLooping(true);
-               }
-           });
-       } catch(e) {}
-    }
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: metadata?.title || file?.name || 'Unknown Track',
+      artist: metadata?.artist || '',
+      album: metadata?.album || '',
+      artwork: metadata?.picture ? [{ src: metadata.picture, type: metadata.format }] : []
+    });
+    navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
+
+    navigator.mediaSession.setActionHandler('play', () => {
+      if (playerRef.current) playerRef.current.play();
+    });
+    navigator.mediaSession.setActionHandler('pause', () => {
+      if (playerRef.current) playerRef.current.pause();
+    });
+    navigator.mediaSession.setActionHandler('stop', () => {
+      if (playerRef.current) {
+        playerRef.current.pause();
+        playerRef.current.currentTime = 0;
+      }
+    });
+    navigator.mediaSession.setActionHandler('seekbackward', (details) => seekBy(-(details.seekOffset || 5)));
+    navigator.mediaSession.setActionHandler('seekforward', (details) => seekBy(details.seekOffset || 5));
+    navigator.mediaSession.setActionHandler('previoustrack', jumpToBeginning);
+    navigator.mediaSession.setActionHandler('nexttrack', jumpToNextSegment);
+    try {
+      navigator.mediaSession.setActionHandler('seekto', (details) => {
+        if (details.seekTime !== undefined && playerRef.current) {
+          playerRef.current.currentTime = details.seekTime;
+        }
+      });
+      // @ts-ignore
+      navigator.mediaSession.setActionHandler('playbackratechange', (details: any) => {
+        if (details.playbackRate) setPlaybackRate(details.playbackRate);
+      });
+      // @ts-ignore
+      navigator.mediaSession.setActionHandler('setrepeatmode', (details: any) => {
+        setIsLooping(details.repeatMode !== 'none');
+      });
+    } catch(e) {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [metadata, file, lines, paragraphStarts]);
 
@@ -418,13 +426,14 @@ export function MediaPlayer() {
     },
     onPlay: () => {
       setIsPlaying(true);
-      if ('mediaSession' in navigator) {
+      // [LINUX WORKAROUND] Linux Tauri 下跳過 MPRIS D-Bus 更新
+      if (!isLinuxTauri && 'mediaSession' in navigator) {
         navigator.mediaSession.playbackState = 'playing';
       }
     },
     onPause: () => {
       setIsPlaying(false);
-      if ('mediaSession' in navigator) {
+      if (!isLinuxTauri && 'mediaSession' in navigator) {
         navigator.mediaSession.playbackState = 'paused';
       }
     },

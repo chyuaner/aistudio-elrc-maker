@@ -25,6 +25,7 @@ export function ElectronWindowControls({ className = '' }: { className?: string 
   const [dialogOpen, setDialogOpen] = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setReady(true);
   }, []);
 

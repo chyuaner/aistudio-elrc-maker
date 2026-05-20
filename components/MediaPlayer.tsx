@@ -413,13 +413,23 @@ export function MediaPlayer() {
           playerRef.current.currentTime = details.seekTime;
         }
       });
+    } catch(e) {}
+    
+    try {
       // @ts-ignore
       navigator.mediaSession.setActionHandler('playbackratechange', (details: any) => {
         if (details.playbackRate) setPlaybackRate(details.playbackRate);
       });
+    } catch(e) {}
+    
+    try {
       // @ts-ignore
       navigator.mediaSession.setActionHandler('setrepeatmode', (details: any) => {
-        setIsLooping(details.repeatMode !== 'none');
+        if (details.repeatMode) {
+          setIsLooping(details.repeatMode !== 'none');
+        } else {
+          setIsLooping(prev => !prev);
+        }
       });
     } catch(e) {}
     // eslint-disable-next-line react-hooks/exhaustive-deps

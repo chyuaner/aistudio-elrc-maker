@@ -140,7 +140,7 @@ export function KaraokePreview({ hideTouchUI = false }: { hideTouchUI?: boolean 
       {!isCollapsed && (
         <div className="flex px-4 pb-4 gap-4">
           <div className="flex-1 flex flex-col gap-4">
-            <div className={`bg-[var(--app-bg-base)] px-4 py-3 rounded border relative shadow-inner min-h-[4.5rem] flex items-center ${isTopOnly ? 'justify-center' : 'justify-start'} ${topIsActive ? 'border-[var(--app-accent)] shadow-[0_0_10px_rgba(242,125,38,0.2)]' : 'border-[var(--app-border-base)] opacity-70'}`}>
+            <div className={`bg-[var(--app-bg-base)] px-4 py-3 rounded border relative shadow-inner min-h-[4.5rem] flex items-center ${isTopOnly ? 'justify-center' : 'justify-start'} ${topIsActive ? 'border-[rgba(242,125,38,0.3)] shadow-[0_0_10px_rgba(242,125,38,0.2)]' : 'border-[var(--app-border-base)] opacity-70'}`}>
               {lines[topIndex] ? (
                  <p className={`text-xl md:text-2xl font-bold tracking-wide flex gap-1 flex-wrap relative ${isTopOnly ? 'justify-center text-center' : 'text-left'}`}>
                    {topIsActive && dotsCount > 0 && (
@@ -166,7 +166,7 @@ export function KaraokePreview({ hideTouchUI = false }: { hideTouchUI?: boolean 
               )}
             </div>
   
-            <div className={`bg-[var(--app-bg-base)] px-4 py-3 rounded border relative shadow-inner min-h-[4.5rem] flex items-center ${isBottomOnly ? 'justify-center' : 'justify-end'} ${bottomIsActive ? 'border-[var(--app-accent)] shadow-[0_0_10px_rgba(242,125,38,0.2)]' : 'border-[var(--app-border-base)] opacity-70'}`}>
+            <div className={`bg-[var(--app-bg-base)] px-4 py-3 rounded border relative shadow-inner min-h-[4.5rem] flex items-center ${isBottomOnly ? 'justify-center' : 'justify-end'} ${bottomIsActive ? 'border-[rgba(242,125,38,0.3)] shadow-[0_0_10px_rgba(242,125,38,0.2)]' : 'border-[var(--app-border-base)] opacity-70'}`}>
               {lines[bottomIndex] ? (
                 <p className={`text-xl md:text-2xl font-bold tracking-wide flex gap-1 flex-wrap relative ${isBottomOnly ? 'justify-center text-center' : 'justify-end text-right'}`}>
                   {bottomIsActive && dotsCount > 0 && (

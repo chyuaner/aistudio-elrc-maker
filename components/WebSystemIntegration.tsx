@@ -10,12 +10,23 @@ import { AppCommands } from '@/lib/app-commands';
 export function WebSystemIntegration() {
   useEffect(() => {
     const isTauri = typeof window !== 'undefined' && (window as any).__TAURI__;
+    const isElectron =
+      typeof window !== 'undefined' &&
+      !!(window as any).electronAPI?.isElectron;
     const ua = typeof navigator !== 'undefined' ? navigator.userAgent.toLowerCase() : '';
     const isLinuxTauri = isTauri && ua.includes('linux');
 
-    // ── toggleFullscreen：Tauri 使用原生視窗 API，瀏覽器使用 document API ──
+    // ── toggleFullscreen：Electron / Tauri 使用原生視窗 API，瀏覽器使用 document API ──
     if (!AppCommands.toggleFullscreen) {
-      if (isTauri) {
+      if (isElectron) {
+        AppCommands.toggleFullscreen = async () => {
+          try {
+            await (window as any).electronAPI.toggleFullscreen();
+          } catch (err) {
+            console.warn('Electron toggleFullscreen failed:', err);
+          }
+        };
+      } else if (isTauri) {
         // Tauri 全螢幕是視窗層級，必須透過 Tauri window API 切換，
         // 不能用 document.requestFullscreen（那只影響 WebView 的 DOM 層）。
         // 使用 dynamic import @tauri-apps/api/window 確保 Tauri v2 API 路徑正確

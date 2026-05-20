@@ -1,6 +1,14 @@
-node_modules/
-.next/
 coverage/
+
+# dependencies
+node_modules/
+
+# Next.js
+.next/
+out/
+dist/
+
+# misc
 .DS_Store
 *.log
 .env*

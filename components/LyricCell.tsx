@@ -95,7 +95,11 @@ export function LyricCellContent({
         )}
       </div>
       {actions && (
-        <div className="w-24 shrink-0 flex items-start justify-end gap-1 pt-1 opacity-70 hover:opacity-100">
+        <div 
+          className="shrink-0 flex items-start justify-end gap-1 pt-1 opacity-70 hover:opacity-100"
+          onClick={(e) => e.stopPropagation()}
+          onContextMenu={(e) => e.stopPropagation()}
+        >
            {actions}
         </div>
       )}

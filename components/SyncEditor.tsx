@@ -32,6 +32,10 @@ const SyncCell = memo(({
       onClick={() => {
         setActiveLineIndex(globalIndex);
         setActiveWordIndex(0);
+        const { current: player } = playerRef;
+        if (player instanceof HTMLMediaElement && line.start !== null) {
+            player.currentTime = line.start;
+        }
       }}
       className={`p-0 align-top group cursor-pointer border-r border-[var(--app-border-base)] transition-colors relative ${isDual ? 'w-1/2' : 'w-full'}
         ${isActive ? 'bg-[var(--app-border-base)] text-[var(--app-text-primary)] shadow-[inset_2px_0_0_0_var(--app-accent)]' : 
@@ -53,15 +57,15 @@ const SyncCell = memo(({
         actions={
           <>
             <Tooltip title="編輯這行字RAW" delay={500}>
-              <button onClick={(e) => { e.stopPropagation(); handleEditText(globalIndex); }} className={`p-1 px-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-text-secondary)] hover:bg-[var(--app-bg-hover)] rounded transition-colors ${isDual ? 'hidden xl:block' : 'hidden md:block'}`}><Edit2 className="w-3.5 h-3.5" /></button>
+              <button onClick={(e) => { e.stopPropagation(); handleEditText(globalIndex); }} className={`p-1 px-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-text-secondary)] hover:bg-[var(--app-bg-hover)] rounded transition-colors ${isDual ? 'hidden 2xl:block' : 'hidden xl:block'}`}><Edit2 className="w-3.5 h-3.5" /></button>
             </Tooltip>
             {globalIndex > 0 && (
               <Tooltip title="合併到上一行" delay={500}>
-                <button onClick={(e) => { e.stopPropagation(); onMergeToPrevious(globalIndex); }} className={`p-1 px-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-text-secondary)] hover:bg-[var(--app-bg-hover)] rounded transition-colors ${isDual ? 'hidden xl:block' : 'hidden md:block'}`}><ArrowUpFromLine className="w-3.5 h-3.5" /></button>
+                <button onClick={(e) => { e.stopPropagation(); onMergeToPrevious(globalIndex); }} className={`p-1 px-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-text-secondary)] hover:bg-[var(--app-bg-hover)] rounded transition-colors ${isDual ? 'hidden 2xl:block' : 'hidden xl:block'}`}><ArrowUpFromLine className="w-3.5 h-3.5" /></button>
               </Tooltip>
             )}
             <Tooltip title={i18n.clearTimestamps} delay={500}>
-              <button onClick={(e) => { e.stopPropagation(); handleClearTime(globalIndex); }} className={`p-1 px-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-accent)] hover:bg-[var(--app-bg-hover)] rounded transition-colors ${isDual ? 'hidden xl:block' : 'hidden md:block'}`}><X className="w-3.5 h-3.5" /></button>
+              <button onClick={(e) => { e.stopPropagation(); handleClearTime(globalIndex); }} className={`p-1 px-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-accent)] hover:bg-[var(--app-bg-hover)] rounded transition-colors ${isDual ? 'hidden 2xl:block' : 'hidden xl:block'}`}><X className="w-3.5 h-3.5" /></button>
             </Tooltip>
             <Tooltip title={i18n.deleteLine} delay={500}>
               <button onClick={(e) => { e.stopPropagation(); handleDeleteLine(globalIndex); }} className="p-1 px-1.5 text-[var(--app-text-muted)] hover:text-red-500 hover:bg-[var(--app-bg-hover)] rounded transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
@@ -338,7 +342,9 @@ export function SyncEditor() {
             setActiveWordIndex(0);
             const { current: player } = playerRef;
             if (player instanceof HTMLMediaElement && lines[globalIndex]?.start !== null) {
-                player.currentTime = lines[globalIndex].start!;
+                if (player.paused) {
+                    player.currentTime = lines[globalIndex].start!;
+                }
             }
             setCtxMenu({ type: 'line', x: e.clientX, y: e.clientY, globalIndex });
         }}
@@ -348,7 +354,9 @@ export function SyncEditor() {
             setActiveWordIndex(wordIndex);
             const { current: player } = playerRef;
             if (player instanceof HTMLMediaElement && lines[globalIndex]?.words[wordIndex]?.start !== null) {
-                player.currentTime = lines[globalIndex].words[wordIndex].start!;
+                if (player.paused) {
+                    player.currentTime = lines[globalIndex].words[wordIndex].start!;
+                }
             }
             setCtxMenu({ type: 'word', x: e.clientX, y: e.clientY, globalIndex, wordIndex });
         }}
@@ -358,7 +366,9 @@ export function SyncEditor() {
             setActiveWordIndex(0);
             const { current: player } = playerRef;
             if (player instanceof HTMLMediaElement && lines[globalIndex]?.start !== null) {
-                player.currentTime = lines[globalIndex].start!;
+                if (player.paused) {
+                    player.currentTime = lines[globalIndex].start!;
+                }
             }
             setCtxMenu({ type: 'time', x: e.clientX, y: e.clientY, globalIndex });
         }}
@@ -370,7 +380,9 @@ export function SyncEditor() {
             setActiveWordIndex(0);
             const { current: player } = playerRef;
             if (player instanceof HTMLMediaElement && lines[globalIndex]?.start !== null) {
-                player.currentTime = lines[globalIndex].start!;
+                if (player.paused) {
+                    player.currentTime = lines[globalIndex].start!;
+                }
             }
             const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
             const x = Math.min(rect.left, window.innerWidth - 250);
@@ -532,14 +544,18 @@ export function SyncEditor() {
               if (el && ctxMenu) {
                   const rect = el.getBoundingClientRect();
                   if (ctxMenu.y + rect.height > window.innerHeight) {
-                      el.style.top = `${Math.max(10, window.innerHeight - rect.height - 10)}px`;
+                      el.style.top = 'auto';
+                      el.style.bottom = '10px';
                   } else {
                       el.style.top = `${ctxMenu.y}px`;
+                      el.style.bottom = 'auto';
                   }
                   if (ctxMenu.x + rect.width > window.innerWidth) {
-                      el.style.left = `${Math.max(10, window.innerWidth - rect.width - 10)}px`;
+                      el.style.left = 'auto';
+                      el.style.right = '10px';
                   } else {
                       el.style.left = `${ctxMenu.x}px`;
+                      el.style.right = 'auto';
                   }
               }
           }}

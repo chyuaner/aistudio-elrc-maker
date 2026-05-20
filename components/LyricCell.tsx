@@ -11,7 +11,10 @@ export function LyricCellContent({
   playerRef, 
   setActiveLineIndex, 
   setActiveWordIndex,
-  actions 
+  actions,
+  onLineContextMenu,
+  onWordContextMenu,
+  onTimeContextMenu
 }: { 
   line: any, 
   globalIndex: number, 
@@ -21,12 +24,17 @@ export function LyricCellContent({
   playerRef: any,
   setActiveLineIndex: (idx: number) => void,
   setActiveWordIndex: (w: number) => void,
-  actions?: React.ReactNode
+  actions?: React.ReactNode,
+  onLineContextMenu?: (e: React.MouseEvent, globalIndex: number) => void,
+  onWordContextMenu?: (e: React.MouseEvent, globalIndex: number, wordIndex: number) => void,
+  onTimeContextMenu?: (e: React.MouseEvent, globalIndex: number) => void
 }) {
   const isStamped = line.start !== null;
 
   return (
-    <div className="flex w-full h-full p-2 gap-2 text-xs">
+    <div className="flex w-full h-full p-2 gap-2 text-xs" onContextMenu={(e) => {
+        if (onLineContextMenu) onLineContextMenu(e, globalIndex);
+    }}>
       <div 
         className="w-16 font-mono text-[11px] hover:text-[var(--app-text-primary)] pt-1 shrink-0 cursor-pointer"
         onClick={(e) => {
@@ -36,7 +44,11 @@ export function LyricCellContent({
               player.currentTime = line.start;
            }
         }}
-        title="Click to seek"
+        onContextMenu={(e) => {
+           e.stopPropagation();
+           if (onTimeContextMenu) onTimeContextMenu(e, globalIndex);
+        }}
+        title="Click to seek / Right click for options"
       >
         <span className={isStamped ? 'text-[var(--app-accent)]' : 'opacity-30'}>
            {isStamped ? formatTime(line.start) : '--:--.--'}
@@ -68,6 +80,10 @@ export function LyricCellContent({
                       if (player instanceof HTMLMediaElement && word.start !== null) {
                          player.currentTime = word.start;
                       }
+                    }}
+                    onContextMenu={(e) => {
+                      e.stopPropagation();
+                      if (onWordContextMenu) onWordContextMenu(e, globalIndex, wIdx);
                     }}
                   >
                     {word.text || '⏎'}

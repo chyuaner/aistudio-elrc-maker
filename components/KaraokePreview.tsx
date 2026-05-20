@@ -3,11 +3,13 @@
 import React, { useState, useEffect } from 'react';
 import { useEditor } from './EditorProvider';
 import { ChevronDown, ChevronUp } from 'lucide-react';
+import { useSyncHotkeys } from './useSyncHotkeys';
 
-export function KaraokePreview() {
-  const { lines, activeLineIndex, activeWordIndex, trackAssignments, paragraphStarts, dualLineGapSec, syncMode, autoScrollEnabled, playerRef, isPlaying } = useEditor();
+export function KaraokePreview({ hideTouchUI = false }: { hideTouchUI?: boolean }) {
+  const { lines, activeLineIndex, activeWordIndex, trackAssignments, paragraphStarts, dualLineGapSec, syncMode, autoScrollEnabled, playerRef, isPlaying, touchUIMode } = useEditor();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
+  const { handleLineStamp, handleWordStamp, handleWordNextLine } = useSyncHotkeys();
 
   useEffect(() => {
     let rafId: number;
@@ -136,58 +138,97 @@ export function KaraokePreview() {
       </div>
       
       {!isCollapsed && (
-        <div className="p-4 pt-0 flex flex-col gap-4">
-          <div className={`bg-[var(--app-bg-base)] px-4 py-3 rounded border relative shadow-inner min-h-[4.5rem] flex items-center ${isTopOnly ? 'justify-center' : 'justify-start'} ${topIsActive ? 'border-[var(--app-accent)] shadow-[0_0_10px_rgba(242,125,38,0.2)]' : 'border-[var(--app-border-base)] opacity-70'}`}>
-            {lines[topIndex] ? (
-               <p className={`text-xl md:text-2xl font-bold tracking-wide flex gap-1 flex-wrap relative ${isTopOnly ? 'justify-center text-center' : 'text-left'}`}>
-                 {topIsActive && dotsCount > 0 && (
-                     <span className={`absolute bottom-full mb-3 flex gap-2 ${isTopOnly ? 'left-1/2 -translate-x-1/2' : 'left-0'}`}>
-                        {[...Array(dotsCount)].map((_, i) => <React.Fragment key={i}>{DotNode}</React.Fragment>)}
+        <div className="flex px-4 pb-4 gap-4">
+          <div className="flex-1 flex flex-col gap-4">
+            <div className={`bg-[var(--app-bg-base)] px-4 py-3 rounded border relative shadow-inner min-h-[4.5rem] flex items-center ${isTopOnly ? 'justify-center' : 'justify-start'} ${topIsActive ? 'border-[var(--app-accent)] shadow-[0_0_10px_rgba(242,125,38,0.2)]' : 'border-[var(--app-border-base)] opacity-70'}`}>
+              {lines[topIndex] ? (
+                 <p className={`text-xl md:text-2xl font-bold tracking-wide flex gap-1 flex-wrap relative ${isTopOnly ? 'justify-center text-center' : 'text-left'}`}>
+                   {topIsActive && dotsCount > 0 && (
+                       <span className={`absolute bottom-full mb-3 flex gap-2 ${isTopOnly ? 'left-1/2 -translate-x-1/2' : 'left-0'}`}>
+                          {[...Array(dotsCount)].map((_, i) => <React.Fragment key={i}>{DotNode}</React.Fragment>)}
+                       </span>
+                   )}
+                   {lines[topIndex].words.map((w, i) => (
+                     <span key={i} className={getWordColor(topIndex, i)}>
+                       {w.text || (i === lines[topIndex].words.length - 1 ? '⏎' : '')}
                      </span>
-                 )}
-                 {lines[topIndex].words.map((w, i) => (
-                   <span key={i} className={getWordColor(topIndex, i)}>
-                     {w.text || (i === lines[topIndex].words.length - 1 ? '⏎' : '')}
-                   </span>
+                   ))}
+                 </p>
+              ) : (
+                 <p className="text-xl md:text-2xl font-bold relative w-full h-full flex items-center justify-start">
+                   {topIsActive && dotsCount > 0 && (
+                       <span className="absolute bottom-1/2 left-0 flex gap-2">
+                          {[...Array(dotsCount)].map((_, i) => <React.Fragment key={i}>{DotNode}</React.Fragment>)}
+                       </span>
+                   )}
+                   &nbsp;
+                 </p>
+              )}
+            </div>
+  
+            <div className={`bg-[var(--app-bg-base)] px-4 py-3 rounded border relative shadow-inner min-h-[4.5rem] flex items-center ${isBottomOnly ? 'justify-center' : 'justify-end'} ${bottomIsActive ? 'border-[var(--app-accent)] shadow-[0_0_10px_rgba(242,125,38,0.2)]' : 'border-[var(--app-border-base)] opacity-70'}`}>
+              {lines[bottomIndex] ? (
+                <p className={`text-xl md:text-2xl font-bold tracking-wide flex gap-1 flex-wrap relative ${isBottomOnly ? 'justify-center text-center' : 'justify-end text-right'}`}>
+                  {bottomIsActive && dotsCount > 0 && (
+                       <span className={`absolute bottom-full mb-3 flex gap-2 ${isBottomOnly ? 'left-1/2 -translate-x-1/2' : 'right-0'}`}>
+                          {[...Array(dotsCount)].map((_, i) => <React.Fragment key={i}>{DotNode}</React.Fragment>)}
+                       </span>
+                  )}
+                  {lines[bottomIndex].words.map((w, i) => (
+                     <span key={i} className={getWordColor(bottomIndex, i)}>
+                       {w.text || (i === lines[bottomIndex].words.length - 1 ? '⏎' : '')}
+                     </span>
                  ))}
-               </p>
-            ) : (
-               <p className="text-xl md:text-2xl font-bold relative w-full h-full flex items-center justify-start">
-                 {topIsActive && dotsCount > 0 && (
-                     <span className="absolute bottom-1/2 left-0 flex gap-2">
-                        {[...Array(dotsCount)].map((_, i) => <React.Fragment key={i}>{DotNode}</React.Fragment>)}
-                     </span>
-                 )}
-                 &nbsp;
-               </p>
-            )}
+                </p>
+              ) : (
+                 <p className={`text-xl md:text-2xl font-bold relative w-full h-full flex items-center ${isBottomOnly ? 'justify-center' : 'justify-end'}`}>
+                   {bottomIsActive && dotsCount > 0 && (
+                       <span className={`absolute bottom-1/2 flex gap-2 ${isBottomOnly ? 'left-1/2 -translate-x-1/2' : 'right-0'}`}>
+                          {[...Array(dotsCount)].map((_, i) => <React.Fragment key={i}>{DotNode}</React.Fragment>)}
+                       </span>
+                   )}
+                   &nbsp;
+                 </p>
+              )}
+            </div>
           </div>
-
-          <div className={`bg-[var(--app-bg-base)] px-4 py-3 rounded border relative shadow-inner min-h-[4.5rem] flex items-center ${isBottomOnly ? 'justify-center' : 'justify-end'} ${bottomIsActive ? 'border-[var(--app-accent)] shadow-[0_0_10px_rgba(242,125,38,0.2)]' : 'border-[var(--app-border-base)] opacity-70'}`}>
-            {lines[bottomIndex] ? (
-              <p className={`text-xl md:text-2xl font-bold tracking-wide flex gap-1 flex-wrap relative ${isBottomOnly ? 'justify-center text-center' : 'justify-end text-right'}`}>
-                {bottomIsActive && dotsCount > 0 && (
-                     <span className={`absolute bottom-full mb-3 flex gap-2 ${isBottomOnly ? 'left-1/2 -translate-x-1/2' : 'right-0'}`}>
-                        {[...Array(dotsCount)].map((_, i) => <React.Fragment key={i}>{DotNode}</React.Fragment>)}
-                     </span>
-                )}
-                {lines[bottomIndex].words.map((w, i) => (
-                   <span key={i} className={getWordColor(bottomIndex, i)}>
-                     {w.text || (i === lines[bottomIndex].words.length - 1 ? '⏎' : '')}
-                   </span>
-               ))}
-              </p>
-            ) : (
-               <p className={`text-xl md:text-2xl font-bold relative w-full h-full flex items-center ${isBottomOnly ? 'justify-center' : 'justify-end'}`}>
-                 {bottomIsActive && dotsCount > 0 && (
-                     <span className={`absolute bottom-1/2 flex gap-2 ${isBottomOnly ? 'left-1/2 -translate-x-1/2' : 'right-0'}`}>
-                        {[...Array(dotsCount)].map((_, i) => <React.Fragment key={i}>{DotNode}</React.Fragment>)}
-                     </span>
-                 )}
-                 &nbsp;
-               </p>
-            )}
-          </div>
+          
+          {touchUIMode && !hideTouchUI && (
+            <div className="w-[100px] sm:w-[140px] md:w-[180px] shrink-0 flex flex-col gap-2">
+               <button 
+                 autoFocus={false}
+                 onClick={(e) => {
+                     e.preventDefault();
+                     e.currentTarget.blur();
+                     syncMode === 'line' ? handleLineStamp() : handleWordStamp();
+                 }} 
+                 onTouchStart={(e) => {
+                     e.preventDefault();
+                     syncMode === 'line' ? handleLineStamp() : handleWordStamp();
+                 }}
+                 className="flex-1 bg-[var(--app-accent)] hover:bg-[var(--app-accent-hover)] active:bg-[var(--app-accent-hover)] text-black rounded-lg shadow font-extrabold text-xl md:text-3xl select-none transition-all flex items-center justify-center -outline-offset-2 touch-manipulation focus:outline-none"
+               >
+                 打點
+               </button>
+               {syncMode === 'word' && (
+                 <button 
+                   autoFocus={false}
+                   onClick={(e) => {
+                       e.preventDefault();
+                       e.currentTarget.blur();
+                       handleWordNextLine();
+                   }} 
+                   onTouchStart={(e) => {
+                       e.preventDefault();
+                       handleWordNextLine();
+                   }}
+                   className="h-[3rem] bg-[var(--app-bg-panel)] hover:bg-[var(--app-bg-hover)] active:bg-[var(--app-border-base)] text-[var(--app-text-primary)] rounded-lg shadow font-extrabold text-lg md:text-xl border border-[var(--app-border-base)] select-none transition-all flex items-center justify-center -outline-offset-2 touch-manipulation focus:outline-none"
+                 >
+                   換行
+                 </button>
+               )}
+            </div>
+          )}
         </div>
       )}
     </div>

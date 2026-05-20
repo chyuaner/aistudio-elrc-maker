@@ -522,9 +522,9 @@ export function MediaPlayer() {
       {/* Time Display */}
       <TimeDisplay className="-mb-2" />
       
-      <div className="@container flex flex-col gap-3 bg-[var(--app-bg-panel)] p-3 shadow-sm border-t border-[var(--app-border-base)]">
+      <div className="@container flex flex-wrap items-center justify-between gap-y-2 gap-x-2 bg-[var(--app-bg-panel)] p-3 shadow-sm border-t border-[var(--app-border-base)]">
         {/* Playback controls row */}
-        <div className="flex items-center justify-between gap-1">
+        <div className="flex items-center gap-1">
           <div className="flex items-center gap-1.5">
             <Tooltip title={<div className="flex items-center gap-2">播放 / 暫停 <kbd className="bg-[var(--app-bg-base)] text-[var(--app-accent)] px-1.5 py-0.5 rounded text-[9px] font-mono border border-[var(--app-accent)]/50">P</kbd></div>} delay={500}>
               <button onClick={togglePlay} className="flex items-center justify-center w-10 h-10 text-[var(--app-text-primary)] hover:bg-[var(--app-accent)] hover:text-white rounded-full transition-colors border border-[var(--app-border-light)] bg-[var(--app-bg-input)] shadow-sm">
@@ -539,9 +539,9 @@ export function MediaPlayer() {
             </Tooltip>
           </div>
 
-          <div className="h-6 w-px bg-[var(--app-border-base)] mx-1"></div>
+          <div className="h-6 w-px bg-[var(--app-border-base)] mx-1 hidden @[300px]:block"></div>
 
-          <div className="flex items-center gap-0.5 flex-1 justify-end">
+          <div className="flex items-center gap-0.5">
             <Tooltip title={<div className="flex items-center gap-2">跳到開頭 <kbd className="bg-[var(--app-bg-base)] text-[var(--app-text-secondary)] px-1.5 py-0.5 rounded text-[9px] font-mono border border-[var(--app-border-light)]">0</kbd></div>} delay={500}>
               <button onClick={jumpToBeginning} className="hidden @[300px]:block p-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-text-primary)] hover:bg-[var(--app-bg-hover)] rounded transition-colors">
                 <SkipBack className="w-4 h-4" />
@@ -585,12 +585,12 @@ export function MediaPlayer() {
           </div>
         </div>
         
-        {/* Volume and Settings Row */}
-        <div className="flex items-center justify-between gap-2 pt-2 border-t border-[var(--app-border-light)]">
+        {/* Volume and Settings */}
+        <div className="flex items-center justify-between gap-2 flex-grow @[300px]:flex-grow-0 w-full @[300px]:w-auto">
           <Tooltip title={`音量: ${Math.round((isMuted ? 0 : volume) * 100)}%`}>
-            <div className="flex items-center gap-1.5 flex-1 min-w-[100px] max-w-[180px]">
+            <div className="flex items-center gap-1.5 flex-1 min-w-[80px] max-w-[120px]">
               <button onClick={() => setIsMuted(!isMuted)} className="p-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-text-primary)] hover:bg-[var(--app-bg-hover)] rounded transition-colors shrink-0">
-                {isMuted || volume === 0 ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                {isMuted || volume === 0 ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
               </button>
               <input 
                 type="range" min="0" max="1" step="0.05" 
@@ -599,7 +599,7 @@ export function MediaPlayer() {
                   setVolume(parseFloat(e.target.value));
                   if (isMuted && parseFloat(e.target.value) > 0) setIsMuted(false);
                 }}
-                className="w-full min-w-[50px] accent-[var(--app-accent)] h-1.5 rounded-lg outline-none bg-[var(--app-bg-input)]"
+                className="w-full min-w-[40px] accent-[var(--app-accent)] h-1.5 rounded-lg outline-none bg-[var(--app-bg-input)]"
               />
             </div>
           </Tooltip>
@@ -642,7 +642,7 @@ export function MediaPlayer() {
             </Tooltip>
             
             {showSettings && (
-              <div className="absolute bottom-full right-0 mb-2 p-3 bg-[var(--app-bg-panel)] border border-[var(--app-border-base)] shadow-[0_4px_12px_rgba(0,0,0,0.5)] rounded-lg z-50 flex flex-col gap-2 w-[240px]">
+              <div className="absolute bottom-[calc(100%+8px)] right-0 mb-2 p-3 bg-[var(--app-bg-panel)] border border-[var(--app-border-base)] shadow-[0_4px_12px_rgba(0,0,0,0.5)] rounded-lg z-50 flex flex-col gap-2 w-[240px]">
                 <span className="text-xs font-bold text-[var(--app-text-secondary)]">音頻延遲補償 (藍牙耳機)</span>
                 <span className="text-[10px] text-[var(--app-text-muted)] leading-relaxed">調整此值以對齊音訊與顯示畫面，適用於藍牙耳機等有延遲的情境。正值提早，負值延後。</span>
                 <div className="flex items-center bg-[var(--app-bg-input)] rounded border border-[var(--app-border-base)] overflow-hidden mt-1 mx-auto">

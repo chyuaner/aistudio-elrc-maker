@@ -134,7 +134,7 @@ export function parseRawLyrics(text: string): { lines: LyricLine[], metadata: Lr
   return { lines: result, metadata };
 }
 
-export function exportLrc(lines: LyricLine[], metadata?: LrcMetadata, isEnhanced = false, isSimple = false): string {
+export function exportLrc(lines: LyricLine[], metadata?: LrcMetadata, isEnhanced = false, isSimple = false, simpleIncludeInstrumental = false, paragraphStarts?: boolean[]): string {
   let lrc = '';
   
   if (!isSimple && metadata) {
@@ -145,7 +145,12 @@ export function exportLrc(lines: LyricLine[], metadata?: LrcMetadata, isEnhanced
     }
   }
   
-  for (const line of lines) {
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (isSimple && simpleIncludeInstrumental && i > 0 && paragraphStarts && paragraphStarts[i]) {
+       lrc += `\n`;
+    }
+    
     if (isSimple) {
       lrc += `${line.words.map(w => w.text).join('')}\n`;
       continue;

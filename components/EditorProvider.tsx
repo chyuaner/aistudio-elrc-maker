@@ -156,6 +156,9 @@ interface EditorContextType {
   playbackRate: number;
   setPlaybackRate: React.Dispatch<React.SetStateAction<number>>;
   
+  touchUIMode: boolean;
+  setTouchUIMode: (touchUIMode: boolean) => void;
+  
   playerRef: React.RefObject<HTMLVideoElement | HTMLAudioElement | null>;
   
   audioSpecs: { format?: string, bitrate?: string, sampleRate?: string, bitsPerSample?: string } | null;
@@ -212,6 +215,7 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [audioLatency, setAudioLatency] = useState(0);
   const [playbackRate, setPlaybackRate] = useState(1);
+  const [touchUIMode, setTouchUIMode] = useState(false);
   const [audioSpecs, setAudioSpecs] = useState<{ format?: string, bitrate?: string, sampleRate?: string } | null>(null);
   
   const playerRef = useRef<HTMLVideoElement | HTMLAudioElement | null>(null);
@@ -433,6 +437,7 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
       isPlaying, setIsPlaying,
       audioLatency, setAudioLatency,
       playbackRate, setPlaybackRate,
+      touchUIMode, setTouchUIMode,
       audioSpecs, setAudioSpecs,
       playerRef,
       handleFormatWords,

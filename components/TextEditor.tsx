@@ -8,11 +8,12 @@ import { useI18n } from '@/hooks/useI18n';
 import { useDialogs } from './DialogProvider';
 
 export function TextEditor() {
-  const { lines, setLines, commitLines, exportFormat, setActiveLineIndex, setActiveWordIndex, lrcMetadata, setLrcMetadata } = useEditor();
+  const { lines, setLines, commitLines, exportFormat, setActiveLineIndex, setActiveWordIndex, lrcMetadata, setLrcMetadata, activeLineIndex } = useEditor();
   const [text, setText] = useState('');
   const isDirty = useRef(false);
   const i18n = useI18n();
   const dialogs = useDialogs();
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     // Initial sync from lines to text if not dirty
@@ -26,6 +27,32 @@ export function TextEditor() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lines, exportFormat, lrcMetadata]);
+
+  useEffect(() => {
+     const handler = (e: any) => {
+         const lineIndex = e.detail?.lineIndex;
+         if (lineIndex !== undefined && textareaRef.current) {
+             const metadataLinesCount = Object.values(lrcMetadata || {}).filter(Boolean).length;
+             const targetRow = metadataLinesCount + lineIndex;
+             
+             let pos = 0;
+             const splitLines = text.split('\n');
+             for (let i = 0; i < targetRow && i < splitLines.length; i++) {
+                 pos += splitLines[i].length + 1;
+             }
+             
+             const textarea = textareaRef.current;
+             textarea.focus();
+             textarea.setSelectionRange(pos, pos + (splitLines[targetRow]?.length || 0));
+             
+             // Hack to scroll into view
+             const lineHeight = parseInt(window.getComputedStyle(textarea).lineHeight || '24') || 24;
+             textarea.scrollTop = Math.max(0, targetRow * lineHeight - textarea.clientHeight / 2);
+         }
+     };
+     window.addEventListener('focus-raw-text-line', handler);
+     return () => window.removeEventListener('focus-raw-text-line', handler);
+  }, [text, lrcMetadata]);
 
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setText(e.target.value);
@@ -92,6 +119,7 @@ export function TextEditor() {
         </div>
       </div>
       <LineNumberedTextarea
+        ref={textareaRef}
         className="flex-1 rounded-none border-0 border-t border-[var(--app-border-base)] shadow-inner text-[var(--app-text-secondary)]"
         placeholder="Paste your raw LRC with timestamps here..."
         value={text}

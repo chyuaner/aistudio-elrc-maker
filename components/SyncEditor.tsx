@@ -1,10 +1,10 @@
-import React, { useEffect, useRef, memo, useCallback } from 'react';
+import React, { useEffect, useRef, memo, useCallback, useState } from 'react';
 import { useEditor } from './EditorProvider';
 import { useSyncHotkeys } from './useSyncHotkeys';
 import { formatTime } from '@/lib/lyric-utils';
 import { KaraokePreview } from './KaraokePreview';
 import { Tooltip } from './Tooltip';
-import { Edit2, Trash2, X, ArrowRight } from 'lucide-react';
+import { Edit2, Trash2, X, ArrowRight, MoreVertical, ArrowUpFromLine, Copy, Play, SplitSquareVertical, Clock, Scissors, Type, Plus, FileText } from 'lucide-react';
 
 import { useAutoScroll } from './useAutoScroll';
 import { useDialogs } from './DialogProvider';
@@ -13,7 +13,8 @@ import { LyricCellContent } from './LyricCell';
 
 const SyncCell = memo(({ 
   data, isDual, isActive, isPassed, activeWordIndex, syncMode, paragraphStart, playerRef, i18n, 
-  setActiveLineIndex, setActiveWordIndex, handleEditText, handleOffsetFromHere, handleClearTime, handleDeleteLine 
+  setActiveLineIndex, setActiveWordIndex, handleEditText, handleOffsetFromHere, handleClearTime, handleDeleteLine,
+  onMergeToPrevious, onLineContextMenu, onWordContextMenu, onTimeContextMenu, openMoreMenu
 }: any) => {
   if (!data) {
     return (
@@ -46,19 +47,27 @@ const SyncCell = memo(({
         playerRef={playerRef}
         setActiveLineIndex={setActiveLineIndex}
         setActiveWordIndex={setActiveWordIndex}
+        onLineContextMenu={onLineContextMenu}
+        onWordContextMenu={onWordContextMenu}
+        onTimeContextMenu={onTimeContextMenu}
         actions={
           <>
-            <Tooltip title={i18n.editText} delay={500}>
-              <button onClick={(e) => { e.stopPropagation(); handleEditText(globalIndex, line.raw || ''); }} className="p-1 px-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-text-secondary)] hover:bg-[var(--app-bg-hover)] rounded transition-colors"><Edit2 className="w-3.5 h-3.5" /></button>
+            <Tooltip title="編輯這行字RAW" delay={500}>
+              <button onClick={(e) => { e.stopPropagation(); handleEditText(globalIndex); }} className={`p-1 px-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-text-secondary)] hover:bg-[var(--app-bg-hover)] rounded transition-colors ${isDual ? 'hidden xl:block' : 'hidden md:block'}`}><Edit2 className="w-3.5 h-3.5" /></button>
             </Tooltip>
-            <Tooltip title={i18n.offsetSubsequent} delay={500}>
-              <button onClick={(e) => { e.stopPropagation(); handleOffsetFromHere(globalIndex); }} className="p-1 px-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-text-secondary)] hover:bg-[var(--app-bg-hover)] rounded transition-colors"><ArrowRight className="w-3.5 h-3.5" /></button>
-            </Tooltip>
+            {globalIndex > 0 && (
+              <Tooltip title="合併到上一行" delay={500}>
+                <button onClick={(e) => { e.stopPropagation(); onMergeToPrevious(globalIndex); }} className={`p-1 px-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-text-secondary)] hover:bg-[var(--app-bg-hover)] rounded transition-colors ${isDual ? 'hidden xl:block' : 'hidden md:block'}`}><ArrowUpFromLine className="w-3.5 h-3.5" /></button>
+              </Tooltip>
+            )}
             <Tooltip title={i18n.clearTimestamps} delay={500}>
-              <button onClick={(e) => { e.stopPropagation(); handleClearTime(globalIndex); }} className="p-1 px-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-accent)] hover:bg-[var(--app-bg-hover)] rounded transition-colors"><X className="w-3.5 h-3.5" /></button>
+              <button onClick={(e) => { e.stopPropagation(); handleClearTime(globalIndex); }} className={`p-1 px-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-accent)] hover:bg-[var(--app-bg-hover)] rounded transition-colors ${isDual ? 'hidden xl:block' : 'hidden md:block'}`}><X className="w-3.5 h-3.5" /></button>
             </Tooltip>
             <Tooltip title={i18n.deleteLine} delay={500}>
               <button onClick={(e) => { e.stopPropagation(); handleDeleteLine(globalIndex); }} className="p-1 px-1.5 text-[var(--app-text-muted)] hover:text-red-500 hover:bg-[var(--app-bg-hover)] rounded transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
+            </Tooltip>
+            <Tooltip title="其他選項" delay={500}>
+              <button onClick={(e) => { e.stopPropagation(); openMoreMenu(e, globalIndex); }} className="p-1 px-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-text-secondary)] hover:bg-[var(--app-bg-hover)] rounded transition-colors"><MoreVertical className="w-3.5 h-3.5" /></button>
             </Tooltip>
           </>
         }
@@ -67,6 +76,22 @@ const SyncCell = memo(({
   );
 });
 SyncCell.displayName = 'SyncCell';
+
+const getLineRawText = (line: any) => {
+    let result = '';
+    if (line?.start !== null) {
+        result += `[${formatTime(line.start, true)}]`;
+    }
+    if (line?.words) {
+        result += line.words.map((w: any) => w.start !== null ? `<${formatTime(w.start, true)}>${w.text}` : w.text).join('');
+    }
+    return result;
+};
+
+const getLineText = (line: any) => {
+    if (!line?.words) return '';
+    return line.words.map((w: any) => w.text).join('');
+};
 
 export function SyncEditor() {
   const {
@@ -97,6 +122,28 @@ export function SyncEditor() {
     }
   }, [activeLineIndex, autoScrollEnabled]);
 
+  const [ctxMenu, setCtxMenu] = React.useState<{
+    x: number; y: number; type: 'line' | 'word' | 'time'; globalIndex: number; wordIndex?: number;
+  } | null>(null);
+
+  useEffect(() => {
+    const handleClick = () => setCtxMenu(null);
+    document.addEventListener('click', handleClick);
+    return () => document.removeEventListener('click', handleClick);
+  }, []);
+
+  const [editingText, setEditingText] = useState<{ globalIndex: number, text: string, type: 'raw' | 'text' } | null>(null);
+
+  const handleEditRawText = useCallback((globalIndex: number) => {
+    const defaultRaw = getLineRawText(lines[globalIndex]);
+    setEditingText({ globalIndex, text: defaultRaw, type: 'raw' });
+  }, [lines]);
+
+  const handleEditTextOnly = useCallback((globalIndex: number) => {
+     const textOnly = getLineText(lines[globalIndex]);
+     setEditingText({ globalIndex, text: textOnly, type: 'text' });
+  }, [lines]);
+
   const handleOffsetFromHere = useCallback(async (globalIndex: number) => {
     const val = await dialogs.prompt(i18n.promptShiftTime, '0');
     if (val !== null) {
@@ -106,22 +153,6 @@ export function SyncEditor() {
       }
     }
   }, [dialogs, i18n, shiftTimeFromIndex]);
-
-  const handleEditText = useCallback(async (globalIndex: number, currentText: string) => {
-    const newText = await dialogs.prompt('Edit line text:', currentText);
-    if (newText !== null && newText !== currentText) {
-       commitLines(prev => {
-         const newLines = [...prev];
-         newLines[globalIndex] = { ...newLines[globalIndex], raw: newText };
-         newLines[globalIndex].words = newText.split(' ').map((w, i, arr) => ({
-            text: w + (i < arr.length - 1 ? ' ' : ''),
-            start: null,
-            end: null
-         }));
-         return newLines;
-       }, 'Edit Text');
-    }
-  }, [dialogs, commitLines]);
 
   const handleClearTime = useCallback((globalIndex: number) => {
     commitLines(prev => {
@@ -138,6 +169,149 @@ export function SyncEditor() {
     commitLines(prev => prev.filter((_, i) => i !== globalIndex), 'Delete Line');
   }, [commitLines]);
 
+  const handleMergeToPrevious = useCallback((globalIndex: number) => {
+      if (globalIndex === 0) return;
+      commitLines(prev => {
+          const newLines = [...prev];
+          const curr = newLines[globalIndex];
+          const prevLine = newLines[globalIndex - 1];
+          const newWords = [...prevLine.words];
+          
+          if (newWords.length > 0 && !newWords[newWords.length - 1].text.match(/\s$/)) {
+              newWords.push({ text: ' ', start: null, end: null });
+          }
+          newWords.push(...curr.words);
+          
+          const { formatTime } = require('@/lib/lyric-utils');
+          const newRaw = newWords.map(w => w.start !== null ? `<${formatTime(w.start, true)}>${w.text}` : w.text).join('');
+          
+          newLines[globalIndex - 1] = { ...prevLine, raw: newRaw, words: newWords };
+          newLines.splice(globalIndex, 1);
+          return newLines;
+      }, 'Merge to Previous Line');
+  }, [commitLines]);
+
+  const handleEditTimeOnly = useCallback(async (globalIndex: number) => {
+      const line = lines[globalIndex];
+      const val = await dialogs.prompt('Edit timestamp (ss.xx or mm:ss.xx):', line.start !== null ? formatTime(line.start, true) : '');
+      if (val !== null) {
+         const { parseSeconds } = require('@/lib/lyric-utils');
+         const num = parseSeconds(val);
+         if (!isNaN(num)) {
+            commitLines(prev => {
+               const newLines = [...prev];
+               newLines[globalIndex] = { ...newLines[globalIndex], start: num };
+               return newLines;
+            }, 'Edit Time');
+         }
+      }
+  }, [lines, dialogs, commitLines]);
+
+  const handleJumpTo = useCallback((globalIndex: number, wordIndex?: number) => {
+      const line = lines[globalIndex];
+      if (!line) return;
+      const { current: player } = playerRef;
+      if (player instanceof HTMLMediaElement) {
+          let t = line.start;
+          if (wordIndex !== undefined && line.words[wordIndex]?.start !== null) {
+               t = line.words[wordIndex].start;
+          }
+          if (t !== null) player.currentTime = t;
+      }
+  }, [lines, playerRef]);
+
+  const handleSplitWordToNextLine = useCallback((globalIndex: number, wordIndex: number) => {
+      commitLines(prev => {
+          const newLines = [...prev];
+          const line = newLines[globalIndex];
+          const words = line.words;
+          const leftWords = words.slice(0, wordIndex);
+          const rightWords = words.slice(wordIndex);
+          const leftRaw = leftWords.map(w => w.start !== null ? `<${formatTime(w.start, true)}>${w.text}` : w.text).join('');
+          const leftStart = leftWords.find(w => w.start !== null)?.start || line.start;
+          const rightRaw = rightWords.map(w => w.start !== null ? `<${formatTime(w.start, true)}>${w.text}` : w.text).join('');
+          const rightStart = rightWords[0]?.start || null;
+          
+          const { generateId } = require('@/lib/lyric-utils');
+  
+          newLines[globalIndex] = { ...line, words: leftWords, raw: leftRaw, start: leftStart };
+          newLines.splice(globalIndex + 1, 0, {
+              id: generateId(),
+              start: rightStart,
+              end: null,
+              words: rightWords,
+              raw: rightRaw
+          });
+          return newLines;
+      }, 'Split Line');
+  }, [commitLines]);
+
+  const handleDeleteWord = useCallback((globalIndex: number, wordIndex: number) => {
+      commitLines(prev => {
+          const newLines = [...prev];
+          const line = newLines[globalIndex];
+          const newWords = [...line.words];
+          newWords.splice(wordIndex, 1);
+          const newRaw = newWords.map(w => w.start !== null ? `<${formatTime(w.start, true)}>${w.text}` : w.text).join('');
+          newLines[globalIndex] = { ...line, words: newWords, raw: newRaw };
+          return newLines;
+      }, 'Delete Word');
+  }, [commitLines]);
+
+  const handleInsertLineBefore = useCallback((globalIndex: number) => {
+      commitLines(prev => {
+          const newLines = [...prev];
+          const { generateId } = require('@/lib/lyric-utils');
+          newLines.splice(globalIndex, 0, { id: generateId(), start: null, end: null, words: [], raw: '' });
+          return newLines;
+      }, 'Insert Line Before');
+  }, [commitLines]);
+
+  const handleInsertLineAfter = useCallback((globalIndex: number) => {
+      commitLines(prev => {
+          const newLines = [...prev];
+          const { generateId } = require('@/lib/lyric-utils');
+          newLines.splice(globalIndex + 1, 0, { id: generateId(), start: null, end: null, words: [], raw: '' });
+          return newLines;
+      }, 'Insert Line After');
+  }, [commitLines]);
+
+  const handleEditWordRaw = useCallback(async (globalIndex: number, wordIndex: number) => {
+      const line = lines[globalIndex];
+      const word = line.words[wordIndex];
+      const currentText = word.start !== null ? `<${formatTime(word.start, true)}>${word.text}` : word.text;
+      const val = await dialogs.prompt('Edit word RAW:', currentText);
+      if (val !== null && val !== currentText) {
+          commitLines(prev => {
+              const newLines = [...prev];
+              const newWords = [...newLines[globalIndex].words];
+              const { parseRawLyrics } = require('@/lib/lyric-utils');
+              const parsedWordLine = parseRawLyrics(val).lines[0];
+              const resultWords = parsedWordLine ? parsedWordLine.words : [{text: val, start: null, end: null}];
+              newWords.splice(wordIndex, 1, ...resultWords);
+              const newRaw = newWords.map(w => w.start !== null ? `<${formatTime(w.start, true)}>${w.text}` : w.text).join('');
+              newLines[globalIndex] = { ...newLines[globalIndex], words: newWords, raw: newRaw };
+              return newLines;
+          }, 'Edit Word RAW');
+      }
+  }, [lines, dialogs, commitLines]);
+
+  const handleEditWordText = useCallback(async (globalIndex: number, wordIndex: number) => {
+      const line = lines[globalIndex];
+      const word = line.words[wordIndex];
+      const val = await dialogs.prompt('Edit word text:', word.text);
+      if (val !== null && val !== word.text) {
+          commitLines(prev => {
+              const newLines = [...prev];
+              const newWords = [...newLines[globalIndex].words];
+              newWords[wordIndex] = { ...newWords[wordIndex], text: val };
+              const newRaw = newWords.map(w => w.start !== null ? `<${formatTime(w.start, true)}>${w.text}` : w.text).join('');
+              newLines[globalIndex] = { ...newLines[globalIndex], words: newWords, raw: newRaw };
+              return newLines;
+          }, 'Edit Word');
+      }
+  }, [lines, dialogs, commitLines]);
+
   const renderCellWrapper = (data: { line: any, index: number } | null, isDual: boolean) => {
     return (
       <SyncCell 
@@ -153,10 +327,58 @@ export function SyncEditor() {
         i18n={i18n}
         setActiveLineIndex={setActiveLineIndex}
         setActiveWordIndex={setActiveWordIndex}
-        handleEditText={handleEditText}
+        handleEditText={handleEditRawText}
         handleOffsetFromHere={handleOffsetFromHere}
         handleClearTime={handleClearTime}
         handleDeleteLine={handleDeleteLine}
+        onMergeToPrevious={handleMergeToPrevious}
+        onLineContextMenu={(e: React.MouseEvent, globalIndex: number) => {
+            e.preventDefault();
+            setActiveLineIndex(globalIndex);
+            setActiveWordIndex(0);
+            const { current: player } = playerRef;
+            if (player instanceof HTMLMediaElement && lines[globalIndex]?.start !== null) {
+                player.currentTime = lines[globalIndex].start!;
+            }
+            setCtxMenu({ type: 'line', x: e.clientX, y: e.clientY, globalIndex });
+        }}
+        onWordContextMenu={(e: React.MouseEvent, globalIndex: number, wordIndex: number) => {
+            e.preventDefault();
+            setActiveLineIndex(globalIndex);
+            setActiveWordIndex(wordIndex);
+            const { current: player } = playerRef;
+            if (player instanceof HTMLMediaElement && lines[globalIndex]?.words[wordIndex]?.start !== null) {
+                player.currentTime = lines[globalIndex].words[wordIndex].start!;
+            }
+            setCtxMenu({ type: 'word', x: e.clientX, y: e.clientY, globalIndex, wordIndex });
+        }}
+        onTimeContextMenu={(e: React.MouseEvent, globalIndex: number) => {
+            e.preventDefault();
+            setActiveLineIndex(globalIndex);
+            setActiveWordIndex(0);
+            const { current: player } = playerRef;
+            if (player instanceof HTMLMediaElement && lines[globalIndex]?.start !== null) {
+                player.currentTime = lines[globalIndex].start!;
+            }
+            setCtxMenu({ type: 'time', x: e.clientX, y: e.clientY, globalIndex });
+        }}
+        openMoreMenu={(e: React.MouseEvent, globalIndex: number) => {
+            e.preventDefault();
+            e.stopPropagation();
+            e.nativeEvent.stopImmediatePropagation();
+            setActiveLineIndex(globalIndex);
+            setActiveWordIndex(0);
+            const { current: player } = playerRef;
+            if (player instanceof HTMLMediaElement && lines[globalIndex]?.start !== null) {
+                player.currentTime = lines[globalIndex].start!;
+            }
+            const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+            const x = Math.min(rect.left, window.innerWidth - 250);
+            const y = Math.min(rect.bottom, window.innerHeight - 300);
+            setTimeout(() => {
+                setCtxMenu({ type: 'line', x, y, globalIndex });
+            }, 0);
+        }}
       />
     );
   };
@@ -302,6 +524,174 @@ export function SyncEditor() {
           </tbody>
         </table>
       </div>
+
+      {ctxMenu && (
+        <div 
+          className="fixed z-50 bg-[var(--app-bg-panel)] border border-[var(--app-border-base)] shadow-lg rounded-md min-w-[200px] text-xs font-sans max-h-[85vh] overflow-y-auto py-1"
+          ref={(el) => {
+              if (el && ctxMenu) {
+                  const rect = el.getBoundingClientRect();
+                  if (ctxMenu.y + rect.height > window.innerHeight) {
+                      el.style.top = `${Math.max(10, window.innerHeight - rect.height - 10)}px`;
+                  } else {
+                      el.style.top = `${ctxMenu.y}px`;
+                  }
+                  if (ctxMenu.x + rect.width > window.innerWidth) {
+                      el.style.left = `${Math.max(10, window.innerWidth - rect.width - 10)}px`;
+                  } else {
+                      el.style.left = `${ctxMenu.x}px`;
+                  }
+              }
+          }}
+          style={{ visibility: 'visible' }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {ctxMenu.type === 'line' && (
+            <>
+              <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors flex items-center gap-2" onClick={() => { handleJumpTo(ctxMenu.globalIndex); setCtxMenu(null); }}><Play className="w-3.5 h-3.5" /> 歌曲跳轉至該行開頭</button>
+              <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors flex items-center gap-2" onClick={() => { navigator.clipboard.writeText(getLineText(lines[ctxMenu.globalIndex])); setCtxMenu(null); }}><Copy className="w-3.5 h-3.5" /> 複製這行字</button>
+              <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors flex items-center gap-2" onClick={() => { navigator.clipboard.writeText(lines[ctxMenu.globalIndex]?.start !== null ? formatTime(lines[ctxMenu.globalIndex].start!) : ''); setCtxMenu(null); }}><Clock className="w-3.5 h-3.5" /> 複製時間戳</button>
+              <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors flex items-center gap-2" onClick={() => { navigator.clipboard.writeText(getLineRawText(lines[ctxMenu.globalIndex])); setCtxMenu(null); }}><Copy className="w-3.5 h-3.5 opacity-70" /> 複製這行字RAW（含時間戳）</button>
+              <div className="h-px bg-[var(--app-border-base)] my-1"></div>
+              <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors flex items-center gap-2" onClick={() => { handleEditTextOnly(ctxMenu.globalIndex); setCtxMenu(null); }}><Type className="w-3.5 h-3.5" /> 編輯這行字</button>
+              <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors flex items-center gap-2" onClick={() => { handleEditRawText(ctxMenu.globalIndex); setCtxMenu(null); }}><Edit2 className="w-3.5 h-3.5" /> 編輯這行字RAW（含時間戳）</button>
+              <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors flex items-center gap-2" onClick={() => { 
+                const targetIndex = ctxMenu.globalIndex;
+                setCtxMenu(null);
+                setMode('text');
+                setTimeout(() => window.dispatchEvent(new CustomEvent('focus-raw-text-line', { detail: { lineIndex: targetIndex } })), 50);
+              }}><FileText className="w-3.5 h-3.5" /> 到編輯原始文字</button>
+              <div className="h-px bg-[var(--app-border-base)] my-1"></div>
+              <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors flex items-center gap-2" onClick={() => { handleInsertLineBefore(ctxMenu.globalIndex); setCtxMenu(null); }}><Plus className="w-3.5 h-3.5" /> 插入上一行</button>
+              <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors flex items-center gap-2" onClick={() => { handleInsertLineAfter(ctxMenu.globalIndex); setCtxMenu(null); }}><Plus className="w-3.5 h-3.5" /> 插入下一行</button>
+              <div className="h-px bg-[var(--app-border-base)] my-1"></div>
+              <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors flex items-center gap-2" onClick={() => { handleMergeToPrevious(ctxMenu.globalIndex); setCtxMenu(null); }}><ArrowUpFromLine className="w-3.5 h-3.5" /> 合併到上一行</button>
+              <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors flex items-center gap-2" onClick={() => { handleOffsetFromHere(ctxMenu.globalIndex); setCtxMenu(null); }}><ArrowRight className="w-3.5 h-3.5" /> 平移後續時間</button>
+              <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors text-red-400 flex items-center gap-2" onClick={() => { handleClearTime(ctxMenu.globalIndex); setCtxMenu(null); }}><X className="w-3.5 h-3.5" /> 清除時間戳</button>
+              <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors text-red-500 flex items-center gap-2" onClick={() => { handleDeleteLine(ctxMenu.globalIndex); setCtxMenu(null); }}><Trash2 className="w-3.5 h-3.5" /> 刪除行</button>
+              <div className="px-3 py-2 flex flex-col gap-0.5 border-t border-[var(--app-border-base)]/50 mb-1">
+                 <div className="flex items-center justify-between gap-4">
+                     <span className="text-[10px] text-[var(--app-text-muted)] font-bold uppercase tracking-widest">目前選擇的行</span>
+                     <span className="text-[11px] font-mono text-[var(--app-text-muted)] opacity-60">
+                         {lines[ctxMenu.globalIndex]?.start !== null ? formatTime(lines[ctxMenu.globalIndex].start!) : '--:--.--'}
+                     </span>
+                 </div>
+                 <span className="text-sm font-bold text-[var(--app-text-primary)] truncate max-w-[200px]">{getLineText(lines[ctxMenu.globalIndex]) || '(空白行)'}</span>
+              </div>
+            </>
+          )}
+
+          {ctxMenu.type === 'word' && ctxMenu.wordIndex !== undefined && (
+            <>
+              <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors flex items-center gap-2" onClick={() => { handleJumpTo(ctxMenu.globalIndex, ctxMenu.wordIndex); setCtxMenu(null); }}><Play className="w-3.5 h-3.5" /> 歌曲跳轉至該字</button>
+              <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors flex items-center gap-2" onClick={() => { navigator.clipboard.writeText(lines[ctxMenu.globalIndex].words[ctxMenu.wordIndex!].text); setCtxMenu(null); }}><Copy className="w-3.5 h-3.5" /> 複製這字</button>
+              <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors flex items-center gap-2" onClick={() => { const word = lines[ctxMenu.globalIndex].words[ctxMenu.wordIndex!]; navigator.clipboard.writeText(word.start !== null ? formatTime(word.start, true) : ''); setCtxMenu(null); }}><Clock className="w-3.5 h-3.5" /> 複製字的時間戳</button>
+              <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors flex items-center gap-2" onClick={() => { const word = lines[ctxMenu.globalIndex].words[ctxMenu.wordIndex!]; navigator.clipboard.writeText(word.start !== null ? `<${formatTime(word.start, true)}>${word.text}` : word.text); setCtxMenu(null); }}><Copy className="w-3.5 h-3.5 opacity-70" /> 複製這字RAW（含時間戳）</button>
+              <div className="h-px bg-[var(--app-border-base)] my-1"></div>
+              <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors flex items-center gap-2" onClick={() => { handleEditWordText(ctxMenu.globalIndex, ctxMenu.wordIndex!); setCtxMenu(null); }}><Type className="w-3.5 h-3.5" /> 編輯這段字</button>
+              <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors flex items-center gap-2" onClick={() => { handleEditWordRaw(ctxMenu.globalIndex, ctxMenu.wordIndex!); setCtxMenu(null); }}><Edit2 className="w-3.5 h-3.5" /> 編輯這段字RAW（含時間戳）</button>
+              <div className="h-px bg-[var(--app-border-base)] my-1"></div>
+              <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors flex items-center gap-2" onClick={() => { handleSplitWordToNextLine(ctxMenu.globalIndex, ctxMenu.wordIndex!); setCtxMenu(null); }}><SplitSquareVertical className="w-3.5 h-3.5" /> 從該字分割斷行到下一行</button>
+              <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors flex items-center gap-2" onClick={() => { handleOffsetFromHere(ctxMenu.globalIndex); setCtxMenu(null); }}><ArrowRight className="w-3.5 h-3.5" /> 平移後續時間</button>
+              <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors text-red-500 flex items-center gap-2" onClick={() => { handleDeleteWord(ctxMenu.globalIndex, ctxMenu.wordIndex!); setCtxMenu(null); }}><Scissors className="w-3.5 h-3.5" /> 刪除該段字</button>
+              <div className="px-3 py-2 flex flex-col gap-0.5 border-t border-[var(--app-border-base)]/50 mb-1">
+                 <div className="flex items-center justify-between gap-4">
+                     <span className="text-[10px] text-[var(--app-text-muted)] font-bold uppercase tracking-widest">目前選擇的字</span>
+                     <span className="text-[11px] font-mono text-[var(--app-text-muted)] opacity-60">
+                         {lines[ctxMenu.globalIndex]?.words[ctxMenu.wordIndex!]?.start !== null ? formatTime(lines[ctxMenu.globalIndex].words[ctxMenu.wordIndex!].start!, true) : '--:--.--'}
+                     </span>
+                 </div>
+                 <span className="text-sm font-bold text-[var(--app-text-primary)] truncate max-w-[200px]">{lines[ctxMenu.globalIndex]?.words[ctxMenu.wordIndex!]?.text || '(無)'}</span>
+              </div>
+            </>
+          )}
+
+          {ctxMenu.type === 'time' && (
+            <>
+              <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors flex items-center gap-2" onClick={() => { handleJumpTo(ctxMenu.globalIndex); setCtxMenu(null); }}><Play className="w-3.5 h-3.5" /> 歌曲跳轉至該行開頭</button>
+              <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors flex items-center gap-2" onClick={() => { navigator.clipboard.writeText(lines[ctxMenu.globalIndex].start !== null ? formatTime(lines[ctxMenu.globalIndex].start!) : ''); setCtxMenu(null); }}><Clock className="w-3.5 h-3.5" /> 複製時間戳</button>
+              <div className="h-px bg-[var(--app-border-base)] my-1"></div>
+              <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors flex items-center gap-2" onClick={() => { handleEditTimeOnly(ctxMenu.globalIndex); setCtxMenu(null); }}><Edit2 className="w-3.5 h-3.5" /> 編輯這行時間戳（手打輸入）</button>
+              <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors flex items-center gap-2" onClick={() => { handleOffsetFromHere(ctxMenu.globalIndex); setCtxMenu(null); }}><ArrowRight className="w-3.5 h-3.5" /> 平移後續時間</button>
+              <div className="px-3 py-2 flex flex-col gap-0.5 border-t border-[var(--app-border-base)]/50 mb-1">
+                 <div className="flex items-center justify-between gap-4">
+                     <span className="text-[10px] text-[var(--app-text-muted)] font-bold uppercase tracking-widest">時間戳操作</span>
+                     <span className="text-[11px] font-mono text-[var(--app-text-muted)] opacity-60">
+                         {lines[ctxMenu.globalIndex]?.start !== null ? formatTime(lines[ctxMenu.globalIndex].start!) : '--:--.--'}
+                     </span>
+                 </div>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {editingText && (
+         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <div className="bg-[var(--app-bg-panel)] rounded-xl shadow-2xl w-full max-w-xl border border-[var(--app-border-base)] flex flex-col overflow-hidden">
+                <div className="px-4 py-3 border-b border-[var(--app-border-base)] flex items-center justify-between bg-[var(--app-bg-panel-alt)]">
+                    <h3 className="font-bold text-[var(--app-text-primary)]">
+                        {editingText.type === 'raw' ? '編輯這行字 RAW (含時間戳)' : '編輯這行字'}
+                    </h3>
+                    <button onClick={() => setEditingText(null)} className="text-[var(--app-text-muted)] hover:text-[var(--app-text-primary)] transition-colors">
+                        <X className="w-5 h-5" />
+                    </button>
+                </div>
+                <div className="p-4 flex flex-col gap-3">
+                    <textarea 
+                        autoFocus
+                        style={{ fieldSizing: 'content' }}
+                        className="w-full bg-[var(--app-bg-input)] border border-[var(--app-border-base)] rounded-lg p-3 text-[var(--app-text-primary)] outline-none focus:border-[var(--app-accent)] min-h-[100px] resize-none font-mono"
+                        value={editingText.text}
+                        onChange={(e) => setEditingText({ ...editingText, text: e.target.value })}
+                    />
+                    <div className="text-xs text-[var(--app-text-muted)] font-bold uppercase tracking-widest mt-2 px-1">拆字預覽</div>
+                    <div className="flex flex-wrap gap-1 p-3 bg-[var(--app-bg-input)] rounded-lg border border-[var(--app-border-light)] min-h-[3rem] items-center">
+                        {(() => {
+                           const { parseRawLyrics, splitWordsAegisub } = require('@/lib/lyric-utils');
+                           const words = editingText.type === 'raw' 
+                               ? (parseRawLyrics(editingText.text).lines[0]?.words || [])
+                               : splitWordsAegisub(editingText.text);
+                           
+                           if (words.length === 0) return <span className="opacity-50 text-xs">無內容</span>;
+                           
+                           return words.map((w: any, i: number) => (
+                               <span key={i} className="px-2 py-0.5 bg-[var(--app-bg-panel-alt)] border border-[var(--app-border-dark)] rounded text-sm group relative">
+                                   {w.text || '⏎'}
+                                   {w.start !== null && <span className="absolute -top-2 -right-2 text-[8px] bg-[var(--app-accent)] text-black px-1 rounded font-bold">{formatTime(w.start, true)}</span>}
+                               </span>
+                           ));
+                        })()}
+                    </div>
+                </div>
+                <div className="p-4 pt-0 flex justify-end gap-2 text-sm mt-2">
+                    <button onClick={() => setEditingText(null)} className="px-4 py-2 text-[var(--app-text-secondary)] hover:bg-[var(--app-bg-hover)] rounded-lg transition-colors font-bold">
+                        取消
+                    </button>
+                    <button 
+                        onClick={() => {
+                            commitLines(prev => {
+                                const newLines = [...prev];
+                                const currentLine = newLines[editingText.globalIndex];
+                                const { parseRawLyrics, splitWordsAegisub } = require('@/lib/lyric-utils');
+                                if (editingText.type === 'raw') {
+                                    const parsed = parseRawLyrics(editingText.text).lines[0];
+                                    newLines[editingText.globalIndex] = { ...currentLine, raw: editingText.text, words: parsed ? parsed.words : [] };
+                                } else {
+                                    newLines[editingText.globalIndex] = { ...currentLine, raw: editingText.text, words: splitWordsAegisub(editingText.text), start: null };
+                                }
+                                return newLines;
+                            }, 'Edit Text');
+                            setEditingText(null);
+                        }}
+                        className="px-6 py-2 bg-[var(--app-accent)] hover:bg-[var(--app-accent-hover)] text-black rounded-lg transition-colors font-bold shadow"
+                    >
+                        儲存
+                    </button>
+                </div>
+            </div>
+         </div>
+      )}
     </div>
   );
 }

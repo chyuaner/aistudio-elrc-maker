@@ -3,7 +3,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useEditor } from './EditorProvider';
 import { parseRawLyrics, exportLrc } from '@/lib/lyric-utils';
-import { Music, Download, ChevronDown, X, FileText, Maximize, Moon, Tag, Edit2 } from 'lucide-react';
+import { Music, Download, ChevronDown, X, FileText, Maximize, Moon, Tag, Edit2, Hand } from 'lucide-react';
 import { UndoRedoControls } from './UndoRedo';
 import { useDialogs } from './DialogProvider';
 import { AppCommands } from '@/lib/app-commands';
@@ -101,7 +101,7 @@ function extractFlacMetadata(buffer: ArrayBuffer) {
 }
 
 export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
-  const { undo, redo, pastActions, futureActions, file, setFile, commitLines, resetHistory, lines, syncMode, setMetadata, metadata, audioFileName, lyricFileName, setLyricFileName, exportFormat, shiftTime, setAudioSpecs, setIsPlaying, playerRef, setDuration, setPlaybackRate, lrcMetadata, setLrcMetadata } = useEditor();
+  const { undo, redo, pastActions, futureActions, file, setFile, commitLines, resetHistory, lines, syncMode, setMetadata, metadata, audioFileName, lyricFileName, setLyricFileName, exportFormat, shiftTime, setAudioSpecs, setIsPlaying, playerRef, setDuration, setPlaybackRate, lrcMetadata, setLrcMetadata, touchUIMode, setTouchUIMode } = useEditor();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const lyricInputRef = useRef<HTMLInputElement>(null);
   const mixedInputRef = useRef<HTMLInputElement>(null);
@@ -307,12 +307,14 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
     const lrcText = exportLrc(lines, lrcMetadata, format === 'enhanced', format === 'simple');
 
     let defaultName = 'lyrics.lrc';
-    if (format === 'simple') {
-        defaultName = 'lyrics.txt';
-    } else if (lyricFileName && lyricFileName !== 'Embedded Tag' && lyricFileName !== 'New Lyrics') {
+    if (lyricFileName && lyricFileName !== 'Embedded Tag' && lyricFileName !== 'New Lyrics') {
         defaultName = lyricFileName;
     } else if (audioFileName) {
         defaultName = audioFileName.replace(/\.[^/.]+$/, "") + ".lrc";
+    }
+
+    if (format === 'simple') {
+        defaultName = defaultName.replace(/\.[^/.]+$/, "") + ".txt";
     }
 
     const isTauri = typeof window !== 'undefined' && ((window as any).__TAURI__);
@@ -838,6 +840,13 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
         
         {/* Right Group */}
         <div className="flex items-center gap-2 flex-wrap justify-center lg:justify-end mt-2 lg:mt-0">
+            <button 
+              onClick={() => setTouchUIMode(!touchUIMode)} 
+              title="觸控 UI 模式"
+              className={`p-1.5 rounded transition-colors mr-1 ${touchUIMode ? 'text-[var(--app-accent)] bg-[var(--app-bg-hover)]' : 'text-[var(--app-text-muted)] hover:text-[var(--app-text-primary)] hover:bg-[var(--app-bg-hover)]'}`}
+            >
+              <Hand className="w-4 h-4" />
+            </button>
             {mounted && !isTauri && (
               <button 
                 onClick={() => AppCommands.toggleTheme?.()} 

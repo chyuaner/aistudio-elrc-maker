@@ -7,6 +7,8 @@ node_modules/
 .next/
 out/
 dist/
+# 由 next dev / build 自動產生，內容會隨 .next 狀態變動，不應納入版控
+next-env.d.ts
 
 # misc
 .DS_Store

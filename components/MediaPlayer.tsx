@@ -231,6 +231,7 @@ export function MediaPlayer() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsWaveReady(false);
     if (fileUrl && playerRef.current) {
        // 使用常駐 probe 解析 CSS 色彩（避免 append/remove 干擾 React reconciler）
@@ -282,7 +283,6 @@ export function MediaPlayer() {
        };
     }
   // 移除 duration dep：duration 改變不應重建 WaveSurfer（會觸發 destroy + create 並直接操作 DOM）
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fileUrl, playerRef]);
 
   // When a new file is loaded, read the duration pre-parsed by Rust (via window.__mediaDurations__).
@@ -376,7 +376,7 @@ export function MediaPlayer() {
         });
       } catch (e) {}
     }
-  }, [syncCurrTime, duration, playbackRate]);
+  }, [syncCurrTime, duration, playbackRate, isLinuxTauri]);
 
   useEffect(() => {
     if (!('mediaSession' in navigator)) return;
@@ -423,7 +423,7 @@ export function MediaPlayer() {
       });
     } catch(e) {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [metadata, file, lines, paragraphStarts]);
+  }, [metadata, file, lines, paragraphStarts, isLinuxTauri]);
 
   if (!fileUrl) {
     return (

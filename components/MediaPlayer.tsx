@@ -7,6 +7,42 @@ import { Play, Pause, Square, Rewind, FastForward, ChevronLeft, ChevronRight, Vo
 import { formatTime } from '@/lib/lyric-utils';
 import { Tooltip } from './Tooltip';
 
+// ── CSS 色彩解析用 常駐 Probe 元素 ───────────────────────────────────────
+// 問題：Canvas 2D API 不接受 CSS var() 字串，必須先用 getComputedStyle 解析成 rgb(...)。
+// 原來的做法是每次都 create → appendChild → getComputedStyle → removeChild，
+// 但 MutationObserver callback 可能在 React commit 階段觸發，
+// 這時進行 appendChild/removeChild 會交互干擾 React 的 fiber 節點追蹤，
+// 導致 deletedFiber.parentNode 為 null 而 crash。
+// 修復：模組級 singleton probe「只 append 一次，永不 remove」，安全讀取色彩。
+let _cssProbe: HTMLSpanElement | null = null;
+function _getProbe(): HTMLSpanElement {
+  if (!_cssProbe && typeof document !== 'undefined') {
+    _cssProbe = document.createElement('span');
+    _cssProbe.setAttribute('aria-hidden', 'true');
+    // 完全隱藏，不占空間，不影響使用者
+    _cssProbe.style.cssText =
+      'position:fixed;top:-9999px;left:-9999px;visibility:hidden;pointer-events:none;width:0;height:0;overflow:hidden;';
+    document.body.appendChild(_cssProbe);
+  }
+  return _cssProbe!;
+}
+/** 讀取 CSS 色彩變數并解析為終端 rgb() 字串（給 Canvas fillStyle 用） */
+function getCssColor(cssValue: string): string {
+  const p = _getProbe();
+  p.style.color = cssValue;
+  const resolved = getComputedStyle(p).color;
+  p.style.color = '';
+  return resolved;
+}
+/** 讀取 CSS 背景色變數并解析為終端 rgb() 字串（給 Canvas fillStyle 用） */
+function getCssBgColor(cssValue: string): string {
+  const p = _getProbe();
+  p.style.backgroundColor = cssValue;
+  const resolved = getComputedStyle(p).backgroundColor;
+  p.style.backgroundColor = '';
+  return resolved;
+}
+
 function TimeDisplay({ className = '' }: { className?: string }) {
   const { duration, playerRef } = useEditor();
   const [currentTime, setCurrentTime] = useState(0);
@@ -18,12 +54,7 @@ function TimeDisplay({ className = '' }: { className?: string }) {
 
   useEffect(() => {
     const updateColor = () => {
-      const tempDiv = document.createElement('div');
-      tempDiv.style.color = 'var(--app-visualizer-color)';
-      document.body.appendChild(tempDiv);
-      const computedColor = getComputedStyle(tempDiv).color;
-      document.body.removeChild(tempDiv);
-      colorRef.current = computedColor;
+      colorRef.current = getCssColor('var(--app-visualizer-color)') || '#444C56';
     };
     updateColor();
     const observer = new MutationObserver(updateColor);
@@ -171,19 +202,12 @@ export function MediaPlayer() {
     // Theme change observer for WaveSurfer
     const updateColors = () => {
       if (waveSurferRef.current) {
-        const tempDiv = document.createElement('div');
-        tempDiv.style.color = 'var(--app-visualizer-color)';
-        tempDiv.style.backgroundColor = 'var(--app-accent)';
-        document.body.appendChild(tempDiv);
-        const computedStyles = getComputedStyle(tempDiv);
-        const waveColor = computedStyles.color;
-        const progressColor = computedStyles.backgroundColor;
-        document.body.removeChild(tempDiv);
-        
+        const waveColor = getCssColor('var(--app-visualizer-color)') || '#444C56';
+        const progressColor = getCssBgColor('var(--app-accent)') || '#F27D26';
         waveSurferRef.current.setOptions({
-          waveColor: waveColor || '#444C56',
-          progressColor: progressColor || '#F27D26',
-          cursorColor: progressColor || '#F27D26',
+          waveColor,
+          progressColor,
+          cursorColor: progressColor,
         });
       }
     };
@@ -207,18 +231,11 @@ export function MediaPlayer() {
   }, []);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsWaveReady(false);
     if (fileUrl && playerRef.current) {
-       // Get computed colors initially since Canvas 2D context does not support CSS var() strings
-       const tempDiv = document.createElement('div');
-       tempDiv.style.color = 'var(--app-visualizer-color)';
-       tempDiv.style.backgroundColor = 'var(--app-accent)';
-       document.body.appendChild(tempDiv);
-       const computedStyles = getComputedStyle(tempDiv);
-       const initialWaveColor = computedStyles.color || '#444C56';
-       const initialProgressColor = computedStyles.backgroundColor || '#F27D26';
-       document.body.removeChild(tempDiv);
+       // 使用常駐 probe 解析 CSS 色彩（避免 append/remove 干擾 React reconciler）
+       const initialWaveColor = getCssColor('var(--app-visualizer-color)') || '#444C56';
+       const initialProgressColor = getCssBgColor('var(--app-accent)') || '#F27D26';
 
        waveSurferRef.current = WaveSurfer.create({
           container: containerRef.current!,
@@ -238,11 +255,13 @@ export function MediaPlayer() {
        });
 
        const handleMouseMove = (e: MouseEvent) => {
-          if (containerRef.current && duration > 0) {
+          // 直接從 playerRef 讀取 duration，避免黃 closure 導致此 effect deps 包含 duration
+          const dur = playerRef.current?.duration;
+          if (containerRef.current && dur && dur > 0 && isFinite(dur)) {
              const rect = containerRef.current.getBoundingClientRect();
              const x = e.clientX - rect.left;
              const ratio = Math.max(0, Math.min(1, x / rect.width));
-             setHoverTime(ratio * duration);
+             setHoverTime(ratio * dur);
              setHoverX(e.clientX);
           }
        };
@@ -262,7 +281,9 @@ export function MediaPlayer() {
           }
        };
     }
-  }, [fileUrl, playerRef, duration]);
+  // 移除 duration dep：duration 改變不應重建 WaveSurfer（會觸發 destroy + create 並直接操作 DOM）
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fileUrl, playerRef]);
 
   // When a new file is loaded, read the duration pre-parsed by Rust (via window.__mediaDurations__).
   // This bypasses the Chromium/GStreamer issue where FLAC files report Infinity for duration.

@@ -38,6 +38,38 @@
   }
 }
 
+/* 桌面殼層（Electron / Tauri）：標題列拖曳與互動區分離 */
+.app-region-drag {
+  -webkit-app-region: drag;
+  app-region: drag;
+}
+
+.app-region-no-drag {
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+}
+
+/* Electron：執行期由 layout 加上 html.electron-shell，不依賴 build 時 isElectron */
+html.electron-shell header {
+  -webkit-app-region: drag;
+  app-region: drag;
+}
+
+html.electron-shell header button,
+html.electron-shell header input,
+html.electron-shell header .dropdown-container,
+html.electron-shell header .app-region-no-drag,
+html.electron-shell header [data-electron-window-controls] {
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+}
+
+html.electron-shell .titlebar-drag-spacer {
+  -webkit-app-region: drag;
+  app-region: drag;
+  pointer-events: auto;
+}
+
 html.light {
   --app-bg-base: #f7f7f9;
   --app-bg-panel: #ffffff;

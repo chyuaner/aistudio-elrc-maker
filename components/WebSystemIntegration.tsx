@@ -13,7 +13,21 @@ export function WebSystemIntegration() {
     const isElectron =
       typeof window !== 'undefined' &&
       !!(window as any).electronAPI?.isElectron;
+    const electronShell = (window as any).electronAPI?.shell;
     const ua = typeof navigator !== 'undefined' ? navigator.userAgent.toLowerCase() : '';
+
+    if (isElectron && electronShell) {
+      const root = document.documentElement;
+      root.classList.add('electron-shell');
+      if (electronShell.titlebarLeftPadding) {
+        root.style.setProperty('--titlebar-left-padding', electronShell.titlebarLeftPadding);
+      }
+      if (electronShell.useCustomWindowControls) {
+        root.style.setProperty('--titlebar-right-padding', '0px');
+      } else if (electronShell.titlebarRightPadding) {
+        root.style.setProperty('--titlebar-right-padding', electronShell.titlebarRightPadding);
+      }
+    }
     const isLinuxTauri = isTauri && ua.includes('linux');
 
     // ── toggleFullscreen：Electron / Tauri 使用原生視窗 API，瀏覽器使用 document API ──

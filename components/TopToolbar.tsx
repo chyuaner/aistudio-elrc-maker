@@ -10,6 +10,7 @@ import { AppCommands } from '@/lib/app-commands';
 import { Tooltip } from './Tooltip';
 import { useI18n } from '@/hooks/useI18n';
 import { LrcMetadataDialog } from './LrcMetadataDialog';
+import { ElectronWindowControls } from './ElectronWindowControls';
 
 function extractFlacMetadata(buffer: ArrayBuffer) {
     const view = new DataView(buffer);
@@ -116,6 +117,62 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    const api = (window as unknown as {
+      electronAPI?: {
+        needsManualWindowDrag?: boolean;
+        windowDragStart?: (p: { x: number; y: number }) => void;
+        windowDragMove?: (p: { x: number; y: number }) => void;
+        windowDragEnd?: () => void;
+      };
+    }).electronAPI;
+    if (!api?.needsManualWindowDrag) return;
+
+    const isDragHandle = (el: EventTarget | null) => {
+      if (!(el instanceof Element)) return false;
+      if (
+        el.closest('button') ||
+        el.closest('input') ||
+        el.closest('.app-region-no-drag') ||
+        el.closest('[data-electron-window-controls]')
+      ) {
+        return false;
+      }
+      return !!el.closest('header');
+    };
+
+    let dragging = false;
+
+    const onMouseDown = (e: MouseEvent) => {
+      if (e.button !== 0 || !isDragHandle(e.target)) return;
+      dragging = true;
+      api.windowDragStart?.({ x: e.screenX, y: e.screenY });
+    };
+
+    const onMouseMove = (e: MouseEvent) => {
+      if (!dragging) return;
+      api.windowDragMove?.({ x: e.screenX, y: e.screenY });
+    };
+
+    const endDrag = () => {
+      if (!dragging) return;
+      dragging = false;
+      api.windowDragEnd?.();
+    };
+
+    window.addEventListener('mousedown', onMouseDown);
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', endDrag);
+    window.addEventListener('blur', endDrag);
+
+    return () => {
+      window.removeEventListener('mousedown', onMouseDown);
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', endDrag);
+      window.removeEventListener('blur', endDrag);
+    };
+  }, []);
+
+  useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
@@ -157,6 +214,13 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
   }, []);
   
   const isTauri = typeof window !== 'undefined' && ((window as any).__TAURI__);
+  const electronAPI =
+    typeof window !== 'undefined'
+      ? (window as unknown as { electronAPI?: { isElectron?: boolean; shell?: { useCustomWindowControls?: boolean } } })
+          .electronAPI
+      : undefined;
+  const isElectron = !!electronAPI?.isElectron;
+  const isElectronCustomControls = !!electronAPI?.shell?.useCustomWindowControls;
   const isWindows = typeof navigator !== 'undefined' && navigator.userAgent.includes('Windows');
   const finalHideTitle = hideTitle || (isTauri && isWindows);
   const titleColor = (isTauri && !isFocused) ? 'text-[var(--app-text-muted)]' : 'text-[var(--app-text-secondary)]';
@@ -746,11 +810,37 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
     if (f) processLyricFile(f);
   };
 
+  const titlebarSpacerClass = (height: string) =>
+    `${height} shrink-0 transition-[width] titlebar-drag-spacer ${
+      isElectron ? 'app-region-drag' : 'app-region-drag pointer-events-none'
+    }`;
+
+  const renderTitlebarLeftSpacer = (height: string, hiddenLg = true) => (
+    <div
+      style={{ width: 'var(--titlebar-left-padding, 0px)' }}
+      className={`${titlebarSpacerClass(height)} ${hiddenLg ? 'hidden lg:block' : ''}`}
+    />
+  );
+
+  const renderTitlebarRightEnd = (height: string, hiddenLg = true) =>
+    isElectronCustomControls ? (
+      <ElectronWindowControls
+        className={`${height} ${hiddenLg ? 'hidden lg:flex' : 'flex'}`}
+      />
+    ) : (
+      <div
+        style={{ width: 'var(--titlebar-right-padding, 0px)' }}
+        className={`${titlebarSpacerClass(height)} ${hiddenLg ? 'hidden lg:block' : ''}`}
+      />
+    );
+
+  const interactiveShellClass = isElectron ? 'app-region-no-drag' : '';
+
   const renderButtonsRow = (className: string) => (
       <div className={`flex-row flex-wrap items-center justify-center lg:justify-between w-full px-2 py-2 gap-y-2 gap-x-4 ${className}`}>
         {/* Left Group */}
-        <div className="flex items-center gap-2 flex-wrap justify-center lg:justify-start">
-          <div style={{ width: 'var(--titlebar-left-padding, 0px)' }} className="h-8 app-region-drag pointer-events-none shrink-0 transition-[width] hidden lg:block" />
+        <div className={`flex items-center gap-2 flex-wrap justify-center lg:justify-start ${interactiveShellClass}`}>
+          {renderTitlebarLeftSpacer('h-8')}
           
           <div className="relative dropdown-container">
             <div className="flex group shadow-sm rounded">
@@ -839,7 +929,7 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
         </div>
         
         {/* Right Group */}
-        <div className="flex items-center gap-2 flex-wrap justify-center lg:justify-end mt-2 lg:mt-0">
+        <div className={`flex items-center gap-2 flex-wrap justify-center lg:justify-end mt-2 lg:mt-0 ${interactiveShellClass}`}>
             <button 
               onClick={() => setTouchUIMode(!touchUIMode)} 
               title="觸控 UI 模式"
@@ -904,7 +994,7 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
                </div>
             )}
           </div>
-          <div style={{ width: 'var(--titlebar-right-padding, 0px)' }} className="h-8 app-region-drag pointer-events-none shrink-0 transition-[width] hidden lg:block" />
+          {renderTitlebarRightEnd('h-8')}
         </div>
       </div>
   );
@@ -955,8 +1045,21 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
          </div>
       )}
     <header 
-      className="bg-[var(--app-bg-panel-alt)] border-b border-[var(--app-border-base)] shrink-0 relative select-none flex flex-col lg:flex-row lg:items-center lg:justify-between sticky top-0 z-50 w-full"
+      className={`bg-[var(--app-bg-panel-alt)] border-b border-[var(--app-border-base)] shrink-0 relative select-none flex flex-col lg:flex-row lg:items-center lg:justify-between sticky top-0 z-50 w-full${isElectron ? ' app-region-drag' : ''}`}
       style={{ display: 'var(--top-toolbar-display, flex)' }}
+      onDoubleClick={(e) => {
+        if (!isElectron) return;
+        const target = e.target as HTMLElement;
+        if (
+          target.closest('button') ||
+          target.closest('input') ||
+          target.closest('.app-region-no-drag') ||
+          target.closest('[data-electron-window-controls]')
+        ) {
+          return;
+        }
+        (window as unknown as { electronAPI?: { windowToggleMaximize?: () => void } }).electronAPI?.windowToggleMaximize?.();
+      }}
     >
       {/* Desktop Title (Absolute centered) */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none whitespace-nowrap overflow-hidden px-8 z-20 hidden lg:flex gap-4">
@@ -986,7 +1089,7 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
 
       {/* Mobile Title Row */}
       <div className="lg:hidden items-center justify-between w-full py-2 app-region-drag relative bg-[var(--app-bg-panel-alt)] z-10 flex">
-         <div style={{ width: 'var(--titlebar-left-padding, 0px)' }} className="h-6 pointer-events-none shrink-0 transition-[width]" />
+         {renderTitlebarLeftSpacer('h-6', false)}
          <div className="flex items-center justify-center pointer-events-none whitespace-nowrap overflow-hidden px-2 z-0 flex-1 gap-2">
              <button 
                onClick={() => setMetadataDialogOpen(true)}
@@ -1009,7 +1112,7 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
                  </div>
              </div>
          </div>
-         <div style={{ width: 'var(--titlebar-right-padding, 0px)' }} className="h-6 pointer-events-none shrink-0 transition-[width]" />
+         {renderTitlebarRightEnd('h-6', false)}
       </div>
 
       {/* Desktop Buttons */}

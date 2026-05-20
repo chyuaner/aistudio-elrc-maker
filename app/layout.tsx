@@ -30,12 +30,26 @@ export default function RootLayout({children}: {children: React.ReactNode}) {
               window.__TAURI__ || 
               window.__TAURI_INTERNALS__
             );
+            const electronAPI = typeof window !== 'undefined' && window.electronAPI;
+            const isElectron = !!(electronAPI && electronAPI.isElectron);
             const ua = navigator.userAgent.toLowerCase();
             
             // Set defaults for web
             document.documentElement.style.setProperty('--top-toolbar-display', 'flex');
 
-            if (isTauri) {
+            if (isElectron && electronAPI.shell) {
+                document.documentElement.classList.add('electron-shell');
+                var sh = electronAPI.shell;
+                if (sh.titlebarLeftPadding) {
+                    document.documentElement.style.setProperty('--titlebar-left-padding', sh.titlebarLeftPadding);
+                }
+                if (sh.titlebarRightPadding && !sh.useCustomWindowControls) {
+                    document.documentElement.style.setProperty('--titlebar-right-padding', sh.titlebarRightPadding);
+                }
+                if (sh.useCustomWindowControls) {
+                    document.documentElement.style.setProperty('--titlebar-right-padding', '0px');
+                }
+            } else if (isTauri) {
                 if (ua.includes('macintosh') || ua.includes('mac os x')) {
                     document.documentElement.style.setProperty('--titlebar-left-padding', '70px');
                 } else if (ua.includes('linux')) {

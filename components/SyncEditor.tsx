@@ -229,12 +229,21 @@ export function SyncEditor() {
           const newLines = [...prev];
           const line = newLines[globalIndex];
           const words = line.words;
+          const lineHasEndStamp = words.length > 0 && words[words.length - 1].text === '' && words[words.length - 1].start !== null;
+
           const leftWords = words.slice(0, wordIndex);
           const rightWords = words.slice(wordIndex);
+          const rightStart = rightWords[0]?.start || null;
+
+          if (lineHasEndStamp) {
+              if (leftWords.length === 0 || leftWords[leftWords.length - 1].text !== '') {
+                  leftWords.push({ text: '', start: rightStart, end: null });
+              }
+          }
+
           const leftRaw = leftWords.map(w => w.start !== null ? `<${formatTime(w.start, true)}>${w.text}` : w.text).join('');
           const leftStart = leftWords.find(w => w.start !== null)?.start || line.start;
           const rightRaw = rightWords.map(w => w.start !== null ? `<${formatTime(w.start, true)}>${w.text}` : w.text).join('');
-          const rightStart = rightWords[0]?.start || null;
           
           const { generateId } = require('@/lib/lyric-utils');
   
@@ -378,12 +387,6 @@ export function SyncEditor() {
             e.nativeEvent.stopImmediatePropagation();
             setActiveLineIndex(globalIndex);
             setActiveWordIndex(0);
-            const { current: player } = playerRef;
-            if (player instanceof HTMLMediaElement && lines[globalIndex]?.start !== null) {
-                if (player.paused) {
-                    player.currentTime = lines[globalIndex].start!;
-                }
-            }
             const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
             const x = Math.min(rect.left, window.innerWidth - 250);
             const y = Math.min(rect.bottom, window.innerHeight - 300);

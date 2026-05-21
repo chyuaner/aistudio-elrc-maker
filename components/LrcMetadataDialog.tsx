@@ -101,7 +101,7 @@ export function LrcMetadataDialog({ isOpen, onClose }: { isOpen: boolean; onClos
     // Copy populated custom keys
     customKeys.forEach(({ key, value }) => {
         if (key && value) {
-            finalData[key.toLowerCase()] = value;
+            finalData[key] = value;
         }
     });
 
@@ -172,7 +172,7 @@ export function LrcMetadataDialog({ isOpen, onClose }: { isOpen: boolean; onClos
                                 <input 
                                     type="text" 
                                     value={item.key} 
-                                    onChange={e => handleCustomChange(i, e.target.value.replace(/[^a-zA-Z]/g, '').toLowerCase(), item.value)} 
+                                    onChange={e => handleCustomChange(i, e.target.value.trim(), item.value)} 
                                     className="w-20 bg-[var(--app-bg-input)] text-sm border border-[var(--app-border-light)] rounded px-2 py-1 focus:outline-none focus:border-[var(--app-accent)]"
                                     placeholder="key"
                                 />

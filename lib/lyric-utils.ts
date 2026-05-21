@@ -72,7 +72,7 @@ export function parseRawLyrics(text: string): { lines: LyricLine[], metadata: Lr
   const metadata: LrcMetadata = {};
   
   const lineTimeRegex = /^\[(\d+:\d+\.\d+)\]/;
-  const metaRegex = /^\[([a-zA-Z]+):(.*)\]$/;
+  const metaRegex = /^\[([^:]+):(.*)\]$/;
   const wordTimeRegex = /<(\d+:\d+\.\d+)>([^<]*)/g;
   
   for (const line of lines) {
@@ -80,7 +80,11 @@ export function parseRawLyrics(text: string): { lines: LyricLine[], metadata: Lr
     
     const metaMatch = metaRegex.exec(line);
     if (metaMatch && !lineTimeRegex.test(line)) {
-      metadata[metaMatch[1].toLowerCase()] = metaMatch[2];
+      const rawKey = metaMatch[1];
+      const predefined = ['ti', 'ar', 'al', 'au', 'by', 'offset', 're', 've'];
+      const lowerKey = rawKey.toLowerCase();
+      const finalKey = predefined.includes(lowerKey) ? lowerKey : rawKey;
+      metadata[finalKey] = metaMatch[2];
       continue;
     }
     

@@ -2,48 +2,61 @@
 
 import React, { useRef, useEffect, useState } from 'react';
 import { useEditor } from './EditorProvider';
-import { exportLrc } from '@/lib/lyric-utils';
+import { exportLrc, exportSrt } from '@/lib/lyric-utils';
 import { useI18n } from '@/hooks/useI18n';
 import { KaraokePreview } from './KaraokePreview';
 import { useAutoScroll } from './useAutoScroll';
 
 export function RawTextDisplay() {
-  const { lines, activeLineIndex, lrcMetadata, exportFormat, setExportFormat, setAutoScrollEnabled, dualLineGapSec, setDualLineGapSec, paragraphStarts } = useEditor();
+  const { lines, activeLineIndex, lrcMetadata, exportFormat, setExportFormat, setAutoScrollEnabled, dualLineGapSec, setDualLineGapSec, paragraphStarts, duration } = useEditor();
   const i18n = useI18n();
   const containerRef = useRef<HTMLDivElement>(null);
   const [simpleIncludeInstrumental, setSimpleIncludeInstrumental] = useState(false);
 
   useAutoScroll();
   
-  // Auto-switch to enhanced if any word has a timestamp
   useEffect(() => {
-    const hasElrc = lines.some(l => l.words.some(w => w.start !== null));
-    if (hasElrc) {
-      setExportFormat('enhanced');
-    }
     setAutoScrollEnabled(true);
-  }, [lines, setExportFormat, setAutoScrollEnabled]);
+  }, [setAutoScrollEnabled]);
   
-  const text = exportLrc(lines, lrcMetadata, exportFormat === 'enhanced', exportFormat === 'simple', simpleIncludeInstrumental, paragraphStarts);
+  let text = '';
+  if (exportFormat === 'srt') {
+      text = exportSrt(lines, duration);
+  } else {
+      text = exportLrc(lines, lrcMetadata, exportFormat === 'enhanced', exportFormat === 'simple', simpleIncludeInstrumental, paragraphStarts);
+  }
   const allLines = text.split('\n');
   
   let currentRawIndex = 0;
   const rawIdxToLineIdx = new Map<number, number>();
   
-  const metadataLinesCount = Object.values(lrcMetadata || {}).filter(Boolean).length;
-  
-  if (exportFormat !== 'simple') {
-      for (let i = 0; i < metadataLinesCount; i++) {
+  if (exportFormat === 'srt') {
+      for (let i = 0; i < lines.length; i++) {
+          const l = lines[i];
+          if (l.start !== null && l.words.some(w => w.text.trim().length > 0)) {
+              rawIdxToLineIdx.set(currentRawIndex, i);
+              rawIdxToLineIdx.set(currentRawIndex + 1, i);
+              rawIdxToLineIdx.set(currentRawIndex + 2, i);
+              rawIdxToLineIdx.set(currentRawIndex + 3, i);
+              currentRawIndex += 4;
+          }
+      }
+  } else {
+      const metadataLinesCount = Object.values(lrcMetadata || {}).filter(Boolean).length;
+      
+      if (exportFormat !== 'simple') {
+          for (let i = 0; i < metadataLinesCount; i++) {
+              currentRawIndex++;
+          }
+      }
+
+      for (let i = 0; i < lines.length; i++) {
+          if (exportFormat === 'simple' && simpleIncludeInstrumental && i > 0 && paragraphStarts[i]) {
+              currentRawIndex++; // Empty line
+          }
+          rawIdxToLineIdx.set(currentRawIndex, i);
           currentRawIndex++;
       }
-  }
-
-  for (let i = 0; i < lines.length; i++) {
-      if (exportFormat === 'simple' && simpleIncludeInstrumental && i > 0 && paragraphStarts[i]) {
-          currentRawIndex++; // Empty line
-      }
-      rawIdxToLineIdx.set(currentRawIndex, i);
-      currentRawIndex++;
   }
 
   const handleSelectAll = () => {
@@ -87,6 +100,12 @@ export function RawTextDisplay() {
              className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded border transition-colors disabled:opacity-50 ${exportFormat === 'simple' ? 'bg-[var(--app-border-base)] border-[var(--app-accent)] text-[var(--app-accent)] shadow-inner' : 'border-[var(--app-border-light)] text-[var(--app-text-muted)] hover:text-[var(--app-text-secondary)]'}`}
            >
              {i18n.exportSimple || '簡易歌詞 (無時間戳)'}
+           </button>
+           <button
+             onClick={() => setExportFormat('srt')}
+             className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded border transition-colors disabled:opacity-50 ${exportFormat === 'srt' ? 'bg-[var(--app-border-base)] border-[var(--app-accent)] text-[var(--app-accent)] shadow-inner' : 'border-[var(--app-border-light)] text-[var(--app-text-muted)] hover:text-[var(--app-text-secondary)]'}`}
+           >
+             .SRT
            </button>
            
            {exportFormat === 'simple' && (

@@ -184,3 +184,65 @@ export function exportLrc(lines: LyricLine[], metadata?: LrcMetadata, isEnhanced
   
   return lrc;
 }
+
+export function formatSrtTime(seconds: number): string {
+  const totalMs = Math.round(seconds * 1000);
+  const h = Math.floor(totalMs / 3600000);
+  const m = Math.floor((totalMs % 3600000) / 60000);
+  const s = Math.floor((totalMs % 60000) / 1000);
+  const ms = totalMs % 1000;
+  
+  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')},${ms.toString().padStart(3, '0')}`;
+}
+
+export function exportSrt(lines: LyricLine[], durationSec: number = 0): string {
+   let srt = '';
+   let index = 1;
+   
+   const validLines = lines.filter(l => l.start !== null && l.words.some(w => w.text.trim().length > 0)); 
+   
+   for (let i = 0; i < validLines.length; i++) {
+       const line = validLines[i];
+       const nextLine = validLines[i+1];
+       
+       const startSrt = formatSrtTime(line.start!);
+       
+       let endTimeSec: number | null = null;
+       
+       if (line.end !== null) {
+           endTimeSec = line.end;
+       } else {
+           const lastWord = line.words[line.words.length - 1];
+           if (lastWord && lastWord.text.trim() === '' && lastWord.start !== null) {
+               endTimeSec = lastWord.start;
+           }
+       }
+       
+       if (endTimeSec === null) {
+           let fallbackEnd = line.start! + 5;
+           if (nextLine && nextLine.start !== null) {
+               fallbackEnd = nextLine.start;
+           } else if (durationSec > line.start!) {
+               fallbackEnd = durationSec;
+           }
+           
+           if (fallbackEnd - line.start! > 10) {
+               fallbackEnd = line.start! + 10;
+           }
+           endTimeSec = fallbackEnd;
+       }
+       
+       if (endTimeSec <= line.start!) {
+           endTimeSec = line.start! + 1;
+       }
+       
+       const endSrt = formatSrtTime(endTimeSec);
+       
+       srt += `${index}\n`;
+       srt += `${startSrt} --> ${endSrt}\n`;
+       srt += `${line.words.map(w => w.text).join('')}\n\n`;
+       index++;
+   }
+   
+   return srt.trim();
+}

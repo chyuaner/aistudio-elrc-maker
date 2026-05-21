@@ -10,7 +10,7 @@ interface Hotkeys {
 
 export type EditorMode = 'text' | 'sync' | 'dual-sync' | 'raw';
 export type SyncMode = 'line' | 'word';
-export type ExportFormat = 'standard' | 'enhanced' | 'simple';
+export type ExportFormat = 'standard' | 'enhanced' | 'simple' | 'srt';
 
 export interface HistoryState {
   past: { lines: LyricLine[]; action: string; cursor: { line: number, word: number } }[];

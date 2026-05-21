@@ -2,7 +2,7 @@
 
 import React, { useRef, useState, useEffect } from 'react';
 import { useEditor } from './EditorProvider';
-import { parseRawLyrics, exportLrc } from '@/lib/lyric-utils';
+import { parseRawLyrics, exportLrc, exportSrt } from '@/lib/lyric-utils';
 import { Music, Download, ChevronDown, X, FileText, Maximize, Moon, Tag, Edit2, Hand } from 'lucide-react';
 import { UndoRedoControls } from './UndoRedo';
 import { useDialogs } from './DialogProvider';
@@ -102,7 +102,7 @@ function extractFlacMetadata(buffer: ArrayBuffer) {
 }
 
 export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
-  const { undo, redo, pastActions, futureActions, file, setFile, commitLines, resetHistory, lines, syncMode, setMetadata, metadata, audioFileName, lyricFileName, setLyricFileName, exportFormat, shiftTime, setAudioSpecs, setIsPlaying, playerRef, setDuration, setPlaybackRate, lrcMetadata, setLrcMetadata, touchUIMode, setTouchUIMode } = useEditor();
+  const { undo, redo, pastActions, futureActions, file, setFile, commitLines, resetHistory, lines, syncMode, setMetadata, metadata, audioFileName, lyricFileName, setLyricFileName, exportFormat, shiftTime, setAudioSpecs, setIsPlaying, playerRef, duration, setDuration, setPlaybackRate, lrcMetadata, setLrcMetadata, touchUIMode, setTouchUIMode } = useEditor();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const lyricInputRef = useRef<HTMLInputElement>(null);
   const mixedInputRef = useRef<HTMLInputElement>(null);
@@ -380,9 +380,15 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
     reader.readAsText(f);
   }, [lines.length, dialogs, resetHistory, setLyricFileName, setLrcMetadata]);
 
-  const handleExport = React.useCallback(async (format: 'standard' | 'enhanced' | 'simple', saveType: 'file' | 'embedded' = 'file') => {
+  const handleExport = React.useCallback(async (format: 'standard' | 'enhanced' | 'simple' | 'srt', saveType: 'file' | 'embedded' = 'file') => {
     if (lines.length === 0) return;
-    const lrcText = exportLrc(lines, lrcMetadata, format === 'enhanced', format === 'simple');
+    
+    let lrcText = '';
+    if (format === 'srt') {
+        lrcText = exportSrt(lines, duration);
+    } else {
+        lrcText = exportLrc(lines, lrcMetadata, format === 'enhanced', format === 'simple');
+    }
 
     let defaultName = 'lyrics.lrc';
     if (lyricFileName && lyricFileName !== 'Embedded Tag' && lyricFileName !== 'New Lyrics') {
@@ -393,6 +399,8 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
 
     if (format === 'simple') {
         defaultName = defaultName.replace(/\.[^/.]+$/, "") + ".txt";
+    } else if (format === 'srt') {
+        defaultName = defaultName.replace(/\.[^/.]+$/, "") + ".srt";
     }
 
     const isTauri = typeof window !== 'undefined' && ((window as any).__TAURI__);
@@ -471,7 +479,7 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
         URL.revokeObjectURL(url);
     }
     setExportDropdownOpen(false);
-  }, [lines, lyricFileName, audioFileName, lrcMetadata, file]);
+  }, [lines, lyricFileName, audioFileName, lrcMetadata, file, duration]);
 
   // AppCommands mapping extracted from useEditor hooks above
 
@@ -540,16 +548,18 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
       exportStandard: () => handleExport('standard'),
       exportEnhanced: () => handleExport('enhanced'),
       exportSimple: () => handleExport('simple'),
+      exportSrt: () => handleExport('srt'),
       exportEmbeddedStandard: () => handleExport('standard', 'embedded'),
       exportEmbeddedEnhanced: () => handleExport('enhanced', 'embedded'),
       exportEmbeddedSimple: () => handleExport('simple', 'embedded'),
-     exportCurrent: () => handleExport(exportFormat as 'standard' | 'enhanced' | 'simple'),
+     exportCurrent: () => handleExport(exportFormat as 'standard' | 'enhanced' | 'simple' | 'srt'),
       getExportOptions: () => {
          const ext = audioFileName ? audioFileName.substring(audioFileName.lastIndexOf('.')).toLowerCase() : '';
          const options = [
              { label: '.lrc 增強型LRC (ESLYRIC ﹣ 逐字同步)', action: 'exportEnhanced' },
              { label: '.lrc 標準LRC (逐行同步)', action: 'exportStandard' },
-             { label: '.txt 簡易歌詞 (無時間戳)', action: 'exportSimple' }
+             { label: '.txt 簡易歌詞 (無時間戳)', action: 'exportSimple' },
+             { label: '.srt 影片字幕 (逐行同步)', action: 'exportSrt' }
          ];
          if (ext === '.flac' || ext === '.m4a' || ext === '.mp4') {
              options.push({ label: '---', action: 'separator' });
@@ -995,6 +1005,7 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
                                   exportEnhanced: () => handleExport('enhanced', 'file'),
                                   exportStandard: () => handleExport('standard', 'file'),
                                   exportSimple: () => handleExport('simple', 'file'),
+                                  exportSrt: () => handleExport('srt', 'file'),
                                   exportEmbeddedEnhanced: () => handleExport('enhanced', 'embedded'),
                                   exportEmbeddedStandard: () => handleExport('standard', 'embedded'),
                                   exportEmbeddedSimple: () => handleExport('simple', 'embedded')

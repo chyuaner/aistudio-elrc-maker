@@ -2,7 +2,7 @@ import type {Metadata, Viewport} from 'next';
 import './globals.css'; // Global styles
 
 export const metadata: Metadata = {
-  title: 'LRC Maker Enhanced',
+  title: 'Enhanced LRC Maker',
   description: 'A desktop-like web app for syncing lyrics',
   manifest: '/manifest.json',
   icons: {

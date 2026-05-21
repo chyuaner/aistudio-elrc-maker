@@ -3,7 +3,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useEditor } from './EditorProvider';
 import { parseRawLyrics, exportLrc, exportSrt } from '@/lib/lyric-utils';
-import { Music, Download, ChevronDown, X, FileText, Maximize, Moon, Tag, Edit2, Hand } from 'lucide-react';
+import { Music, Download, ChevronDown, X, FileText, Maximize, Moon, Tag, Edit2, Hand, MoreVertical } from 'lucide-react';
 import { UndoRedoControls } from './UndoRedo';
 import { useDialogs } from './DialogProvider';
 import { AppCommands } from '@/lib/app-commands';
@@ -11,6 +11,7 @@ import { Tooltip } from './Tooltip';
 import { useI18n } from '@/hooks/useI18n';
 import { LrcMetadataDialog } from './LrcMetadataDialog';
 import { ElectronWindowControls } from './ElectronWindowControls';
+import { AboutDialog } from './AboutDialog';
 
 function extractFlacMetadata(buffer: ArrayBuffer) {
     const view = new DataView(buffer);
@@ -112,9 +113,18 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
   const [loadMediaDropdownOpen, setLoadMediaDropdownOpen] = useState(false);
   const [loadDropdownOpen, setLoadDropdownOpen] = useState(false);
   const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+  const [aboutDialogOpen, setAboutDialogOpen] = useState(false);
   const [metadataDialogOpen, setMetadataDialogOpen] = useState(false);
   const [isFocused, setIsFocused] = useState(true);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [mounted, setMounted] = useState(false);
+
+  const MORE_MENU_ITEMS: { type: 'link' | 'action', label: string, url?: string, action?: () => void }[] = [
+    // { type: 'link', label: 'Buy me a Coffee', url: 'https://buymeacoffee.com/' },
+    { type: 'link', label: 'Project Homepage', url: 'https://github.com/chyuaner/aistudio-elrc-maker' },
+    { type: 'link', label: 'My Homepage', url: 'https://yuaner.tw' },
+  ];
 
   useEffect(() => {
     const api = (window as unknown as {
@@ -185,16 +195,44 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
         setLoadMediaDropdownOpen(false);
         setLoadDropdownOpen(false);
         setExportDropdownOpen(false);
+        setMoreMenuOpen(false);
       }
     };
     
-    if (loadMediaDropdownOpen || loadDropdownOpen || exportDropdownOpen) {
+    if (loadMediaDropdownOpen || loadDropdownOpen || exportDropdownOpen || moreMenuOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [loadMediaDropdownOpen, loadDropdownOpen, exportDropdownOpen]);
+  }, [loadMediaDropdownOpen, loadDropdownOpen, exportDropdownOpen, moreMenuOpen]);
+
+  // Track Fullscreen state for hiding titlebar spacers
+  useEffect(() => {
+    const checkFs = () => {
+      const isDOMFs = !!document.fullscreenElement;
+      const isWindowFs = window.innerWidth === window.screen.width && window.innerHeight === window.screen.height;
+      setIsFullscreen(isDOMFs || isWindowFs);
+    };
+
+    document.addEventListener('fullscreenchange', checkFs);
+    window.addEventListener('resize', checkFs);
+    setTimeout(checkFs, 100);
+
+    const api = (window as unknown as { electronAPI?: { onWindowStateChange?: (cb: (s: any) => void) => () => void } }).electronAPI;
+    let electronUnsub: (() => void) | undefined;
+    if (api?.onWindowStateChange) {
+      electronUnsub = api.onWindowStateChange((s: any) => {
+        setIsFullscreen(!!s?.isFullScreen || !!document.fullscreenElement);
+      });
+    }
+
+    return () => {
+      document.removeEventListener('fullscreenchange', checkFs);
+      window.removeEventListener('resize', checkFs);
+      if (electronUnsub) electronUnsub();
+    };
+  }, []);
 
   useEffect(() => {
      const tauri = (window as any).__TAURI__;
@@ -839,15 +877,19 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
       isElectron ? 'app-region-drag' : 'app-region-drag pointer-events-none'
     }`;
 
-  const renderTitlebarLeftSpacer = (height: string, hiddenLg = true) => (
-    <div
-      style={{ width: 'var(--titlebar-left-padding, 0px)' }}
-      className={`${titlebarSpacerClass(height)} ${hiddenLg ? 'hidden lg:block' : ''}`}
-    />
-  );
+  const renderTitlebarLeftSpacer = (height: string, hiddenLg = true) => {
+    if (isFullscreen) return null;
+    return (
+      <div
+        style={{ width: 'var(--titlebar-left-padding, 0px)' }}
+        className={`${titlebarSpacerClass(height)} ${hiddenLg ? 'hidden lg:block' : ''}`}
+      />
+    );
+  };
 
-  const renderTitlebarRightEnd = (height: string, hiddenLg = true) =>
-    isElectronCustomControls ? (
+  const renderTitlebarRightEnd = (height: string, hiddenLg = true) => {
+    if (isFullscreen) return null;
+    return isElectronCustomControls ? (
       <ElectronWindowControls
         className={`${height} ${hiddenLg ? 'hidden lg:flex' : 'flex'}`}
       />
@@ -857,6 +899,7 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
         className={`${titlebarSpacerClass(height)} ${hiddenLg ? 'hidden lg:block' : ''}`}
       />
     );
+  };
 
   const interactiveShellClass = isElectron ? 'app-region-no-drag' : '';
 
@@ -1019,6 +1062,59 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
                </div>
             )}
           </div>
+          <div className="relative dropdown-container">
+            <button
+               onClick={() => setMoreMenuOpen(!moreMenuOpen)}
+               title="其他選項 (More)"
+               className="p-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-text-primary)] hover:bg-[var(--app-bg-hover)] rounded transition-colors"
+            >
+               <MoreVertical className="w-5 h-5" />
+            </button>
+            {moreMenuOpen && (
+               <div className="absolute top-full right-0 mt-1 w-max min-w-[12rem] bg-[var(--app-bg-panel)] border border-[var(--app-border-base)] rounded shadow-xl z-50 overflow-hidden py-1 whitespace-nowrap">
+                  {MORE_MENU_ITEMS.map((opt, i) => {
+                      if (opt.type === 'link' && opt.url) {
+                        return (
+                          <a 
+                            key={i} 
+                            href={opt.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="block w-full text-left px-4 py-2 text-sm text-[var(--app-text-secondary)] hover:bg-[var(--app-accent)] hover:text-black transition-colors" 
+                            onClick={() => setMoreMenuOpen(false)}
+                          >
+                              {opt.label}
+                          </a>
+                        );
+                      }
+                      return (
+                        <button 
+                          key={i} 
+                          className="w-full text-left px-4 py-2 text-sm text-[var(--app-text-secondary)] hover:bg-[var(--app-accent)] hover:text-black transition-colors" 
+                          onClick={() => {
+                              if (opt.type === 'action' && opt.action) {
+                                 opt.action();
+                              }
+                              setMoreMenuOpen(false);
+                          }}
+                        >
+                            {opt.label}
+                        </button>
+                      );
+                  })}
+                  <div className="h-px bg-[var(--app-border-base)] my-1" />
+                  <button 
+                    className="w-full text-left px-4 py-2 text-sm text-[var(--app-text-secondary)] hover:bg-[var(--app-accent)] hover:text-black transition-colors" 
+                    onClick={() => {
+                        setAboutDialogOpen(true);
+                        setMoreMenuOpen(false);
+                    }}
+                  >
+                      關於 (About)
+                  </button>
+               </div>
+            )}
+          </div>
           {renderTitlebarRightEnd('h-8')}
         </div>
       </div>
@@ -1100,8 +1196,8 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
         </button>
         <div className="flex flex-col items-center">
           {!finalHideTitle && (
-            <h1 className={`text-sm font-bold tracking-tight uppercase ${titleColor} transition-colors duration-300`}>
-              LRC Maker <span className="text-[var(--app-text-muted)] font-normal italic ml-1">Enhanced</span>
+            <h1 className={`text-sm font-normal tracking-tight ${titleColor} transition-colors duration-300`}>
+              <span className="font-bold">E</span><span>nhanced</span> <span className="font-bold">LRC Maker</span>
             </h1>
           )}
           <div className={`${finalHideTitle ? 'text-sm' : 'text-[10px] mt-0.5'} text-[var(--app-text-muted)] font-mono truncate flex items-center justify-center gap-2 max-w-full transition-all`}>
@@ -1128,12 +1224,14 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
              </button>
              <div className="flex flex-col items-start justify-center">
                  {!finalHideTitle && (
-                    <h1 className={`text-sm font-bold tracking-tight uppercase ${titleColor} transition-colors duration-300`}>
-                      LRC Maker <span className="text-[var(--app-text-muted)] font-normal italic ml-1">Enhanced</span>
+                    <h1 className={`text-sm font-normal tracking-tight ${titleColor} transition-colors duration-300`}>
+                      <span className="font-bold">E</span><span>nhanced</span> <span className="font-bold">LRC Maker</span>
                     </h1>
                  )}
                  <div className={`${finalHideTitle ? 'text-sm' : 'text-[10px] mt-0.5'} text-[var(--app-text-muted)] font-mono truncate flex items-center justify-start gap-2 max-w-full transition-all`}>
-                    {audioFileName ? <span className="truncate max-w-[160px] text-[var(--app-text-secondary)]">{audioFileName}</span> : <span>{i18n.noAudio}</span>}
+                    {audioFileName ? <span className="truncate max-w-[120px] text-[var(--app-text-secondary)]">{audioFileName}</span> : <span>{i18n.noAudio}</span>}
+                    <span className="opacity-50 shrink-0">|</span>
+                    {lyricFileName ? <span className="truncate max-w-[120px] text-[var(--app-text-secondary)]">{lyricFileName}</span> : metadata?.lyric ? <span className="text-[var(--app-text-secondary)]">{i18n.embeddedTag}</span> : <span>{i18n.noLyrics}</span>}
                  </div>
              </div>
          </div>
@@ -1151,6 +1249,10 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
     <LrcMetadataDialog 
         isOpen={metadataDialogOpen} 
         onClose={() => setMetadataDialogOpen(false)} 
+    />
+    <AboutDialog
+        isOpen={aboutDialogOpen}
+        onClose={() => setAboutDialogOpen(false)}
     />
     </>
   );

@@ -68,23 +68,8 @@ export function RawTextDisplay() {
     <div className="flex flex-col h-full bg-[var(--app-bg-panel-alt)] relative">
       <KaraokePreview hideTouchUI={true} />
       
-      {exportFormat === 'simple' && (
-        <div className="px-3 py-2 bg-[var(--app-bg-panel-alt)] border-b border-[var(--app-border-light)] flex items-center gap-2">
-          <input 
-            type="checkbox" 
-            id="include-instrumental" 
-            checked={simpleIncludeInstrumental} 
-            onChange={(e) => setSimpleIncludeInstrumental(e.target.checked)} 
-            className="rounded border-[var(--app-border-base)] bg-transparent accent-[var(--app-accent)]"
-          />
-          <label htmlFor="include-instrumental" className="text-xs text-[var(--app-text-muted)] cursor-pointer select-none">
-            輸出包含留空的間奏行
-          </label>
-        </div>
-      )}
-      
-      <div className="p-3 bg-[var(--app-bg-panel)] border-b border-[var(--app-border-base)] flex justify-between items-center shrink-0">
-        <div className="flex gap-2">
+      <div className="p-3 bg-[var(--app-bg-panel)] border-b border-[var(--app-border-base)] flex flex-wrap gap-3 justify-between items-center shrink-0">
+        <div className="flex items-center gap-2 flex-wrap">
            <button
              onClick={() => setExportFormat('enhanced')}
              className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded border transition-colors disabled:opacity-50 ${exportFormat === 'enhanced' ? 'bg-[var(--app-border-base)] border-[var(--app-accent)] text-[var(--app-accent)] shadow-inner' : 'border-[var(--app-border-light)] text-[var(--app-text-muted)] hover:text-[var(--app-text-secondary)]'}`}
@@ -103,6 +88,18 @@ export function RawTextDisplay() {
            >
              {i18n.exportSimple || '簡易歌詞 (無時間戳)'}
            </button>
+           
+           {exportFormat === 'simple' && (
+             <label className="flex items-center gap-1.5 ml-2 cursor-pointer text-xs text-[var(--app-text-muted)] hover:text-[var(--app-text-primary)] transition-colors select-none">
+               <input 
+                 type="checkbox" 
+                 checked={simpleIncludeInstrumental} 
+                 onChange={(e) => setSimpleIncludeInstrumental(e.target.checked)} 
+                 className="rounded border-[var(--app-border-base)] bg-transparent accent-[var(--app-accent)] m-0 w-3.5 h-3.5"
+               />
+               輸出包含留空的間奏行
+             </label>
+           )}
         </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">

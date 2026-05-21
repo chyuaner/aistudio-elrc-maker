@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useEditor } from './EditorProvider';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useSyncHotkeys } from './useSyncHotkeys';
@@ -90,23 +90,55 @@ export function KaraokePreview({ hideTouchUI = false }: { hideTouchUI?: boolean 
   const topIsActive = topIndex === previewLineIndex;
   const bottomIsActive = bottomIndex === previewLineIndex;
 
+  const [touchBtnWidth, setTouchBtnWidth] = useState(140);
+  const dragRef = useRef(false);
+
+  useEffect(() => {
+    const onMouseMove = (e: MouseEvent) => {
+      if (!dragRef.current) return;
+      // We are dragging the left edge of the right panel, so window.innerWidth - clientX is the width.
+      // But actually, we shouldn't rely on window.innerWidth strictly because of the left panel width.
+      // Easiest is to measure delta from previous, or just e.clientX.
+      // Right panel width = window.innerWidth - e.clientX
+      // Let's constrain it between 80px and 70% of the screen width
+      e.preventDefault();
+      const newWidth = document.body.clientWidth - e.clientX - 16; // minus padding
+      setTouchBtnWidth(Math.max(80, Math.min(document.body.clientWidth * 0.7, newWidth)));
+    };
+    
+    const onMouseUp = () => {
+      if (dragRef.current) {
+        dragRef.current = false;
+        document.body.style.cursor = 'default';
+        document.body.classList.remove('is-dragging-resizer');
+      }
+    };
+    
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+  }, []);
+
   const getWordColor = (lineIdx: number, wordIdx: number) => {
       if (lineIdx < activeLineIndex) {
-          return "text-[var(--app-accent)] drop-shadow-[0_0_8px_rgba(242,125,38,0.8)] transition-all";
+          return "text-[var(--app-accent)] drop-shadow-[0_0_8px_rgba(242,125,38,0.8)] border-b-4 border-transparent pb-1 transition-all";
       } else if (lineIdx === activeLineIndex) {
           const isLineSynced = lines[lineIdx].words.every(w => w.start === null);
           if (syncMode === 'line' || isLineSynced) {
-              return "text-[var(--app-text-primary)] underline decoration-[var(--app-accent)] decoration-4 underline-offset-8 transition-all relative transform scale-105 origin-bottom z-10";
+              return "text-[var(--app-text-primary)] border-b-4 border-[var(--app-accent)] pb-1 transition-all relative transform scale-105 origin-bottom z-10";
           }
           if (wordIdx < activeWordIndex) {
-              return "text-[var(--app-accent)] drop-shadow-[0_0_8px_rgba(242,125,38,0.8)] transition-all";
+              return "text-[var(--app-accent)] drop-shadow-[0_0_8px_rgba(242,125,38,0.8)] border-b-4 border-transparent pb-1 transition-all";
           } else if (wordIdx === activeWordIndex) {
-              return "text-[var(--app-text-primary)] underline decoration-[var(--app-accent)] decoration-4 underline-offset-8 transition-all relative transform scale-105 origin-bottom z-10";
+              return "text-[var(--app-text-primary)] border-b-4 border-[var(--app-accent)] pb-1 transition-all relative transform scale-105 origin-bottom z-10";
           } else {
-              return "text-[var(--app-text-muted)] transition-colors";
+              return "text-[var(--app-text-muted)] border-b-4 border-transparent pb-1 transition-colors";
           }
       } else {
-          return "text-[var(--app-text-muted)] transition-colors";
+          return "text-[var(--app-text-muted)] border-b-4 border-transparent pb-1 transition-colors";
       }
   };
 
@@ -138,96 +170,128 @@ export function KaraokePreview({ hideTouchUI = false }: { hideTouchUI?: boolean 
       </div>
       
       {!isCollapsed && (
-        <div className="flex px-4 pb-4 gap-4">
-          <div className="flex-1 flex flex-col gap-4">
-            <div className={`bg-[var(--app-bg-base)] px-4 py-3 rounded border relative shadow-inner min-h-[4.5rem] flex items-center ${isTopOnly ? 'justify-center' : 'justify-start'} ${topIsActive ? 'border-[rgba(242,125,38,0.3)] shadow-[0_0_10px_rgba(242,125,38,0.2)]' : 'border-[var(--app-border-base)] opacity-70'}`}>
-              {lines[topIndex] ? (
-                 <p className={`text-xl md:text-2xl font-bold tracking-wide flex gap-1 flex-wrap relative ${isTopOnly ? 'justify-center text-center' : 'text-left'}`}>
-                   {topIsActive && dotsCount > 0 && (
-                       <span className={`absolute bottom-full mb-3 flex gap-2 ${isTopOnly ? 'left-1/2 -translate-x-1/2' : 'left-0'}`}>
-                          {[...Array(dotsCount)].map((_, i) => <React.Fragment key={i}>{DotNode}</React.Fragment>)}
-                       </span>
-                   )}
-                   {lines[topIndex].words.map((w, i) => (
-                     <span key={i} className={getWordColor(topIndex, i)}>
-                       {w.text || (i === lines[topIndex].words.length - 1 ? '⏎' : '')}
-                     </span>
-                   ))}
-                 </p>
-              ) : (
-                 <p className="text-xl md:text-2xl font-bold relative w-full h-full flex items-center justify-start">
-                   {topIsActive && dotsCount > 0 && (
-                       <span className="absolute bottom-1/2 left-0 flex gap-2">
-                          {[...Array(dotsCount)].map((_, i) => <React.Fragment key={i}>{DotNode}</React.Fragment>)}
-                       </span>
-                   )}
-                   &nbsp;
-                 </p>
-              )}
+        <div className="flex px-4 pb-4 gap-4 relative">
+          <div className="flex-1 min-w-0 flex flex-col gap-4">
+            <div className={`px-4 py-3 relative min-h-[4.5rem] flex items-center w-full ${isTopOnly ? 'justify-center' : 'justify-start'} ${topIsActive ? '' : 'opacity-70'}`}>
+              <div className="relative w-full">
+                {lines[topIndex] ? (
+                  <>
+                    {topIsActive && dotsCount > 0 && (
+                        <span className={`absolute bottom-full mb-3 flex gap-2 ${isTopOnly ? 'left-1/2 -translate-x-1/2' : 'left-0'}`}>
+                           {[...Array(dotsCount)].map((_, i) => <React.Fragment key={i}>{DotNode}</React.Fragment>)}
+                        </span>
+                    )}
+                    <div className="overflow-hidden w-full">
+                      <p className={`text-xl md:text-2xl font-bold tracking-wide flex gap-1 flex-nowrap whitespace-nowrap ${isTopOnly ? 'justify-center text-center' : 'justify-start text-left'}`}>
+                        {lines[topIndex].words.map((w, i) => (
+                          <span key={i} className={getWordColor(topIndex, i)}>
+                            {w.text || (i === lines[topIndex].words.length - 1 ? '⏎' : '')}
+                          </span>
+                        ))}
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    {topIsActive && dotsCount > 0 && (
+                        <span className="absolute bottom-full mb-3 left-0 flex gap-2">
+                           {[...Array(dotsCount)].map((_, i) => <React.Fragment key={i}>{DotNode}</React.Fragment>)}
+                        </span>
+                    )}
+                    <div className="overflow-hidden w-full">
+                      <p className="text-xl md:text-2xl font-bold w-full h-full flex items-center justify-start flex-nowrap whitespace-nowrap">
+                        &nbsp;
+                      </p>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
   
-            <div className={`bg-[var(--app-bg-base)] px-4 py-3 rounded border relative shadow-inner min-h-[4.5rem] flex items-center ${isBottomOnly ? 'justify-center' : 'justify-end'} ${bottomIsActive ? 'border-[rgba(242,125,38,0.3)] shadow-[0_0_10px_rgba(242,125,38,0.2)]' : 'border-[var(--app-border-base)] opacity-70'}`}>
-              {lines[bottomIndex] ? (
-                <p className={`text-xl md:text-2xl font-bold tracking-wide flex gap-1 flex-wrap relative ${isBottomOnly ? 'justify-center text-center' : 'justify-end text-right'}`}>
-                  {bottomIsActive && dotsCount > 0 && (
-                       <span className={`absolute bottom-full mb-3 flex gap-2 ${isBottomOnly ? 'left-1/2 -translate-x-1/2' : 'right-0'}`}>
-                          {[...Array(dotsCount)].map((_, i) => <React.Fragment key={i}>{DotNode}</React.Fragment>)}
-                       </span>
-                  )}
-                  {lines[bottomIndex].words.map((w, i) => (
-                     <span key={i} className={getWordColor(bottomIndex, i)}>
-                       {w.text || (i === lines[bottomIndex].words.length - 1 ? '⏎' : '')}
-                     </span>
-                 ))}
-                </p>
-              ) : (
-                 <p className={`text-xl md:text-2xl font-bold relative w-full h-full flex items-center ${isBottomOnly ? 'justify-center' : 'justify-end'}`}>
-                   {bottomIsActive && dotsCount > 0 && (
-                       <span className={`absolute bottom-1/2 flex gap-2 ${isBottomOnly ? 'left-1/2 -translate-x-1/2' : 'right-0'}`}>
-                          {[...Array(dotsCount)].map((_, i) => <React.Fragment key={i}>{DotNode}</React.Fragment>)}
-                       </span>
-                   )}
-                   &nbsp;
-                 </p>
-              )}
+            <div className={`px-4 py-3 relative min-h-[4.5rem] flex items-center w-full ${isBottomOnly ? 'justify-center' : 'justify-end'} ${bottomIsActive ? '' : 'opacity-70'}`}>
+              <div className="relative w-full">
+                {lines[bottomIndex] ? (
+                  <>
+                    {bottomIsActive && dotsCount > 0 && (
+                         <span className={`absolute bottom-full mb-3 flex gap-2 ${isBottomOnly ? 'left-1/2 -translate-x-1/2' : 'right-0'}`}>
+                            {[...Array(dotsCount)].map((_, i) => <React.Fragment key={i}>{DotNode}</React.Fragment>)}
+                         </span>
+                    )}
+                    <div className="overflow-hidden w-full">
+                      <p className={`text-xl md:text-2xl font-bold tracking-wide flex gap-1 flex-nowrap whitespace-nowrap ${isBottomOnly ? 'justify-center text-center' : 'justify-end text-right'}`}>
+                        {lines[bottomIndex].words.map((w, i) => (
+                           <span key={i} className={getWordColor(bottomIndex, i)}>
+                             {w.text || (i === lines[bottomIndex].words.length - 1 ? '⏎' : '')}
+                           </span>
+                        ))}
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                   <>
+                     {bottomIsActive && dotsCount > 0 && (
+                         <span className={`absolute bottom-full mb-3 flex gap-2 ${isBottomOnly ? 'left-1/2 -translate-x-1/2' : 'right-0'}`}>
+                            {[...Array(dotsCount)].map((_, i) => <React.Fragment key={i}>{DotNode}</React.Fragment>)}
+                         </span>
+                     )}
+                     <div className="overflow-hidden w-full">
+                       <p className={`text-xl md:text-2xl font-bold w-full h-full flex items-center flex-nowrap whitespace-nowrap ${isBottomOnly ? 'justify-center' : 'justify-end'}`}>
+                         &nbsp;
+                       </p>
+                     </div>
+                   </>
+                )}
+              </div>
             </div>
           </div>
           
           {touchUIMode && !hideTouchUI && (
-            <div className="w-[100px] sm:w-[140px] md:w-[180px] shrink-0 flex flex-col gap-2">
-               <button 
-                 autoFocus={false}
-                 onClick={(e) => {
-                     e.preventDefault();
-                     e.currentTarget.blur();
-                     syncMode === 'line' ? handleLineStamp() : handleWordStamp();
-                 }} 
-                 onTouchStart={(e) => {
-                     e.preventDefault();
-                     syncMode === 'line' ? handleLineStamp() : handleWordStamp();
-                 }}
-                 className="flex-1 bg-[var(--app-accent)] hover:bg-[var(--app-accent-hover)] active:bg-[var(--app-accent-hover)] text-black rounded-lg shadow font-extrabold text-xl md:text-3xl select-none transition-all flex items-center justify-center -outline-offset-2 touch-manipulation focus:outline-none"
-               >
-                 打點
-               </button>
-               {syncMode === 'word' && (
+            <>
+              <div 
+                className="w-4 -ml-2 -mr-2 cursor-col-resize flex justify-center items-center hover:bg-[var(--app-border-light)] hover:opacity-50 transition-colors z-10"
+                onMouseDown={() => {
+                  dragRef.current = true;
+                  document.body.style.cursor = 'col-resize';
+                  document.body.classList.add('is-dragging-resizer');
+                }}
+              >
+                <div className="w-1 h-8 rounded-full bg-[var(--app-text-muted)] opacity-30"></div>
+              </div>
+              <div style={{ width: touchBtnWidth }} className="shrink-0 flex flex-col gap-2">
                  <button 
                    autoFocus={false}
                    onClick={(e) => {
                        e.preventDefault();
                        e.currentTarget.blur();
-                       handleWordNextLine();
+                       syncMode === 'line' ? handleLineStamp() : handleWordStamp();
                    }} 
                    onTouchStart={(e) => {
                        e.preventDefault();
-                       handleWordNextLine();
+                       syncMode === 'line' ? handleLineStamp() : handleWordStamp();
                    }}
-                   className="h-[3rem] bg-[var(--app-bg-panel)] hover:bg-[var(--app-bg-hover)] active:bg-[var(--app-border-base)] text-[var(--app-text-primary)] rounded-lg shadow font-extrabold text-lg md:text-xl border border-[var(--app-border-base)] select-none transition-all flex items-center justify-center -outline-offset-2 touch-manipulation focus:outline-none"
+                   className="flex-1 bg-[var(--app-accent)] hover:bg-[var(--app-accent-hover)] active:bg-[var(--app-accent-hover)] text-black rounded-lg shadow font-extrabold text-xl md:text-3xl select-none transition-all flex items-center justify-center -outline-offset-2 touch-manipulation focus:outline-none"
                  >
-                   換行
+                   打點
                  </button>
-               )}
-            </div>
+                 {syncMode === 'word' && (
+                   <button 
+                     autoFocus={false}
+                     onClick={(e) => {
+                         e.preventDefault();
+                         e.currentTarget.blur();
+                         handleWordNextLine();
+                     }} 
+                     onTouchStart={(e) => {
+                         e.preventDefault();
+                         handleWordNextLine();
+                     }}
+                     className="h-[3rem] bg-[var(--app-bg-panel)] hover:bg-[var(--app-bg-hover)] active:bg-[var(--app-border-base)] text-[var(--app-text-primary)] rounded-lg shadow font-extrabold text-lg md:text-xl border border-[var(--app-border-base)] select-none transition-all flex items-center justify-center -outline-offset-2 touch-manipulation focus:outline-none"
+                   >
+                     換行
+                   </button>
+                 )}
+              </div>
+            </>
           )}
         </div>
       )}

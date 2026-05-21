@@ -135,10 +135,10 @@ function TimeDisplay({ className = '' }: { className?: string }) {
             width={800} 
             height={80} 
         />
-        <span className="text-3xl font-mono text-[var(--app-accent)] tabular-nums tracking-tighter leading-none font-medium z-10 mb-1">
+        <span className="text-3xl font-mono text-[var(--app-accent)] tabular-nums tracking-tighter leading-none font-medium z-10 mb-1 select-text">
           {formatTime(currentTime)}
         </span>
-        <div className="flex flex-col items-end gap-0.5 z-10 mb-2">
+        <div className="flex flex-col items-end gap-0.5 z-10 mb-2 select-text">
           <span className="text-xs font-mono text-[var(--app-text-secondary)] tabular-nums leading-none">
             -{formatTime(Math.max(0, duration - currentTime))}
           </span>

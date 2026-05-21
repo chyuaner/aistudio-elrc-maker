@@ -30,6 +30,27 @@ export function WebSystemIntegration() {
     }
     const isLinuxTauri = isTauri && ua.includes('linux');
 
+    // Prevent tab focus on buttons globally to avoid confusion with keyboard shortcuts
+    const updateTabIndexes = () => {
+      document.querySelectorAll('button, input[type="checkbox"], input[type="radio"], [role="switch"], [role="button"]').forEach((el) => {
+        if (el.getAttribute('tabindex') !== '-1') {
+          el.setAttribute('tabindex', '-1');
+        }
+      });
+    };
+    const observer = new MutationObserver((mutations) => {
+      let shouldUpdate = false;
+      for (const m of mutations) {
+         if (m.addedNodes.length > 0) {
+            shouldUpdate = true;
+            break;
+         }
+      }
+      if (shouldUpdate) updateTabIndexes();
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+    updateTabIndexes();
+
     // ── toggleFullscreen：Electron / Tauri 使用原生視窗 API，瀏覽器使用 document API ──
     if (!AppCommands.toggleFullscreen) {
       if (isElectron) {
@@ -162,6 +183,7 @@ export function WebSystemIntegration() {
     }
     
     return () => {
+      observer.disconnect();
       if (unlistenResize) {
         try { unlistenResize(); } catch (_) {}
       }

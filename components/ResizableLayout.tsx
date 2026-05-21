@@ -6,7 +6,7 @@ import { LeftPanelInfo } from './LeftPanelInfo';
 import { EditorView } from './EditorView';
 
 export function ResizableLayout() {
-  const [leftWidth, setLeftWidth] = useState(25);
+  const [leftWidth, setLeftWidth] = useState(380);
   const [isMobile, setIsMobile] = useState(false);
   const isDragging = useRef(false);
 
@@ -20,17 +20,19 @@ export function ResizableLayout() {
   const startDragging = (e: React.MouseEvent) => {
     isDragging.current = true;
     document.body.style.cursor = 'col-resize';
+    document.body.classList.add('is-dragging-resizer');
   };
 
   const stopDragging = () => {
     isDragging.current = false;
     document.body.style.cursor = 'default';
+    document.body.classList.remove('is-dragging-resizer');
   };
 
   const onDrag = (e: globalThis.MouseEvent) => {
     if (!isDragging.current) return;
-    const newWidth = (e.clientX / window.innerWidth) * 100;
-    if (newWidth > 20 && newWidth < 80) {
+    const newWidth = e.clientX;
+    if (newWidth > 200 && newWidth < window.innerWidth - 200) {
       setLeftWidth(newWidth);
     }
   };
@@ -48,7 +50,7 @@ export function ResizableLayout() {
     <div className="flex-1 flex flex-col lg:flex-row md:overflow-hidden border-t border-[var(--app-border-base)]">
       {/* Left side: Media Player Component and Info Tabs */}
       <div 
-        style={{ width: isMobile ? '100%' : `calc(${leftWidth}% - 4px)` }} 
+        style={{ width: isMobile ? '100%' : `${leftWidth}px`, minWidth: isMobile ? '100%' : `${leftWidth}px` }} 
         className="flex flex-col border-r border-[var(--app-border-base)] bg-[var(--app-bg-panel-alt)] shrink-0 lg:h-full lg:overflow-hidden"
       >
         <div className="bg-[var(--app-bg-input)] border-b border-[var(--app-border-base)] p-0 flex flex-col justify-center shrink-0">
@@ -71,8 +73,7 @@ export function ResizableLayout() {
         
       {/* Right side: Editor View */}
       <div 
-        style={{ width: isMobile ? '100%' : `calc(${100 - leftWidth}% - 4px)` }} 
-        className="flex-1 lg:h-full flex flex-col bg-[var(--app-bg-base)] md:overflow-hidden min-h-0"
+        className="flex-1 lg:h-full flex flex-col bg-[var(--app-bg-base)] md:overflow-hidden min-w-0"
       >
          <EditorView />
       </div>

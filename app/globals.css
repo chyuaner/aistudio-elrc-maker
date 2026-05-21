@@ -1,5 +1,23 @@
 @import "tailwindcss";
 
+@layer base {
+  body {
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  input, textarea, [contenteditable="true"] {
+    user-select: text;
+    -webkit-user-select: text;
+  }
+}
+
+body.is-dragging-resizer * {
+  pointer-events: none !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
+
 :root, html.dark {
   --app-bg-base: #0F1115;
   --app-bg-panel: #1A1D23;

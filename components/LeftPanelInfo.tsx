@@ -45,7 +45,7 @@ export function LeftPanelInfo() {
         </button>
       </div>
       
-      <div className="p-6 flex-1 overflow-y-auto custom-scrollbar text-xs text-[var(--app-text-muted)] space-y-6">
+      <div className="p-6 flex-1 overflow-y-auto custom-scrollbar text-xs text-[var(--app-text-muted)] space-y-6 select-text">
         {activeTab === 'instructions' ? (
           <>
             <div>

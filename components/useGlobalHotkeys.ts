@@ -6,6 +6,19 @@ export function useGlobalHotkeys() {
   const { undo, redo, playerRef, mode, isPlaying, setPlaybackRate } = useEditor();
 
   useEffect(() => {
+    // Global listener to blur active elements (like buttons) when interacting, preventing space/arrow keys from acting on them inadvertently.
+    const onKeyDownCapture = (e: KeyboardEvent) => {
+      const target = document.activeElement;
+      if (target && !isTextEditable(target)) {
+         if ([' ', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Enter'].includes(e.key)) {
+             if (target instanceof HTMLElement && target.tagName !== 'BODY') {
+                 target.blur();
+             }
+         }
+      }
+    };
+    window.addEventListener('keydown', onKeyDownCapture, true);
+
     const onKeyDown = (e: KeyboardEvent) => {
       // Focus check (ignore if inside input/textarea)
       const isInputFocused = isTextEditable(document.activeElement);
@@ -73,6 +86,9 @@ export function useGlobalHotkeys() {
     };
 
     window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
+    return () => {
+      window.removeEventListener('keydown', onKeyDownCapture, true);
+      window.removeEventListener('keydown', onKeyDown);
+    };
   }, [undo, redo, playerRef, mode, isPlaying, setPlaybackRate]);
 }

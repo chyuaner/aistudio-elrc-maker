@@ -1,0 +1,26 @@
+<svg viewBox="0 0 512 512" width="512" height="512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background Squircle for Desktop/App Icon -->
+  <rect width="512" height="512" rx="115" fill="#EEF2F6" />
+  
+  <!-- Drop Shadow for the File -->
+  <path d="M 120 88 C 120 70.3 134.3 56 152 56 L 312 56 L 408 152 L 408 440 C 408 457.7 393.7 472 376 472 L 152 472 C 134.3 472 120 457.7 120 440 Z" fill="#000000" fill-opacity="0.05" />
+  
+  <!-- File Base -->
+  <path d="M 112 80 C 112 62.3 126.3 48 144 48 L 304 48 L 400 144 L 400 432 C 400 449.7 385.7 464 368 464 L 144 464 C 126.3 464 112 449.7 112 432 Z" fill="#FFFFFF" stroke="#334155" stroke-width="16" stroke-linejoin="round" />
+  
+  <!-- File Fold -->
+  <path d="M 304 48 L 304 112 C 304 129.7 318.3 144 336 144 L 400 144" fill="#F8FAFC" stroke="#334155" stroke-width="16" stroke-linejoin="round" />
+  
+  <!-- Text content -->
+  <text x="256" y="240" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="100" text-anchor="middle" fill="#0F172A">.lrc</text>
+  
+  <rect x="156" y="284" width="200" height="54" rx="12" fill="#F1F5F9" stroke="#E2E8F0" stroke-width="4" />
+  <text x="256" y="322" font-family="monospace" font-weight="bold" font-size="36" text-anchor="middle" fill="#475569">00:00.00</text>
+  
+  <!-- Pencil Badge -->
+  <circle cx="416" cy="416" r="80" fill="#3B82F6" stroke="#FFFFFF" stroke-width="12" />
+  <g transform="translate(374, 374) scale(3.5)" stroke="#FFFFFF" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
+    <path d="m15 5 4 4" />
+  </g>
+</svg>

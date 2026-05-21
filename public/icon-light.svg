@@ -1,0 +1,11 @@
+<svg viewBox="0 0 512 512" width="512" height="512" xmlns="http://www.w3.org/2000/svg">
+  <path d="M 112 80 C 112 62.3 126.3 48 144 48 L 304 48 L 400 144 L 400 432 C 400 449.7 385.7 464 368 464 L 144 464 C 126.3 464 112 449.7 112 432 Z" fill="none" stroke="#171717" stroke-width="24" stroke-linejoin="round" />
+  <path d="M 304 48 L 304 112 C 304 129.7 318.3 144 336 144 L 400 144" fill="none" stroke="#171717" stroke-width="24" stroke-linejoin="round" />
+  <text x="256" y="240" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="100" text-anchor="middle" fill="#171717">.lrc</text>
+  <text x="256" y="320" font-family="monospace" font-weight="bold" font-size="44" text-anchor="middle" fill="#171717">00:00.00</text>
+  <circle cx="416" cy="416" r="80" fill="#171717" />
+  <g transform="translate(374, 374) scale(3.5)" stroke="#FFFFFF" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
+    <path d="m15 5 4 4" />
+  </g>
+</svg>

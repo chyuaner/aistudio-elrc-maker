@@ -154,7 +154,7 @@ export function KaraokePreview({ hideTouchUI = false }: { hideTouchUI?: boolean 
 
   const DotNode = (
       <svg width="1em" height="1em" viewBox="0 0 24 24" className="drop-shadow-sm overflow-visible inline-block align-text-bottom mx-1">
-         <circle cx="12" cy="12" r="10" fill="white" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--app-border-light)' }} />
+         <circle cx="12" cy="12" r="15" fill="white" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--app-border-light)' }} />
       </svg>
   );
 

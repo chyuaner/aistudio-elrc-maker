@@ -424,13 +424,7 @@ export function MediaPlayer() {
     
     try {
       // @ts-ignore
-      navigator.mediaSession.setActionHandler('setrepeatmode', (details: any) => {
-        if (details.repeatMode) {
-          setIsLooping(details.repeatMode !== 'none');
-        } else {
-          setIsLooping(prev => !prev);
-        }
-      });
+      navigator.mediaSession.setActionHandler('setrepeatmode', null);
     } catch(e) {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [metadata, file, lines, paragraphStarts, isLinuxTauri]);

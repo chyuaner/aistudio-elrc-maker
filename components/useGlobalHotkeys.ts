@@ -66,6 +66,18 @@ export function useGlobalHotkeys() {
       } else if (e.key === 'ArrowRight') {
         e.preventDefault();
         player.currentTime = Math.min(player.duration, player.currentTime + 5);
+      } else if (e.key === 'ArrowUp' && mode === 'sync') {
+        e.preventDefault();
+        const scrollContainer = document.getElementById('sync-editor-scroll-container');
+        if (scrollContainer) {
+          scrollContainer.scrollBy({ top: -100, behavior: 'smooth' });
+        }
+      } else if (e.key === 'ArrowDown' && mode === 'sync') {
+        e.preventDefault();
+        const scrollContainer = document.getElementById('sync-editor-scroll-container');
+        if (scrollContainer) {
+          scrollContainer.scrollBy({ top: 100, behavior: 'smooth' });
+        }
       }
 
       // Number keys for seeking 0% - 90%

@@ -564,6 +564,7 @@ export function SyncEditor() {
 
       <div 
         ref={containerRef}
+        id="sync-editor-scroll-container"
         className="flex-1 md:overflow-y-auto w-full custom-scrollbar"
       >
         <table className="w-full text-left text-xs border-collapse table-fixed">

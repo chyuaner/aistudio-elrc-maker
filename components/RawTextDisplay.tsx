@@ -124,7 +124,7 @@ export function RawTextDisplay() {
         </div>
       </div>
       
-      <div className="flex-1 overflow-auto bg-[var(--app-bg-base)] text-sm font-mono py-4 select-text leading-relaxed outline-none border-t border-[var(--app-border-base)] shadow-inner" style={{ whiteSpace: 'pre-wrap' }} ref={containerRef}>
+      <div className="flex-1 overflow-auto bg-[var(--app-bg-base)] text-sm font-mono py-4 select-text leading-relaxed outline-none border-t border-[var(--app-border-base)] shadow-inner" style={{ whiteSpace: 'pre-wrap' }} ref={containerRef} data-context-menu="readonly">
           {allLines.map((lineText, idx) => {
               const mappedOriginalIdx = rawIdxToLineIdx.get(idx);
               const isHighlight = mappedOriginalIdx === activeLineIndex && lines.length > 0;

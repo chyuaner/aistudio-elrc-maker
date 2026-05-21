@@ -6,20 +6,32 @@ import { Scissors, Copy, ClipboardPaste, ListChecks } from 'lucide-react';
 export function TextContextMenu() {
   const [visible, setVisible] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isReadOnly, setIsReadOnly] = useState(false);
   const targetElementRef = useRef<HTMLElement | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleContextMenu = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
+      
+      const inApp = target.closest('#app-root') || document.body.contains(target); // Broad check, we just want to prevent native
+      // Always prevent native context menu if it's within the web app
+      e.preventDefault();
+
+      const isReadonlyElement = 
+         target.closest('[data-context-menu="readonly"]') !== null ||
+         (target.tagName === 'TEXTAREA' && (target as HTMLTextAreaElement).readOnly) ||
+         (target.tagName === 'INPUT' && (target as HTMLInputElement).readOnly);
+
       if (
         target &&
         (target.tagName === 'TEXTAREA' ||
           (target.tagName === 'INPUT' && ((target as HTMLInputElement).type === 'text' || (target as HTMLInputElement).type === 'number')) ||
-          target.isContentEditable)
+          target.isContentEditable ||
+          target.closest('[data-context-menu="readonly"]'))
       ) {
-        e.preventDefault();
-        targetElementRef.current = target;
+        targetElementRef.current = (target.closest('[data-context-menu="readonly"]') || target) as HTMLElement;
+        setIsReadOnly(isReadonlyElement);
         
         let x = e.clientX;
         let y = e.clientY;
@@ -155,7 +167,8 @@ export function TextContextMenu() {
     >
       <button
         onClick={() => handleAction('cut')}
-        className="flex items-center gap-2 w-full text-left px-4 py-2 hover:bg-[var(--app-bg-hover)] transition-colors"
+        disabled={isReadOnly}
+        className="flex items-center gap-2 w-full text-left px-4 py-2 hover:bg-[var(--app-bg-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
         <Scissors className="w-3.5 h-3.5" />
         剪下
@@ -169,7 +182,8 @@ export function TextContextMenu() {
       </button>
       <button
         onClick={() => handleAction('paste')}
-        className="flex items-center gap-2 w-full text-left px-4 py-2 hover:bg-[var(--app-bg-hover)] transition-colors"
+        disabled={isReadOnly}
+        className="flex items-center gap-2 w-full text-left px-4 py-2 hover:bg-[var(--app-bg-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
         <ClipboardPaste className="w-3.5 h-3.5" />
         貼上
@@ -185,14 +199,16 @@ export function TextContextMenu() {
       <div className="h-px bg-[var(--app-border-base)] my-1"></div>
       <button
         onClick={() => handleAction('toTraditional')}
-        className="flex items-center gap-2 w-full text-left px-4 py-2 hover:bg-[var(--app-bg-hover)] transition-colors"
+        disabled={isReadOnly}
+        className="flex items-center gap-2 w-full text-left px-4 py-2 hover:bg-[var(--app-bg-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
         <span className="w-3.5 h-3.5 flex items-center justify-center font-bold text-[10px]">繁</span>
         轉成繁體
       </button>
       <button
         onClick={() => handleAction('toSimplified')}
-        className="flex items-center gap-2 w-full text-left px-4 py-2 hover:bg-[var(--app-bg-hover)] transition-colors"
+        disabled={isReadOnly}
+        className="flex items-center gap-2 w-full text-left px-4 py-2 hover:bg-[var(--app-bg-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
         <span className="w-3.5 h-3.5 flex items-center justify-center font-bold text-[10px]">簡</span>
         轉成簡體

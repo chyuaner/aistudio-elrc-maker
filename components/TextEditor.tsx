@@ -59,10 +59,11 @@ export function TextEditor() {
     isDirty.current = true;
   };
 
-  const saveChanges = () => {
-    if (!isDirty.current) return;
+  const saveChanges = (forceText?: string) => {
+    if (!isDirty.current && forceText === undefined) return;
     
-    const parsed = parseRawLyrics(text);
+    const textToParse = forceText !== undefined ? forceText : text;
+    const parsed = parseRawLyrics(textToParse);
     let resultLines = parsed.lines;
     setLrcMetadata(parsed.metadata);
     commitLines(resultLines, 'Edit Raw Lyrics');
@@ -110,9 +111,9 @@ export function TextEditor() {
                  setText(t => {
                      const next = convertToTraditional(t);
                      isDirty.current = true;
+                     saveChanges(next);
                      return next;
                  });
-                 setTimeout(saveChanges, 50);
              }}
              className="px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded border border-[var(--app-border-light)] text-[var(--app-text-muted)] hover:text-white transition-colors"
            >
@@ -124,9 +125,9 @@ export function TextEditor() {
                  setText(t => {
                      const next = convertToSimplified(t);
                      isDirty.current = true;
+                     saveChanges(next);
                      return next;
                  });
-                 setTimeout(saveChanges, 50);
              }}
              className="px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded border border-[var(--app-border-light)] text-[var(--app-text-muted)] hover:text-white transition-colors"
            >

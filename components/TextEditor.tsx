@@ -105,6 +105,37 @@ export function TextEditor() {
         </div>
         <div className="flex gap-2">
            <button 
+             onClick={async () => {
+                 const { convertToTraditional } = await import('@/lib/chinese-conv');
+                 setText(t => {
+                     const next = convertToTraditional(t);
+                     isDirty.current = true;
+                     return next;
+                 });
+                 setTimeout(saveChanges, 50);
+             }}
+             className="px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded border border-[var(--app-border-light)] text-[var(--app-text-muted)] hover:text-white transition-colors"
+           >
+             轉成繁體
+           </button>
+           <button 
+             onClick={async () => {
+                 const { convertToSimplified } = await import('@/lib/chinese-conv');
+                 setText(t => {
+                     const next = convertToSimplified(t);
+                     isDirty.current = true;
+                     return next;
+                 });
+                 setTimeout(saveChanges, 50);
+             }}
+             className="px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded border border-[var(--app-border-light)] text-[var(--app-text-muted)] hover:text-white transition-colors"
+           >
+             轉成簡體
+           </button>
+           
+           <div className="w-px bg-[var(--app-border-light)] opacity-50 my-1 mx-1"></div>
+
+           <button 
              onClick={convertToStandard}
              className="px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded border border-[var(--app-border-light)] text-[var(--app-text-muted)] hover:text-orange-400 transition-colors"
            >

@@ -50,7 +50,7 @@ export function TextContextMenu() {
     };
   }, []);
 
-  const handleAction = async (action: 'cut' | 'copy' | 'paste' | 'selectAll') => {
+  const handleAction = async (action: 'cut' | 'copy' | 'paste' | 'selectAll' | 'toTraditional' | 'toSimplified') => {
     setVisible(false);
     
     const targetElement = targetElementRef.current;
@@ -59,7 +59,41 @@ export function TextContextMenu() {
     targetElement.focus();
 
     try {
-      if (action === 'cut') {
+      if (action === 'toTraditional' || action === 'toSimplified') {
+          const el = targetElement as HTMLInputElement | HTMLTextAreaElement;
+          const { convertToTraditional, convertToSimplified } = await import('@/lib/chinese-conv');
+          const isInputOrTextarea = targetElement.tagName === 'TEXTAREA' || targetElement.tagName === 'INPUT';
+          
+          if (isInputOrTextarea) {
+             const start = el.selectionStart || 0;
+             const end = el.selectionEnd || 0;
+             const val = el.value;
+             let textToConvert = val;
+             let convertAll = false;
+             
+             if (start === end) {
+                 textToConvert = val;
+                 convertAll = true;
+                 el.select(); // Select all so execCommand replaces everything
+             } else {
+                 textToConvert = val.slice(start, end);
+             }
+             
+             const convertedText = action === 'toTraditional' ? convertToTraditional(textToConvert) : convertToSimplified(textToConvert);
+             
+             if (!document.execCommand('insertText', false, convertedText)) {
+                if (convertAll) {
+                   el.value = convertedText;
+                   el.selectionStart = el.selectionEnd = convertedText.length;
+                } else {
+                   el.value = val.slice(0, start) + convertedText + val.slice(end);
+                   el.selectionStart = el.selectionEnd = start + convertedText.length;
+                }
+                const event = new Event('input', { bubbles: true });
+                el.dispatchEvent(event);
+             }
+          }
+      } else if (action === 'cut') {
         const selectedText = window.getSelection()?.toString();
         if (selectedText) {
           await navigator.clipboard.writeText(selectedText);
@@ -147,6 +181,21 @@ export function TextContextMenu() {
       >
         <ListChecks className="w-3.5 h-3.5" />
         全選
+      </button>
+      <div className="h-px bg-[var(--app-border-base)] my-1"></div>
+      <button
+        onClick={() => handleAction('toTraditional')}
+        className="flex items-center gap-2 w-full text-left px-4 py-2 hover:bg-[var(--app-bg-hover)] transition-colors"
+      >
+        <span className="w-3.5 h-3.5 flex items-center justify-center font-bold text-[10px]">繁</span>
+        轉成繁體
+      </button>
+      <button
+        onClick={() => handleAction('toSimplified')}
+        className="flex items-center gap-2 w-full text-left px-4 py-2 hover:bg-[var(--app-bg-hover)] transition-colors"
+      >
+        <span className="w-3.5 h-3.5 flex items-center justify-center font-bold text-[10px]">簡</span>
+        轉成簡體
       </button>
     </div>
   );

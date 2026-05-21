@@ -423,6 +423,56 @@ export function SyncEditor() {
     });
   }
 
+  const handleLineConvertToTraditional = async (globalIndex: number) => {
+    const { convertToTraditional } = await import('@/lib/chinese-conv');
+    commitLines(prev => {
+      const newLines = [...prev];
+      newLines[globalIndex] = {
+        ...newLines[globalIndex],
+        words: newLines[globalIndex].words.map(w => ({ ...w, text: convertToTraditional(w.text) }))
+      };
+      newLines[globalIndex].raw = newLines[globalIndex].words.map(w => w.start !== null ? `<${formatTime(w.start, true)}>${w.text}` : w.text).join('');
+      return newLines;
+    }, '這行字轉繁體');
+  };
+
+  const handleLineConvertToSimplified = async (globalIndex: number) => {
+    const { convertToSimplified } = await import('@/lib/chinese-conv');
+    commitLines(prev => {
+      const newLines = [...prev];
+      newLines[globalIndex] = {
+        ...newLines[globalIndex],
+        words: newLines[globalIndex].words.map(w => ({ ...w, text: convertToSimplified(w.text) }))
+      };
+      newLines[globalIndex].raw = newLines[globalIndex].words.map(w => w.start !== null ? `<${formatTime(w.start, true)}>${w.text}` : w.text).join('');
+      return newLines;
+    }, '這行字轉簡體');
+  };
+
+  const handleWordConvertToTraditional = async (globalIndex: number, wordIndex: number) => {
+    const { convertToTraditional } = await import('@/lib/chinese-conv');
+    commitLines(prev => {
+      const newLines = [...prev];
+      const newWords = [...newLines[globalIndex].words];
+      newWords[wordIndex] = { ...newWords[wordIndex], text: convertToTraditional(newWords[wordIndex].text) };
+      newLines[globalIndex] = { ...newLines[globalIndex], words: newWords };
+      newLines[globalIndex].raw = newLines[globalIndex].words.map(w => w.start !== null ? `<${formatTime(w.start, true)}>${w.text}` : w.text).join('');
+      return newLines;
+    }, '這段字轉繁體');
+  };
+
+  const handleWordConvertToSimplified = async (globalIndex: number, wordIndex: number) => {
+    const { convertToSimplified } = await import('@/lib/chinese-conv');
+    commitLines(prev => {
+      const newLines = [...prev];
+      const newWords = [...newLines[globalIndex].words];
+      newWords[wordIndex] = { ...newWords[wordIndex], text: convertToSimplified(newWords[wordIndex].text) };
+      newLines[globalIndex] = { ...newLines[globalIndex], words: newWords };
+      newLines[globalIndex].raw = newLines[globalIndex].words.map(w => w.start !== null ? `<${formatTime(w.start, true)}>${w.text}` : w.text).join('');
+      return newLines;
+    }, '這段字轉簡體');
+  };
+
   return (
     <div className="flex flex-col h-full bg-[var(--app-bg-base)]">
       <div className="p-3 bg-[var(--app-bg-panel-alt)] border-b border-[var(--app-border-base)] flex flex-wrap items-center justify-between shrink-0 gap-2">
@@ -574,6 +624,8 @@ export function SyncEditor() {
               <div className="h-px bg-[var(--app-border-base)] my-1"></div>
               <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors flex items-center gap-2" onClick={() => { handleEditTextOnly(ctxMenu.globalIndex); setCtxMenu(null); }}><Type className="w-3.5 h-3.5" /> 編輯這行字</button>
               <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors flex items-center gap-2" onClick={() => { handleEditRawText(ctxMenu.globalIndex); setCtxMenu(null); }}><Edit2 className="w-3.5 h-3.5" /> 編輯這行字RAW（含時間戳）</button>
+              <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors flex items-center gap-2" onClick={() => { handleLineConvertToTraditional(ctxMenu.globalIndex); setCtxMenu(null); }}><span className="w-3.5 h-3.5 flex items-center justify-center font-bold text-[10px]">繁</span>這行字轉繁體</button>
+              <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors flex items-center gap-2" onClick={() => { handleLineConvertToSimplified(ctxMenu.globalIndex); setCtxMenu(null); }}><span className="w-3.5 h-3.5 flex items-center justify-center font-bold text-[10px]">簡</span>這行字轉簡體</button>
               <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors flex items-center gap-2" onClick={() => { 
                 const targetIndex = ctxMenu.globalIndex;
                 setCtxMenu(null);
@@ -609,6 +661,8 @@ export function SyncEditor() {
               <div className="h-px bg-[var(--app-border-base)] my-1"></div>
               <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors flex items-center gap-2" onClick={() => { handleEditWordText(ctxMenu.globalIndex, ctxMenu.wordIndex!); setCtxMenu(null); }}><Type className="w-3.5 h-3.5" /> 編輯這段字</button>
               <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors flex items-center gap-2" onClick={() => { handleEditWordRaw(ctxMenu.globalIndex, ctxMenu.wordIndex!); setCtxMenu(null); }}><Edit2 className="w-3.5 h-3.5" /> 編輯這段字RAW（含時間戳）</button>
+              <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors flex items-center gap-2" onClick={() => { handleWordConvertToTraditional(ctxMenu.globalIndex, ctxMenu.wordIndex!); setCtxMenu(null); }}><span className="w-3.5 h-3.5 flex items-center justify-center font-bold text-[10px]">繁</span>這段字轉繁體</button>
+              <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors flex items-center gap-2" onClick={() => { handleWordConvertToSimplified(ctxMenu.globalIndex, ctxMenu.wordIndex!); setCtxMenu(null); }}><span className="w-3.5 h-3.5 flex items-center justify-center font-bold text-[10px]">簡</span>這段字轉簡體</button>
               <div className="h-px bg-[var(--app-border-base)] my-1"></div>
               <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors flex items-center gap-2" onClick={() => { handleSplitWordToNextLine(ctxMenu.globalIndex, ctxMenu.wordIndex!); setCtxMenu(null); }}><SplitSquareVertical className="w-3.5 h-3.5" /> 從該字分割斷行到下一行</button>
               <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors flex items-center gap-2" onClick={() => { handleOffsetFromHere(ctxMenu.globalIndex); setCtxMenu(null); }}><ArrowRight className="w-3.5 h-3.5" /> 平移後續時間</button>

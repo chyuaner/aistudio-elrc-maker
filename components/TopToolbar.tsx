@@ -102,7 +102,7 @@ function extractFlacMetadata(buffer: ArrayBuffer) {
 }
 
 export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
-  const { undo, redo, pastActions, futureActions, file, setFile, commitLines, resetHistory, lines, syncMode, setMetadata, metadata, audioFileName, lyricFileName, setLyricFileName, exportFormat, shiftTime, setAudioSpecs, setIsPlaying, playerRef, duration, setDuration, setPlaybackRate, lrcMetadata, setLrcMetadata, touchUIMode, setTouchUIMode, mode, setMode } = useEditor();
+  const { undo, redo, pastActions, futureActions, file, setFile, commitLines, resetHistory, lines, syncMode, setMetadata, metadata, audioFileName, lyricFileName, setLyricFileName, exportFormat, shiftTime, setAudioSpecs, setIsPlaying, playerRef, duration, setDuration, setPlaybackRate, lrcMetadata, setLrcMetadata, touchUIMode, setTouchUIMode } = useEditor();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const lyricInputRef = useRef<HTMLInputElement>(null);
   const mixedInputRef = useRef<HTMLInputElement>(null);
@@ -549,7 +549,6 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
       exportEnhanced: () => handleExport('enhanced'),
       exportSimple: () => handleExport('simple'),
       exportSrt: () => handleExport('srt'),
-      exportAss: () => setMode('ass-export'),
       exportEmbeddedStandard: () => handleExport('standard', 'embedded'),
       exportEmbeddedEnhanced: () => handleExport('enhanced', 'embedded'),
       exportEmbeddedSimple: () => handleExport('simple', 'embedded'),
@@ -557,7 +556,6 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
       getExportOptions: () => {
          const ext = audioFileName ? audioFileName.substring(audioFileName.lastIndexOf('.')).toLowerCase() : '';
          const options = [
-             { label: '.ass KTV字幕 (逐字同步)', action: 'exportAss' },
              { label: '.lrc 增強型LRC (ESLYRIC ﹣ 逐字同步)', action: 'exportEnhanced' },
              { label: '.lrc 標準LRC (逐行同步)', action: 'exportStandard' },
              { label: '.txt 簡易歌詞 (無時間戳)', action: 'exportSimple' },
@@ -607,7 +605,7 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
             }).catch(() => {});
         } catch (e) {}
     }
-  }, [dialogs, audioFileName, lyricFileName, lines.length, metadata, setFile, setMetadata, commitLines, setLyricFileName, resetHistory, shiftTime, undo, redo, pastActions, futureActions, handleExport, setAudioSpecs, exportFormat, setLrcMetadata, setMode]);
+  }, [dialogs, audioFileName, lyricFileName, lines.length, metadata, setFile, setMetadata, commitLines, setLyricFileName, resetHistory, shiftTime, undo, redo, pastActions, futureActions, handleExport, setAudioSpecs, exportFormat, setLrcMetadata]);
 
   const [dragOverlay, setDragOverlay] = useState<'media' | 'lyric' | 'file' | null>(null);
 
@@ -1008,7 +1006,6 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
                                   exportStandard: () => handleExport('standard', 'file'),
                                   exportSimple: () => handleExport('simple', 'file'),
                                   exportSrt: () => handleExport('srt', 'file'),
-                                  exportAss: () => setMode('ass-export'),
                                   exportEmbeddedEnhanced: () => handleExport('enhanced', 'embedded'),
                                   exportEmbeddedStandard: () => handleExport('standard', 'embedded'),
                                   exportEmbeddedSimple: () => handleExport('simple', 'embedded')

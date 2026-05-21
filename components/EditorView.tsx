@@ -5,7 +5,6 @@ import { useEditor } from './EditorProvider';
 import { TextEditor } from './TextEditor';
 import { SyncEditor } from './SyncEditor';
 import { RawTextDisplay } from './RawTextDisplay';
-import { AssExportView } from './AssExportView';
 import { useGlobalHotkeys } from './useGlobalHotkeys';
 import { useI18n } from '@/hooks/useI18n';
 
@@ -58,19 +57,12 @@ export function EditorView() {
         >
           {i18n.tabRaw}
         </button>
-        <button
-          onClick={() => setMode('ass-export')}
-          className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-widest border-b-2 transition-colors ${mode === 'ass-export' ? 'border-[var(--app-accent)] text-[var(--app-accent)]' : 'border-transparent text-[var(--app-text-muted)] hover:text-[var(--app-text-secondary)]'}`}
-        >
-          KTV ASS輸出
-        </button>
       </div>
 
       <div className="flex-1 md:overflow-hidden flex flex-col">
         {mode === 'text' && <TextEditor />}
         {(mode === 'sync' || mode === 'dual-sync') && <SyncEditor />}
         {mode === 'raw' && <RawTextDisplay />}
-        {mode === 'ass-export' && <AssExportView />}
       </div>
     </div>
   );

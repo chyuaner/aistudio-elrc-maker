@@ -3,9 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "predev": "node scripts/copy-jassub.mjs",
     "dev": "next dev",
-    "prebuild": "node scripts/copy-jassub.mjs",
     "build": "next build && rm -rf dist && mv out dist",
     "lint": "eslint .",
     "clean": "next clean"
@@ -18,7 +16,6 @@
     "autoprefixer": "^10.4.21",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "jassub": "^2.5.1",
     "jsmediatags": "^3.9.7",
     "lucide-react": "^0.553.0",
     "metaflac-js": "^1.0.5",

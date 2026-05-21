@@ -4,7 +4,7 @@ import { useSyncHotkeys } from './useSyncHotkeys';
 import { formatTime } from '@/lib/lyric-utils';
 import { KaraokePreview } from './KaraokePreview';
 import { Tooltip } from './Tooltip';
-import { Edit2, Trash2, X, ArrowRight, MoreVertical, ArrowUpFromLine, Copy, Play, SplitSquareVertical, Clock, Scissors, Type, Plus, FileText } from 'lucide-react';
+import { Edit2, Trash2, X, ArrowRight, MoreVertical, ArrowUpFromLine, Copy, Play, SplitSquareVertical, Clock, Scissors, Type, Plus, FileText, Eraser, SlidersHorizontal, Settings2 } from 'lucide-react';
 
 import { useAutoScroll } from './useAutoScroll';
 import { useDialogs } from './DialogProvider';
@@ -495,34 +495,56 @@ export function SyncEditor() {
         </div>
 
         <div className="flex flex-wrap items-center gap-4 text-[10px] text-[var(--app-text-muted)]">
-          <button
-            onClick={async () => {
-              const confirmed = await dialogs.confirm('確定要移除所有時間戳嗎？');
-              if (confirmed) {
-                  const newLines = lines.map(line => ({
-                      ...line,
-                      start: null,
-                      words: line.words.map(w => ({ ...w, start: null, end: null }))
-                  }));
-                  commitLines(newLines, '移除所有時間戳');
-              }
-            }}
-            className="px-3 py-1.5 bg-[var(--app-bg-panel)] hover:bg-[var(--app-bg-hover)] hover:text-red-400 rounded shadow-sm uppercase font-bold tracking-widest border border-[var(--app-border-light)] flex items-center text-[var(--app-text-secondary)] transition-colors h-[30px]"
-          >
-            移除所有時間戳
-          </button>
+          <Tooltip title={<span className="text-xs font-mono">移除所有時間戳</span>}>
+            <button
+              onClick={async () => {
+                const confirmed = await dialogs.confirm('確定要移除所有時間戳嗎？');
+                if (confirmed) {
+                    const newLines = lines.map(line => ({
+                        ...line,
+                        start: null,
+                        words: line.words.map(w => ({ ...w, start: null, end: null }))
+                    }));
+                    commitLines(newLines, '移除所有時間戳');
+                }
+              }}
+              className="px-3 py-1.5 bg-[var(--app-bg-panel)] hover:bg-[var(--app-bg-hover)] hover:text-red-400 rounded shadow-sm border border-[var(--app-border-light)] flex items-center text-[var(--app-text-secondary)] transition-colors h-[30px]"
+            >
+              <Eraser className="w-4 h-4" />
+            </button>
+          </Tooltip>
           
-          <button
-            onClick={async () => {
-              const val = await dialogs.prompt(i18n.promptShiftTime, '0');
-              if (val && !isNaN(parseFloat(val))) {
-                 shiftTime(parseFloat(val));
-              }
-            }}
-            className="px-3 py-1.5 bg-[var(--app-bg-panel)] hover:bg-[var(--app-bg-hover)] rounded shadow-sm uppercase font-bold tracking-widest border border-[var(--app-border-light)] flex items-center text-[var(--app-text-secondary)] transition-colors h-[30px]"
-          >
-            整份歌詞時間平移
-          </button>
+          <div className="flex items-center shadow-sm rounded border border-[var(--app-border-light)] h-[30px] overflow-hidden bg-[var(--app-bg-panel)]">
+            <Tooltip title={<span className="text-xs font-mono">將所有時間提前 0.1 秒</span>}>
+              <button
+                onClick={() => shiftTime(-0.1)}
+                className="px-2 h-full hover:bg-[var(--app-bg-hover)] text-[var(--app-text-secondary)] hover:text-[var(--app-text-primary)] transition-colors border-r border-[var(--app-border-light)] font-mono text-xs"
+              >
+                -0.1s
+              </button>
+            </Tooltip>
+            <Tooltip title={<span className="text-xs font-mono">整份歌詞時間平移 (輸入數值)</span>}>
+              <button
+                onClick={async () => {
+                  const val = await dialogs.prompt(i18n.promptShiftTime, '0');
+                  if (val && !isNaN(parseFloat(val))) {
+                     shiftTime(parseFloat(val));
+                  }
+                }}
+                className="px-3 h-full hover:bg-[var(--app-bg-hover)] flex items-center text-[var(--app-text-secondary)] hover:text-[var(--app-text-primary)] transition-colors"
+              >
+                <SlidersHorizontal className="w-4 h-4" />
+              </button>
+            </Tooltip>
+            <Tooltip title={<span className="text-xs font-mono">將所有時間延後 0.1 秒</span>}>
+              <button
+                onClick={() => shiftTime(0.1)}
+                className="px-2 h-full hover:bg-[var(--app-bg-hover)] text-[var(--app-text-secondary)] hover:text-[var(--app-text-primary)] transition-colors border-l border-[var(--app-border-light)] font-mono text-xs"
+              >
+                +0.1s
+              </button>
+            </Tooltip>
+          </div>
 
           <label className="flex items-center gap-2 cursor-pointer hover:text-[var(--app-text-primary)] transition-colors">
             <input 

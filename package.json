@@ -5,7 +5,7 @@
   "license": "CC-BY-NC-SA-4.0",
   "scripts": {
     "dev": "next dev",
-    "build": "next build && rm -rf dist && mv out dist",
+    "build": "next build && node -e \"const fs = require('fs'); fs.rmSync('dist', { recursive: true, force: true }); fs.renameSync('out', 'dist');\"",
     "lint": "eslint .",
     "clean": "next clean"
   },

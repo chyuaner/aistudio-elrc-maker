@@ -346,7 +346,7 @@ export function MediaPlayer() {
     const curr = playerRef.current.currentTime;
     for (let i = 0; i < lines.length; i++) {
         if (paragraphStarts[i] && lines[i].start !== null && lines[i].start! > curr + 1.0) {
-            playerRef.current.currentTime = lines[i].start!;
+            playerRef.current.currentTime = Math.max(0, lines[i].start! - 5.5);
             break;
         }
     }
@@ -572,7 +572,7 @@ export function MediaPlayer() {
               </button>
             </Tooltip>
             {lines.length > 0 && (
-              <Tooltip title={<div className="flex items-center gap-2">跳到下一段歌詞開頭</div>} delay={500}>
+              <Tooltip title={<div className="flex items-center gap-2">跳到下一段歌詞</div>} delay={500}>
                 <button onClick={jumpToNextSegment} className="hidden @[300px]:block p-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-text-primary)] hover:bg-[var(--app-bg-hover)] rounded transition-colors">
                   <StepForward className="w-4 h-4" />
                 </button>

@@ -221,6 +221,13 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
   const playerRef = useRef<HTMLVideoElement | HTMLAudioElement | null>(null);
 
   useEffect(() => {
+    const isTouch = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    if (isTouch) {
+      setTouchUIMode(true);
+    }
+  }, []);
+
+  useEffect(() => {
     if (playerRef.current) {
       playerRef.current.playbackRate = playbackRate;
     }

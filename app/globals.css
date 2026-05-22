@@ -10,6 +10,10 @@
     user-select: text;
     -webkit-user-select: text;
   }
+
+  button, [role="button"], a, select {
+    cursor: pointer;
+  }
 }
 
 body.is-dragging-resizer * {
@@ -121,6 +125,12 @@ html.light {
   --app-accent: #F27D26;
   --app-accent-hover: #E26D16;
   --app-visualizer-color: #F0F1F2;
+}
+
+@layer base {
+  button, [role="button"], a, select {
+    @apply cursor-pointer;
+  }
 }
 
 /* Custom scrollbar to match the new styles if needed, we'll keep the custom-scrollbar logic simple */

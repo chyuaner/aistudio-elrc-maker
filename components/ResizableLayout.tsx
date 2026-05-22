@@ -47,18 +47,20 @@ export function ResizableLayout() {
   }, []);
 
   return (
-    <div className="flex-1 flex flex-col lg:flex-row md:overflow-hidden border-t border-[var(--app-border-base)]">
+    <div className="flex-1 flex flex-col lg:flex-row lg:overflow-hidden border-t border-[var(--app-border-base)] relative">
       {/* Left side: Media Player Component and Info Tabs */}
       <div 
-        style={{ width: isMobile ? '100%' : `${leftWidth}px`, minWidth: isMobile ? '100%' : `${leftWidth}px` }} 
-        className="flex flex-col border-r border-[var(--app-border-base)] bg-[var(--app-bg-panel-alt)] shrink-0 lg:h-full lg:overflow-hidden"
+        style={isMobile ? undefined : { width: `${leftWidth}px`, minWidth: `${leftWidth}px` }} 
+        className={isMobile ? 'contents' : 'flex flex-col lg:border-r border-[var(--app-border-base)] bg-[var(--app-bg-panel-alt)] shrink-0 w-full lg:w-auto z-10 lg:h-full lg:overflow-hidden relative'}
       >
-        <div className="bg-[var(--app-bg-input)] border-b border-[var(--app-border-base)] p-0 flex flex-col justify-center shrink-0">
+        <div className={isMobile ? 'contents' : 'bg-[var(--app-bg-input)] lg:border-b border-[var(--app-border-base)] p-0 flex flex-col justify-center shrink-0'}>
           <MediaPlayer />
         </div>
-        <div className="hidden lg:flex flex-col flex-1 overflow-hidden">
-          <LeftPanelInfo />
-        </div>
+        {!isMobile && (
+          <div className="flex flex-col flex-1 overflow-hidden">
+            <LeftPanelInfo />
+          </div>
+        )}
       </div>
       
       {/* Resizer */}
@@ -73,7 +75,7 @@ export function ResizableLayout() {
         
       {/* Right side: Editor View */}
       <div 
-        className="flex-1 lg:h-full flex flex-col bg-[var(--app-bg-base)] md:overflow-hidden min-w-0"
+        className={isMobile ? 'contents' : 'flex-1 lg:h-full flex flex-col bg-[var(--app-bg-base)] lg:overflow-hidden min-w-0 relative z-30 lg:w-auto w-full'}
       >
          <EditorView />
       </div>

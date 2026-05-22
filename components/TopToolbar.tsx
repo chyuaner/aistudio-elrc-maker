@@ -1166,7 +1166,15 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
          </div>
       )}
     <header 
-      className={`bg-[var(--app-bg-panel-alt)] border-b border-[var(--app-border-base)] shrink-0 relative select-none flex flex-col lg:flex-row lg:items-center lg:justify-between sticky top-0 z-50 w-full transition-opacity duration-300 ${isElectron ? 'app-region-drag' : ''} ${unfocusedClass}`}
+      ref={(el) => {
+        if (!el) return;
+        const observer = new ResizeObserver((entries) => {
+          document.documentElement.style.setProperty('--header-height', `${entries[0].contentRect.height}px`);
+        });
+        observer.observe(el);
+        return () => observer.disconnect();
+      }}
+      className={`bg-[var(--app-bg-panel-alt)] border-b border-[var(--app-border-base)] shrink-0 relative select-none flex flex-col lg:flex-row lg:items-center lg:justify-between sticky top-0 z-[60] w-full transition-opacity duration-300 ${isElectron ? 'app-region-drag' : ''} ${unfocusedClass}`}
       style={{ display: 'var(--top-toolbar-display, flex)' }}
       onDoubleClick={(e) => {
         if (!isElectron) return;

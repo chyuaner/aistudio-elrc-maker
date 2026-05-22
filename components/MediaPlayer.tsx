@@ -552,7 +552,7 @@ export function MediaPlayer() {
           observer.observe(el);
           return () => observer.disconnect();
         }}
-        className={`flex flex-col w-full shrink-0 ${isMobile ? 'z-50 sticky mb-3 shadow-sm' : 'lg:static lg:z-auto'}`}
+        className={`flex flex-col w-full shrink-0 ${isMobile ? 'z-50 sticky shadow-sm' : 'lg:static lg:z-auto'}`}
         style={{ top: isMobile ? 'var(--header-height, 41px)' : undefined }}
       >
         

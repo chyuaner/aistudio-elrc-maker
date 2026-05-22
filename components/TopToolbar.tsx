@@ -221,17 +221,23 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
     window.addEventListener('androidfullscreenchange' as any, checkFs);
     setTimeout(checkFs, 100);
 
-    const api = (window as unknown as { electronAPI?: { onWindowStateChange?: (cb: (s: any) => void) => () => void } }).electronAPI;
+    const api = (window as unknown as { electronAPI?: { onWindowStateChange?: (cb: (s: any) => void) => () => void; getWindowState?: () => Promise<{ isFullScreen?: boolean }> } }).electronAPI;
     let electronUnsub: (() => void) | undefined;
     if (api?.onWindowStateChange) {
       electronUnsub = api.onWindowStateChange((s: any) => {
         setIsFullscreen(!!s?.isFullScreen || !!document.fullscreenElement);
       });
     }
+    if (api?.getWindowState) {
+      api.getWindowState().then((s: any) => {
+        setIsFullscreen(!!s?.isFullScreen || !!document.fullscreenElement);
+      }).catch(() => {});
+    }
 
     return () => {
       document.removeEventListener('fullscreenchange', checkFs);
       window.removeEventListener('resize', checkFs);
+      window.removeEventListener('androidfullscreenchange' as any, checkFs);
       if (electronUnsub) electronUnsub();
     };
   }, []);
@@ -1073,7 +1079,7 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
             <button 
               onClick={() => AppCommands.toggleFullscreen?.()} 
               title="全螢幕"
-              className="p-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-text-primary)] hover:bg-[var(--app-bg-hover)] rounded transition-colors mr-1"
+              className={`p-1.5 rounded transition-colors mr-1 ${isFullscreen ? 'text-[var(--app-accent)] bg-[var(--app-bg-hover)]' : 'text-[var(--app-text-muted)] hover:text-[var(--app-text-primary)] hover:bg-[var(--app-bg-hover)]'}`}
             >
               <Maximize className="w-4 h-4" />
             </button>

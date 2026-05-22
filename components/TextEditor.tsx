@@ -83,17 +83,23 @@ export function TextEditor() {
   };
 
   const convertToSimple = async () => {
-    const newText = lines.map(l => l.words.map(w=>w.text).join('')).join('\n');
+    const parsed = parseRawLyrics(text);
+    let metaStr = '';
+    for (const [key, value] of Object.entries(parsed.metadata)) {
+      if (value) metaStr += `[${key}:${value}]\n`;
+    }
+    const newText = metaStr + parsed.lines.map(l => l.words.map(w=>w.text).join('')).join('\n');
     setText(newText);
     isDirty.current = true;
-    saveChanges();
+    saveChanges(newText);
   };
 
   const convertToStandard = async () => {
-    const newText = exportLrc(lines, lrcMetadata, false, false); // force standard
+    const parsed = parseRawLyrics(text);
+    const newText = exportLrc(parsed.lines, parsed.metadata, false, false); // force standard
     setText(newText);
     isDirty.current = true;
-    saveChanges();
+    saveChanges(newText);
   };
 
   return (

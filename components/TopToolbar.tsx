@@ -1281,7 +1281,15 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
         onClick={(e) => { (e.target as HTMLInputElement).value = ''; }}
       />
       {dragOverlay && (
-         <div className="fixed inset-0 z-[100] bg-[var(--app-bg-base)]/80 backdrop-blur-sm flex items-center justify-center border-[3px] border-dashed border-[var(--app-accent)] m-4 rounded-xl pointer-events-none">
+         <div 
+           className="fixed inset-0 z-[100] bg-[var(--app-bg-base)]/80 backdrop-blur-sm flex items-center justify-center border-[3px] border-dashed border-[var(--app-accent)] m-4 rounded-xl pointer-events-none"
+           style={{
+             marginTop: 'max(1rem, env(safe-area-inset-top))',
+             marginBottom: 'max(1rem, env(safe-area-inset-bottom))',
+             marginLeft: 'max(1rem, env(safe-area-inset-left))',
+             marginRight: 'max(1rem, env(safe-area-inset-right))'
+           }}
+         >
              <div className="text-center flex flex-col items-center gap-4 text-[var(--app-accent)] bg-[var(--app-bg-panel)] px-12 py-8 rounded-2xl shadow-2xl animate-pulse">
                 <Music className="w-16 h-16" />
                 <span className="text-3xl font-bold tracking-wide">
@@ -1300,7 +1308,12 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
         return () => observer.disconnect();
       }}
       className={`bg-[var(--app-bg-panel-alt)] border-b border-[var(--app-border-base)] shrink-0 relative select-none flex flex-col lg:flex-row lg:items-center lg:justify-between sticky top-0 z-[60] w-full transition-opacity duration-300 ${isElectron ? 'app-region-drag' : ''} ${unfocusedClass}`}
-      style={{ display: 'var(--top-toolbar-display, flex)', paddingTop: 'env(safe-area-inset-top, 0px)' }}
+      style={{ 
+        display: 'var(--top-toolbar-display, flex)', 
+        paddingTop: 'env(safe-area-inset-top, 0px)',
+        paddingLeft: 'env(safe-area-inset-left, 0px)',
+        paddingRight: 'env(safe-area-inset-right, 0px)'
+      }}
       onDoubleClick={(e) => {
         if (!isElectron) return;
         const target = e.target as HTMLElement;

@@ -50,7 +50,14 @@ export function ResizableLayout() {
   }, []);
 
   return (
-    <div className={`flex-1 flex flex-col lg:flex-row lg:overflow-hidden border-t border-[var(--app-border-base)] relative ${isMobile ? 'overflow-y-auto custom-scrollbar' : ''}`}>
+    <div 
+      className={`flex-1 flex flex-col lg:flex-row lg:overflow-hidden border-t border-[var(--app-border-base)] relative ${isMobile ? 'overflow-y-auto custom-scrollbar' : ''}`}
+      style={{
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+        paddingLeft: 'env(safe-area-inset-left, 0px)',
+        paddingRight: 'env(safe-area-inset-right, 0px)'
+      }}
+    >
       {/* Left side: Media Player Component and Info Tabs */}
       <div 
         style={isMobile ? undefined : { width: `${leftWidth}px`, minWidth: `${leftWidth}px` }} 

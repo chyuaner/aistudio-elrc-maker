@@ -723,7 +723,15 @@ export function SyncEditor() {
       )}
 
       {editingText && (
-         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+         <div 
+           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+           style={{
+             paddingLeft: 'max(1rem, env(safe-area-inset-left))',
+             paddingRight: 'max(1rem, env(safe-area-inset-right))',
+             paddingTop: 'max(1rem, env(safe-area-inset-top))',
+             paddingBottom: 'max(1rem, env(safe-area-inset-bottom))'
+           }}
+         >
             <div className="bg-[var(--app-bg-panel)] rounded-xl shadow-2xl w-full max-w-xl border border-[var(--app-border-base)] flex flex-col overflow-hidden">
                 <div className="px-4 py-3 border-b border-[var(--app-border-base)] flex items-center justify-between bg-[var(--app-bg-panel-alt)]">
                     <h3 className="font-bold text-[var(--app-text-primary)]">

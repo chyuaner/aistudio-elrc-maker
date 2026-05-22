@@ -13,6 +13,7 @@ export function WebSystemIntegration() {
     const isElectron =
       typeof window !== 'undefined' &&
       !!(window as any).electronAPI?.isElectron;
+    const isCapacitor = typeof window !== 'undefined' && !!(window as any).Capacitor;
     const electronShell = (window as any).electronAPI?.shell;
     const ua = typeof navigator !== 'undefined' ? navigator.userAgent.toLowerCase() : '';
 
@@ -51,7 +52,7 @@ export function WebSystemIntegration() {
     observer.observe(document.body, { childList: true, subtree: true });
     updateTabIndexes();
 
-    // ── toggleFullscreen：Electron / Tauri 使用原生視窗 API，瀏覽器使用 document API ──
+    // ── toggleFullscreen：Electron / Tauri / Capacitor 使用原生視窗 API，瀏覽器使用 document API ──
     if (!AppCommands.toggleFullscreen) {
       if (isElectron) {
         AppCommands.toggleFullscreen = async () => {
@@ -75,6 +76,23 @@ export function WebSystemIntegration() {
             console.warn('Tauri setFullscreen failed:', err);
           }
         };
+      } else if (isCapacitor) {
+        AppCommands.toggleFullscreen = async () => {
+          try {
+            const { registerPlugin } = await import('@capacitor/core');
+            const ThemeControl = registerPlugin<any>('ThemeControl');
+            const currentlyFs = !!(window as any).isAndroidFullscreen;
+            const nextFs = !currentlyFs;
+            await ThemeControl.setFullscreen({ fullscreen: nextFs });
+            (window as any).isAndroidFullscreen = nextFs;
+            
+            // Dispatch event to update the UI fullscreen state detection
+            window.dispatchEvent(new Event('resize'));
+            window.dispatchEvent(new CustomEvent('androidfullscreenchange', { detail: { isFullscreen: nextFs } }));
+          } catch (err) {
+            console.warn('Capacitor setFullscreen failed:', err);
+          }
+        };
       } else {
         AppCommands.toggleFullscreen = () => {
           if (!document.fullscreenElement) {
@@ -90,8 +108,6 @@ export function WebSystemIntegration() {
       }
     }
     
-    const isCapacitor = typeof window !== 'undefined' && !!(window as any).Capacitor;
-
     async function syncCapacitorStatusBar(color: string) {
         if (!isCapacitor) return;
         try {
@@ -102,8 +118,13 @@ export function WebSystemIntegration() {
             await StatusBar.setStyle({
                 style: isDark ? Style.Dark : Style.Light,
             });
+
+            // Android Navigation Bar theme-color synchronization via the custom ThemeControl plugin
+            const { registerPlugin } = await import('@capacitor/core');
+            const ThemeControl = registerPlugin<any>('ThemeControl');
+            await ThemeControl.setNavigationBarColor({ color: color });
         } catch (err) {
-            console.warn('Failed to update Capacitor status bar:', err);
+            console.warn('Failed to update Capacitor status/navigation bar:', err);
         }
     }
 

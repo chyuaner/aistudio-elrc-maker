@@ -212,11 +212,13 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
     const checkFs = () => {
       const isDOMFs = !!document.fullscreenElement;
       const isWindowFs = window.innerWidth === window.screen.width && window.innerHeight === window.screen.height;
-      setIsFullscreen(isDOMFs || isWindowFs);
+      const isAndroidFs = !!(window as any).isAndroidFullscreen;
+      setIsFullscreen(isDOMFs || isWindowFs || isAndroidFs);
     };
 
     document.addEventListener('fullscreenchange', checkFs);
     window.addEventListener('resize', checkFs);
+    window.addEventListener('androidfullscreenchange' as any, checkFs);
     setTimeout(checkFs, 100);
 
     const api = (window as unknown as { electronAPI?: { onWindowStateChange?: (cb: (s: any) => void) => () => void } }).electronAPI;

@@ -474,8 +474,8 @@ export function SyncEditor() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-[var(--app-bg-base)]">
-      <div className="p-3 bg-[var(--app-bg-panel-alt)] border-b border-[var(--app-border-base)] flex flex-wrap items-center justify-between shrink-0 gap-2">
+    <div className="contents lg:flex lg:flex-col lg:h-full lg:bg-[var(--app-bg-base)]">
+      <div className="p-3 bg-[var(--app-bg-panel-alt)] flex flex-wrap items-center justify-between shrink-0 gap-2 lg:static z-40">
         <div className="flex bg-[var(--app-bg-input)] p-1 rounded-md border border-[var(--app-border-base)] shadow-inner">
           <button
             onClick={() => {
@@ -587,10 +587,10 @@ export function SyncEditor() {
       <div 
         ref={containerRef}
         id="sync-editor-scroll-container"
-        className="flex-1 md:overflow-y-auto w-full custom-scrollbar"
+        className="flex-1 lg:overflow-y-auto w-full custom-scrollbar"
       >
         <table className="w-full text-left text-xs border-collapse table-fixed">
-          <thead className="md:sticky md:top-0 bg-[var(--app-bg-panel)] text-[var(--app-text-muted)] z-10 text-[10px] uppercase tracking-widest font-bold outline outline-1 outline-b-[var(--app-border-base)]">
+          <thead className="lg:sticky lg:top-0 bg-[var(--app-bg-panel)] text-[var(--app-text-muted)] z-10 text-[10px] uppercase tracking-widest font-bold outline outline-1 outline-b-[var(--app-border-base)]">
             <tr>
               {isDual ? (
                 <>

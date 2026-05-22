@@ -78,7 +78,7 @@ export function RawTextDisplay() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-[var(--app-bg-panel-alt)] relative">
+    <div className="contents lg:flex lg:flex-col lg:h-full lg:bg-[var(--app-bg-panel-alt)] lg:relative">
       <KaraokePreview hideTouchUI={true} />
       
       <div className="p-3 bg-[var(--app-bg-panel)] border-b border-[var(--app-border-base)] flex flex-wrap gap-3 justify-between items-center shrink-0">

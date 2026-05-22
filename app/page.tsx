@@ -12,7 +12,7 @@ export default function Page() {
       <WebSystemIntegration />
       <TextContextMenu />
       <EditorProvider>
-        <main className="h-[100dvh] w-full bg-[var(--app-bg-base)] text-[var(--app-text-secondary)] font-sans flex flex-col md:overflow-hidden overflow-y-auto custom-scrollbar selection:bg-[var(--app-accent)]/30">
+        <main className="h-[100dvh] w-full bg-[var(--app-bg-base)] text-[var(--app-text-secondary)] font-sans flex flex-col lg:overflow-hidden overflow-y-auto custom-scrollbar selection:bg-[var(--app-accent)]/30">
           <TopToolbar />
           <ResizableLayout />
         </main>

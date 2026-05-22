@@ -127,7 +127,7 @@ function TimeDisplay({ className = '' }: { className?: string }) {
   }, [playerRef]);
 
   return (
-    <div className={`flex justify-between items-end relative overflow-hidden h-20 w-full pt-4 pb-4 px-3 py-2 -mb-2 ${className}`}>
+    <div className={`flex justify-between items-end relative overflow-hidden h-16 w-full px-3 pb-2 pt-4 ${className}`}>
         <canvas 
             ref={canvasRef} 
             className="absolute inset-0 w-full h-full pointer-events-none waveform-visualizer" 
@@ -182,6 +182,14 @@ export function MediaPlayer() {
   const [hoverTime, setHoverTime] = useState<number | null>(null);
   const [hoverX, setHoverX] = useState(0);
   const [isLooping, setIsLooping] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 1024);
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -346,7 +354,7 @@ export function MediaPlayer() {
     const curr = playerRef.current.currentTime;
     for (let i = 0; i < lines.length; i++) {
         if (paragraphStarts[i] && lines[i].start !== null && lines[i].start! > curr + 1.0) {
-            playerRef.current.currentTime = lines[i].start!;
+            playerRef.current.currentTime = Math.max(0, lines[i].start! - 5.5);
             break;
         }
     }
@@ -469,12 +477,19 @@ export function MediaPlayer() {
   };
 
   return (
-    <div className="flex flex-col gap-2 w-full">
-      {isVideo ? <video {...commonProps} /> : <audio {...commonProps} />}
-      
-      <div className="flex flex-col p-2 lg:p-4">
-        {/* Waveform */}
-        <div className={`w-full rounded overflow-hidden bg-[var(--app-bg-input)] relative group/wave ${isWaveReady ? '' : 'hidden'}`} ref={containerRef}>
+    <div className={isMobile ? 'contents' : 'flex flex-col shrink-0 w-full bg-[var(--app-bg-input)] lg:border-none'}>
+      <div className={isMobile ? 'flex flex-col shrink-0 w-full mb-2 bg-[var(--app-bg-input)]' : 'contents'}>
+        {isVideo ? (
+          <div className="shrink-0 p-2 lg:p-4 pb-0 lg:pb-0">
+            <video {...commonProps} />
+          </div>
+        ) : (
+          <audio {...commonProps} />
+        )}
+        
+        <div className="flex flex-col p-2 lg:p-4 pb-0 lg:pb-0 shrink-0">
+          {/* Waveform */}
+        <div className={`w-full rounded overflow-hidden bg-[var(--app-bg-input)] relative group/wave cursor-col-resize ${isWaveReady ? '' : 'hidden'} shrink-0 mb-2`} ref={containerRef}>
           {hoverTime !== null && (
             <div 
               className="absolute z-[60] top-0 pointer-events-none transform -translate-x-1/2 px-1.5 py-0.5 bg-[var(--app-text-primary)] text-[var(--app-bg-base)] text-[10px] font-mono font-bold rounded shadow-lg whitespace-nowrap"
@@ -488,7 +503,7 @@ export function MediaPlayer() {
         {/* Fallback Progress Bar */}
         {!isWaveReady && (
           <div 
-             className="w-full h-12 flex items-center px-2 cursor-pointer bg-[var(--app-bg-input)] rounded relative group/fb" 
+             className="w-full h-12 flex items-center px-2 cursor-col-resize bg-[var(--app-bg-input)] rounded relative group/fb shrink-0 mb-2" 
              onClick={(e) => {
                if (duration <= 0) return;
                const rect = e.currentTarget.getBoundingClientRect();
@@ -518,17 +533,32 @@ export function MediaPlayer() {
         )}
         
         {/* Specs */}
-        <div className="text-[9px] font-mono text-[var(--app-text-muted)] text-right mt-1 px-1 tracking-widest uppercase truncate">
+        <div className="text-[9px] font-mono text-[var(--app-text-muted)] text-right mt-1 px-1 tracking-widest uppercase truncate shrink-0">
           {computeAudioSpecsText()}
         </div>
       </div>
+      </div>
 
       {/* Time Display */}
-      <TimeDisplay className="-mb-2" />
-      
-      <div className="@container flex flex-wrap items-center justify-between gap-y-2 gap-x-2 bg-[var(--app-bg-panel)] p-3 shadow-sm border-t border-[var(--app-border-base)]">
-        {/* Playback controls row */}
-        <div className="flex items-center gap-1">
+      <TimeDisplay className={`w-full shrink-0 relative pointer-events-none`} />
+
+      <div 
+        ref={(el) => {
+          if (!el) return;
+          const observer = new ResizeObserver((entries) => {
+            const height = entries[0].borderBoxSize?.[0]?.blockSize || entries[0].contentRect.height;
+            document.documentElement.style.setProperty('--media-controls-height', `${height}px`);
+          });
+          observer.observe(el);
+          return () => observer.disconnect();
+        }}
+        className={`flex flex-col w-full shrink-0 ${isMobile ? 'z-50 sticky mb-3 shadow-sm' : 'lg:static lg:z-auto'}`}
+        style={{ top: isMobile ? 'var(--header-height, 41px)' : undefined }}
+      >
+        
+        <div className="bg-[var(--app-bg-panel)] p-3 border-t border-[var(--app-border-base)] @container flex flex-wrap @[600px]:flex-nowrap w-full shrink-0">
+          {/* Playback controls row */}
+          <div className="flex items-center gap-1 py-1.5 px-3 flex-shrink-0 w-full @[600px]:w-auto border-b @[600px]:border-b-0 border-[var(--app-border-base)]">
           <div className="flex items-center gap-1.5">
             <Tooltip title={<div className="flex items-center gap-2">播放 / 暫停 <kbd className="bg-[var(--app-bg-base)] text-[var(--app-accent)] px-1.5 py-0.5 rounded text-[9px] font-mono border border-[var(--app-accent)]/50">P</kbd></div>} delay={500}>
               <button onClick={togglePlay} className="flex items-center justify-center w-10 h-10 text-[var(--app-text-primary)] hover:bg-[var(--app-accent)] hover:text-white rounded-full transition-colors border border-[var(--app-border-light)] bg-[var(--app-bg-input)] shadow-sm">
@@ -572,7 +602,7 @@ export function MediaPlayer() {
               </button>
             </Tooltip>
             {lines.length > 0 && (
-              <Tooltip title={<div className="flex items-center gap-2">跳到下一段歌詞開頭</div>} delay={500}>
+              <Tooltip title={<div className="flex items-center gap-2">跳到下一段歌詞</div>} delay={500}>
                 <button onClick={jumpToNextSegment} className="hidden @[300px]:block p-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-text-primary)] hover:bg-[var(--app-bg-hover)] rounded transition-colors">
                   <StepForward className="w-4 h-4" />
                 </button>
@@ -590,7 +620,7 @@ export function MediaPlayer() {
         </div>
         
         {/* Volume and Settings */}
-        <div className="flex items-center justify-between gap-2 flex-grow @[300px]:flex-grow-0 w-full @[300px]:w-auto">
+        <div className="flex items-center justify-between gap-2 p-1.5 px-3 flex-grow w-full @[600px]:w-auto shrink-0">
           <Tooltip title={`音量: ${Math.round((isMuted ? 0 : volume) * 100)}%`}>
             <div className="flex items-center gap-1.5 flex-1 min-w-[80px] max-w-[120px]">
               <button onClick={() => setIsMuted(!isMuted)} className="p-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-text-primary)] hover:bg-[var(--app-bg-hover)] rounded transition-colors shrink-0">
@@ -603,7 +633,7 @@ export function MediaPlayer() {
                   setVolume(parseFloat(e.target.value));
                   if (isMuted && parseFloat(e.target.value) > 0) setIsMuted(false);
                 }}
-                className="w-full min-w-[40px] accent-[var(--app-accent)] h-1.5 rounded-lg outline-none bg-[var(--app-bg-input)]"
+                className="w-full min-w-[40px] accent-[var(--app-accent)] h-1.5 rounded-lg outline-none bg-[var(--app-bg-input)] cursor-col-resize"
               />
             </div>
           </Tooltip>
@@ -663,6 +693,7 @@ export function MediaPlayer() {
               </div>
             )}
           </div>
+        </div>
         </div>
       </div>
     </div>

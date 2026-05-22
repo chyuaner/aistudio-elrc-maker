@@ -126,6 +126,7 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
     const isCapacitor = typeof window !== 'undefined' && !!(window as any).Capacitor;
     const hasScreenLock = typeof window !== 'undefined' && typeof screen !== 'undefined' && !!screen.orientation && typeof (screen.orientation as any).lock === 'function';
     const isMobile = typeof navigator !== 'undefined' && /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCanRotate(isCapacitor || (hasScreenLock && isMobile));
   }, []);
 

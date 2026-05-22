@@ -3,7 +3,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useEditor } from './EditorProvider';
 import { parseRawLyrics, exportLrc, exportSrt } from '@/lib/lyric-utils';
-import { Music, Download, ChevronDown, X, FileText, Maximize, Moon, Tag, Edit2, Hand, MoreVertical } from 'lucide-react';
+import { Music, Download, ChevronDown, X, FileText, Maximize, Moon, Tag, Edit2, Hand, MoreVertical, RotateCw } from 'lucide-react';
 import { UndoRedoControls } from './UndoRedo';
 import { useDialogs } from './DialogProvider';
 import { AppCommands } from '@/lib/app-commands';
@@ -119,6 +119,53 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
   const [isFocused, setIsFocused] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [orientationState, setOrientationState] = useState<'default' | 'portrait' | 'landscape' | 'auto'>('default');
+  const [canRotate, setCanRotate] = useState(false);
+
+  useEffect(() => {
+    const isCapacitor = typeof window !== 'undefined' && !!(window as any).Capacitor;
+    const hasScreenLock = typeof window !== 'undefined' && typeof screen !== 'undefined' && !!screen.orientation && typeof (screen.orientation as any).lock === 'function';
+    const isMobile = typeof navigator !== 'undefined' && /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+    setCanRotate(isCapacitor || (hasScreenLock && isMobile));
+  }, []);
+
+  const handleRotateScreen = React.useCallback(async () => {
+    let nextState: 'default' | 'portrait' | 'landscape' | 'auto' = 'default';
+    if (orientationState === 'default') {
+      nextState = 'portrait';
+    } else if (orientationState === 'portrait') {
+      nextState = 'landscape';
+    } else if (orientationState === 'landscape') {
+      nextState = 'auto';
+    } else if (orientationState === 'auto') {
+      nextState = 'portrait';
+    }
+
+    setOrientationState(nextState);
+
+    const isCapacitor = typeof window !== 'undefined' && !!(window as any).Capacitor;
+    if (isCapacitor) {
+      try {
+        const { registerPlugin } = await import('@capacitor/core');
+        const ThemeControl = registerPlugin<any>('ThemeControl');
+        await ThemeControl.setScreenOrientation({ orientation: nextState });
+      } catch (err) {
+        console.warn('Failed to set screen orientation via Capacitor:', err);
+      }
+    } else if (typeof window !== 'undefined' && typeof screen !== 'undefined' && screen.orientation && typeof (screen.orientation as any).lock === 'function') {
+      try {
+        if (nextState === 'portrait') {
+          await (screen.orientation as any).lock('portrait');
+        } else if (nextState === 'landscape') {
+          await (screen.orientation as any).lock('landscape');
+        } else if (nextState === 'auto') {
+          (screen.orientation as any).unlock();
+        }
+      } catch (err) {
+        console.warn('Failed to set screen orientation via HTML5 screen.orientation:', err);
+      }
+    }
+  }, [orientationState]);
 
   const MORE_MENU_ITEMS: { type: 'link' | 'action', label: string, url?: string, action?: () => void }[] = [
     // { type: 'link', label: 'Buy me a Coffee', url: 'https://buymeacoffee.com/' },
@@ -1074,6 +1121,20 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
                 className="p-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-text-primary)] hover:bg-[var(--app-bg-hover)] rounded transition-colors mr-1"
               >
                 <Moon className="w-4 h-4" />
+              </button>
+            )}
+            {canRotate && (
+              <button 
+                onClick={handleRotateScreen} 
+                title={
+                  orientationState === 'default' ? '旋轉螢幕 (系統預設)' :
+                  orientationState === 'portrait' ? '旋轉螢幕 (鎖定直向)' :
+                  orientationState === 'landscape' ? '旋轉螢幕 (鎖定橫向)' :
+                  '旋轉螢幕 (自動旋轉)'
+                }
+                className={`p-1.5 rounded transition-colors mr-1 ${orientationState === 'auto' ? 'text-[var(--app-accent)] bg-[var(--app-bg-hover)]' : 'text-[var(--app-text-muted)] hover:text-[var(--app-text-primary)] hover:bg-[var(--app-bg-hover)]'}`}
+              >
+                <RotateCw className="w-4 h-4" />
               </button>
             )}
             <button 

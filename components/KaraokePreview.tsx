@@ -268,10 +268,6 @@ export function KaraokePreview({ hideTouchUI = false }: { hideTouchUI?: boolean 
                        e.currentTarget.blur();
                        syncMode === 'line' ? handleLineStamp() : handleWordStamp();
                    }} 
-                   onTouchStart={(e) => {
-                       e.preventDefault();
-                       syncMode === 'line' ? handleLineStamp() : handleWordStamp();
-                   }}
                    className="flex-1 bg-[var(--app-accent)] hover:bg-[var(--app-accent-hover)] active:bg-[var(--app-accent-hover)] text-black rounded-lg shadow font-extrabold text-xl md:text-3xl select-none transition-all flex items-center justify-center -outline-offset-2 touch-manipulation focus:outline-none"
                  >
                    打點
@@ -282,10 +278,6 @@ export function KaraokePreview({ hideTouchUI = false }: { hideTouchUI?: boolean 
                      onClick={(e) => {
                          e.preventDefault();
                          e.currentTarget.blur();
-                         handleWordNextLine();
-                     }} 
-                     onTouchStart={(e) => {
-                         e.preventDefault();
                          handleWordNextLine();
                      }}
                      className="h-[3rem] bg-[var(--app-bg-panel)] hover:bg-[var(--app-bg-hover)] active:bg-[var(--app-border-base)] text-[var(--app-text-primary)] rounded-lg shadow font-extrabold text-lg md:text-xl border border-[var(--app-border-base)] select-none transition-all flex items-center justify-center -outline-offset-2 touch-manipulation focus:outline-none"

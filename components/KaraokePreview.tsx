@@ -94,7 +94,7 @@ export function KaraokePreview({ hideTouchUI = false }: { hideTouchUI?: boolean 
   const dragRef = useRef(false);
 
   useEffect(() => {
-    const onMouseMove = (e: MouseEvent) => {
+    const onPointerMove = (e: PointerEvent) => {
       if (!dragRef.current) return;
       // We are dragging the left edge of the right panel, so window.innerWidth - clientX is the width.
       // But actually, we shouldn't rely on window.innerWidth strictly because of the left panel width.
@@ -106,7 +106,7 @@ export function KaraokePreview({ hideTouchUI = false }: { hideTouchUI?: boolean 
       setTouchBtnWidth(Math.max(80, Math.min(document.body.clientWidth * 0.7, newWidth)));
     };
     
-    const onMouseUp = () => {
+    const onPointerUp = () => {
       if (dragRef.current) {
         dragRef.current = false;
         document.body.style.cursor = 'default';
@@ -114,11 +114,13 @@ export function KaraokePreview({ hideTouchUI = false }: { hideTouchUI?: boolean 
       }
     };
     
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup', onMouseUp);
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
+    window.addEventListener('pointercancel', onPointerUp);
     return () => {
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup', onMouseUp);
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+      window.removeEventListener('pointercancel', onPointerUp);
     };
   }, []);
 
@@ -251,9 +253,10 @@ export function KaraokePreview({ hideTouchUI = false }: { hideTouchUI?: boolean 
           {touchUIMode && !hideTouchUI && (
             <>
               <div 
-                className="w-4 -ml-2 -mr-2 cursor-col-resize flex justify-center items-center hover:bg-[var(--app-border-light)] hover:opacity-50 transition-colors z-10"
-                onMouseDown={() => {
+                className="w-4 -ml-2 -mr-2 cursor-col-resize flex justify-center items-center hover:bg-[var(--app-border-light)] hover:opacity-50 transition-colors z-10 touch-none"
+                onPointerDown={(e) => {
                   dragRef.current = true;
+                  e.currentTarget.setPointerCapture(e.pointerId);
                   document.body.style.cursor = 'col-resize';
                   document.body.classList.add('is-dragging-resizer');
                 }}

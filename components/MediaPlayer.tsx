@@ -263,7 +263,7 @@ export function MediaPlayer() {
            setIsWaveReady(true);
        });
 
-       const handleMouseMove = (e: MouseEvent) => {
+       const handlePointerMove = (e: PointerEvent) => {
           // 直接從 playerRef 讀取 duration，避免黃 closure 導致此 effect deps 包含 duration
           const dur = playerRef.current?.duration;
           if (containerRef.current && dur && dur > 0 && isFinite(dur)) {
@@ -275,15 +275,15 @@ export function MediaPlayer() {
           }
        };
 
-       const handleMouseLeave = () => setHoverTime(null);
+       const handlePointerLeave = () => setHoverTime(null);
 
        const container = containerRef.current;
-       container?.addEventListener('mousemove', handleMouseMove);
-       container?.addEventListener('mouseleave', handleMouseLeave);
+       container?.addEventListener('pointermove', handlePointerMove);
+       container?.addEventListener('pointerleave', handlePointerLeave);
 
        return () => {
-          container?.removeEventListener('mousemove', handleMouseMove);
-          container?.removeEventListener('mouseleave', handleMouseLeave);
+          container?.removeEventListener('pointermove', handlePointerMove);
+          container?.removeEventListener('pointerleave', handlePointerLeave);
           if (waveSurferRef.current) {
              waveSurferRef.current.destroy();
              waveSurferRef.current = null;
@@ -489,7 +489,7 @@ export function MediaPlayer() {
         
         <div className="flex flex-col p-2 lg:p-4 pb-0 lg:pb-0 shrink-0">
           {/* Waveform */}
-        <div className={`w-full rounded overflow-hidden bg-[var(--app-bg-input)] relative group/wave cursor-col-resize ${isWaveReady ? '' : 'hidden'} shrink-0 mb-2`} ref={containerRef}>
+        <div className={`w-full rounded overflow-hidden bg-[var(--app-bg-input)] relative group/wave cursor-col-resize touch-none ${isWaveReady ? '' : 'hidden'} shrink-0 mb-2`} ref={containerRef}>
           {hoverTime !== null && (
             <div 
               className="absolute z-[60] top-0 pointer-events-none transform -translate-x-1/2 px-1.5 py-0.5 bg-[var(--app-text-primary)] text-[var(--app-bg-base)] text-[10px] font-mono font-bold rounded shadow-lg whitespace-nowrap"
@@ -503,20 +503,31 @@ export function MediaPlayer() {
         {/* Fallback Progress Bar */}
         {!isWaveReady && (
           <div 
-             className="w-full h-12 flex items-center px-2 cursor-col-resize bg-[var(--app-bg-input)] rounded relative group/fb shrink-0 mb-2" 
-             onClick={(e) => {
+             className="w-full h-12 flex items-center px-2 cursor-col-resize bg-[var(--app-bg-input)] rounded relative group/fb shrink-0 mb-2 touch-none" 
+             onPointerDown={(e) => {
                if (duration <= 0) return;
+               e.currentTarget.setPointerCapture(e.pointerId);
                const rect = e.currentTarget.getBoundingClientRect();
                const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
                if (playerRef.current) playerRef.current.currentTime = ratio * duration;
              }}
-             onMouseMove={(e) => {
+             onPointerMove={(e) => {
                 if (duration <= 0) return;
                 const rect = e.currentTarget.getBoundingClientRect();
                 const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
                 setHoverTime(ratio * duration);
+                if (e.buttons === 1 && playerRef.current) {
+                   playerRef.current.currentTime = ratio * duration;
+                }
              }}
-             onMouseLeave={() => setHoverTime(null)}
+             onPointerLeave={() => setHoverTime(null)}
+             onPointerUp={(e) => {
+               e.currentTarget.releasePointerCapture(e.pointerId);
+             }}
+             onPointerCancel={(e) => {
+               e.currentTarget.releasePointerCapture(e.pointerId);
+               setHoverTime(null);
+             }}
           >
              <div className="w-full h-1.5 bg-[var(--app-border-base)] rounded-full overflow-hidden relative">
                 <div className="absolute top-0 bottom-0 left-0 bg-[var(--app-accent)]" style={{ width: `${(syncCurrTime / (duration || 1)) * 100}%` }}></div>

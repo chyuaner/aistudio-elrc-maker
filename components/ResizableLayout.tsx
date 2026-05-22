@@ -17,19 +17,20 @@ export function ResizableLayout() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const startDragging = (e: React.MouseEvent) => {
+  const startDragging = (e: React.PointerEvent) => {
     isDragging.current = true;
+    e.currentTarget.setPointerCapture(e.pointerId);
     document.body.style.cursor = 'col-resize';
     document.body.classList.add('is-dragging-resizer');
   };
 
-  const stopDragging = () => {
+  const stopDragging = (e?: globalThis.PointerEvent) => {
     isDragging.current = false;
     document.body.style.cursor = 'default';
     document.body.classList.remove('is-dragging-resizer');
   };
 
-  const onDrag = (e: globalThis.MouseEvent) => {
+  const onDrag = (e: globalThis.PointerEvent) => {
     if (!isDragging.current) return;
     const newWidth = e.clientX;
     if (newWidth > 200 && newWidth < window.innerWidth - 200) {
@@ -38,11 +39,13 @@ export function ResizableLayout() {
   };
 
   useEffect(() => {
-    window.addEventListener('mousemove', onDrag);
-    window.addEventListener('mouseup', stopDragging);
+    window.addEventListener('pointermove', onDrag);
+    window.addEventListener('pointerup', stopDragging);
+    window.addEventListener('pointercancel', stopDragging);
     return () => {
-      window.removeEventListener('mousemove', onDrag);
-      window.removeEventListener('mouseup', stopDragging);
+      window.removeEventListener('pointermove', onDrag);
+      window.removeEventListener('pointerup', stopDragging);
+      window.removeEventListener('pointercancel', stopDragging);
     };
   }, []);
 
@@ -66,8 +69,8 @@ export function ResizableLayout() {
       {/* Resizer */}
       {!isMobile && (
         <div 
-          onMouseDown={startDragging}
-          className="w-[8px] bg-transparent hover:bg-[var(--app-accent)] cursor-col-resize z-50 flex items-center justify-center transition-colors group mx-[-4px]"
+          onPointerDown={startDragging}
+          className="w-[8px] bg-transparent hover:bg-[var(--app-accent)] cursor-col-resize z-50 flex items-center justify-center transition-colors group mx-[-4px] touch-none"
         >
            <div className="w-0.5 h-8 bg-[var(--app-border-base)] group-hover:bg-[var(--app-text-primary)] text-[var(--app-bg-base)] rounded-full" />
         </div>

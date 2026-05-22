@@ -7,7 +7,9 @@ import { useI18n } from '@/hooks/useI18n';
 export function LeftPanelInfo() {
   const { metadata } = useEditor();
   const i18n = useI18n();
-  const [activeTab, setActiveTab] = useState<'instructions' | 'metadata'>('instructions');
+  const [activeTab, setActiveTab] = useState<'instructions' | 'metadata'>(
+    metadata ? 'metadata' : 'instructions'
+  );
   const [pictureIndex, setPictureIndex] = useState(0);
 
   // Switch to metadata tab when a file is loaded for the first time

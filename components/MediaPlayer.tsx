@@ -553,7 +553,7 @@ export function MediaPlayer() {
           return () => observer.disconnect();
         }}
         className={`flex flex-col w-full shrink-0 ${isMobile ? 'z-50 sticky shadow-sm' : 'lg:static lg:z-auto'}`}
-        style={{ top: isMobile ? 'var(--header-height, 41px)' : undefined }}
+        style={{ top: isMobile ? 0 : undefined }}
       >
         
         <div className="bg-[var(--app-bg-panel)] p-3 border-t border-[var(--app-border-base)] @container flex flex-wrap @[600px]:flex-nowrap w-full shrink-0">
@@ -676,7 +676,7 @@ export function MediaPlayer() {
             </Tooltip>
             
             {showSettings && (
-              <div className="absolute bottom-[calc(100%+8px)] right-0 mb-2 p-3 bg-[var(--app-bg-panel)] border border-[var(--app-border-base)] shadow-[0_4px_12px_rgba(0,0,0,0.5)] rounded-lg z-50 flex flex-col gap-2 w-[240px]">
+              <div className="absolute top-[calc(100%+8px)] right-0 mb-2 p-3 bg-[var(--app-bg-panel)] border border-[var(--app-border-base)] shadow-[0_4px_12px_rgba(0,0,0,0.5)] rounded-lg z-50 flex flex-col gap-2 w-[240px]">
                 <span className="text-xs font-bold text-[var(--app-text-secondary)]">音頻延遲補償 (藍牙耳機)</span>
                 <span className="text-[10px] text-[var(--app-text-muted)] leading-relaxed">調整此值以對齊音訊與顯示畫面，適用於藍牙耳機等有延遲的情境。正值提早，負值延後。</span>
                 <div className="flex items-center bg-[var(--app-bg-input)] rounded border border-[var(--app-border-base)] overflow-hidden mt-1 mx-auto">

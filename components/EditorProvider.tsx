@@ -223,8 +223,7 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const isTouch = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     if (isTouch) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setTouchUIMode(true);
+      setTimeout(() => setTouchUIMode(true), 0);
     }
   }, []);
 

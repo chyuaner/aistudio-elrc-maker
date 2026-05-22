@@ -161,7 +161,7 @@ export function KaraokePreview({ hideTouchUI = false }: { hideTouchUI?: boolean 
   return (
     <div 
       className="flex flex-col border-t border-b border-[var(--app-border-base)] bg-[var(--app-bg-panel-alt)] shrink-0 sticky lg:static z-[35] shadow-sm lg:shadow-none"
-      style={{ top: 'calc(var(--header-height, 41px) + var(--media-controls-height, 0px))' }}
+      style={{ top: 'calc(var(--media-controls-height, 0px))' }}
     >
       <div className="flex justify-center items-center px-4 py-2 relative">
         <label className="text-[10px] text-[var(--app-text-muted)] uppercase font-bold tracking-widest text-center cursor-pointer" onClick={() => setIsCollapsed(!isCollapsed)}>

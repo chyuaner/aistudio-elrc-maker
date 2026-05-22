@@ -90,6 +90,23 @@ export function WebSystemIntegration() {
       }
     }
     
+    const isCapacitor = typeof window !== 'undefined' && !!(window as any).Capacitor;
+
+    async function syncCapacitorStatusBar(color: string) {
+        if (!isCapacitor) return;
+        try {
+            const { StatusBar, Style } = await import('@capacitor/status-bar');
+            await StatusBar.setOverlaysWebView({ overlay: true });
+            
+            const isDark = color === '#16191E' || document.documentElement.classList.contains('dark');
+            await StatusBar.setStyle({
+                style: isDark ? Style.Dark : Style.Light,
+            });
+        } catch (err) {
+            console.warn('Failed to update Capacitor status bar:', err);
+        }
+    }
+
     function updateMetaThemeColor(color: string) {
         let metaThemeColor = document.querySelector('meta[name="theme-color"]:not([media])');
         if (!metaThemeColor) {
@@ -101,6 +118,10 @@ export function WebSystemIntegration() {
         document.querySelectorAll('meta[name="theme-color"][media]').forEach(el => el.remove());
         
         metaThemeColor.setAttribute("content", color);
+
+        if (isCapacitor) {
+            syncCapacitorStatusBar(color);
+        }
     }
     
     // Initialize Theme Meta Color

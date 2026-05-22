@@ -1230,7 +1230,7 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
         return () => observer.disconnect();
       }}
       className={`bg-[var(--app-bg-panel-alt)] border-b border-[var(--app-border-base)] shrink-0 relative select-none flex flex-col lg:flex-row lg:items-center lg:justify-between sticky top-0 z-[60] w-full transition-opacity duration-300 ${isElectron ? 'app-region-drag' : ''} ${unfocusedClass}`}
-      style={{ display: 'var(--top-toolbar-display, flex)' }}
+      style={{ display: 'var(--top-toolbar-display, flex)', paddingTop: 'env(safe-area-inset-top, 0px)' }}
       onDoubleClick={(e) => {
         if (!isElectron) return;
         const target = e.target as HTMLElement;

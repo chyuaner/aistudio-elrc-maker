@@ -23,12 +23,9 @@ export default function Page() {
         >
           <div className="flex flex-col flex-1 overflow-hidden relative" 
                style={{
-                 // Only adding borders when there's a safe area inset at the bottom or right.
-                 // We can use a pseudo-element or just the main wrapper borders, since we want borders separating the safe area from the app.
-                 // Actually the style is directly inside <div style={{ borderBottom: '1px solid var(--app-border-base)', borderRight: '1px solid var(--app-border-base)' }}
-                 borderBottom: 'max(0px, min(1px, env(safe-area-inset-bottom))) solid var(--app-border-base)',
-                 borderRight: 'max(0px, min(1px, env(safe-area-inset-right))) solid var(--app-border-base)',
-                 borderLeft: 'max(0px, min(1px, env(safe-area-inset-left))) solid var(--app-border-base)',
+                 borderBottom: '1px solid var(--app-border-base)',
+                 borderRight: '1px solid var(--app-border-base)',
+                 borderLeft: '1px solid var(--app-border-base)',
                }}
           >
             <TopToolbar />

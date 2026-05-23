@@ -426,13 +426,20 @@ export function MediaPlayer() {
     if (!playerRef.current) return;
     const curr = playerRef.current.currentTime;
     for (let i = 0; i < lines.length; i++) {
-      if (
-        paragraphStarts[i] &&
-        lines[i].start !== null &&
-        lines[i].start! > curr + 1.0
-      ) {
-        playerRef.current.currentTime = Math.max(0, lines[i].start! - 5.5);
-        break;
+      if (paragraphStarts[i] && lines[i].start !== null) {
+        const start = lines[i].start!;
+        const windowStart = start - 5.5;
+        const epsilon = 0.1;
+        
+        if (curr >= windowStart - epsilon && curr < start - epsilon) {
+          playerRef.current.currentTime = start;
+          return;
+        }
+        
+        if (curr < windowStart - epsilon) {
+          playerRef.current.currentTime = Math.max(0, windowStart);
+          return;
+        }
       }
     }
   };
@@ -870,7 +877,7 @@ export function MediaPlayer() {
               {formatTime(syncCurrTime)}
             </div>
 
-            <div className="flex items-center gap-0.5 relative shrink-0 settings-dropdown-container">
+            <div className="flex items-center gap-0.5 relative shrink-0 settings-dropdown-container z-[100]">
               <Tooltip
                 title={
                   <div className="flex items-center gap-2">

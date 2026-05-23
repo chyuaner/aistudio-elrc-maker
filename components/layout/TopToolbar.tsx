@@ -989,7 +989,7 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
       {renderButtonsRow('hidden lg:flex flex-1 z-30 relative')}
     </header>
     {/* Mobile Buttons — wrapped so --top-toolbar-display: none also hides this row on Linux Tauri */}
-    <div style={{ display: 'var(--top-toolbar-display, flex)' }} className={`transition-opacity duration-300 ${unfocusedClass}`}>
+    <div style={{ display: 'var(--top-toolbar-display, flex)' }} className={`transition-opacity duration-300 relative z-[100] ${unfocusedClass}`}>
       {renderButtonsRow('flex lg:hidden bg-[var(--app-bg-panel-alt)] border-b border-[var(--app-border-base)] shrink-0')}
     </div>
     

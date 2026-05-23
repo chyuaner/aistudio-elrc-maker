@@ -142,7 +142,7 @@ export function useFileActions() {
 
   const processLyricFile = useCallback(async (f: File) => {
     if (lines.length > 0) {
-      const confirmed = await dialogs.confirm('Loading a new lyrics file will discard your current ones. Continue?');
+      const confirmed = await dialogs.confirm('載入新的歌詞檔案將會覆蓋目前的歌詞。確定要繼續嗎？');
       if (!confirmed) return;
     }
     setLyricFileName(f.name);
@@ -311,7 +311,7 @@ export function useFileActions() {
 
   const clearMedia = useCallback(async () => {
     if (audioFileName) {
-      if (await dialogs.confirm('Are you sure you want to discard current media?')) {
+      if (await dialogs.confirm('確定要清除目前的媒體檔案嗎？')) {
         setFile(null);
         setMetadata(null);
         resetHistory([]);
@@ -323,7 +323,7 @@ export function useFileActions() {
 
   const clearLyrics = useCallback(async () => {
     if (lines.length > 0) {
-      if (await dialogs.confirm('Are you sure you want to discard current lyrics?')) {
+      if (await dialogs.confirm('確定要清除目前的歌詞嗎？')) {
         commitLines([], 'Clear Lyrics');
         setLyricFileName(null);
       }
@@ -333,7 +333,7 @@ export function useFileActions() {
   const loadEmbeddedLyrics = useCallback(async (metadata: any) => {
     if (metadata?.lyric) {
        if (lines.length > 0) {
-           const confirmed = await dialogs.confirm('Loading embedded lyrics will discard your current ones. Continue?');
+           const confirmed = await dialogs.confirm('載入內嵌歌詞將會覆蓋目前的歌詞。確定要繼續嗎？');
            if (!confirmed) return;
        }
        const parsed = parseRawLyrics(metadata.lyric);

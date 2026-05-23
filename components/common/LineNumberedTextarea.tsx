@@ -1,16 +1,22 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect } from "react";
 
 interface Props extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
   value: string;
   startLineNumber?: number;
 }
 
-export const LineNumberedTextarea = React.forwardRef<HTMLTextAreaElement, Props>(({ value, className, onChange, startLineNumber = 1, ...props }, ref) => {
+export const LineNumberedTextarea = React.forwardRef<
+  HTMLTextAreaElement,
+  Props
+>(({ value, className, onChange, startLineNumber = 1, ...props }, ref) => {
   const lineNumRef = useRef<HTMLDivElement>(null);
   const internalRef = useRef<HTMLTextAreaElement>(null);
 
-  const linesCount = value.split('\n').length;
-  const linesArr = Array.from({ length: Math.max(1, linesCount) }, (_, i) => i + startLineNumber);
+  const linesCount = value.split("\n").length;
+  const linesArr = Array.from(
+    { length: Math.max(1, linesCount) },
+    (_, i) => i + startLineNumber,
+  );
 
   const handleScroll = () => {
     if (internalRef.current && lineNumRef.current) {
@@ -18,9 +24,17 @@ export const LineNumberedTextarea = React.forwardRef<HTMLTextAreaElement, Props>
     }
   };
 
+  useEffect(() => {
+    if (internalRef.current) {
+      // Auto-resize textarea to prevent inner scrollbars on mobile tall screens
+      internalRef.current.style.height = "auto";
+      internalRef.current.style.height = `${internalRef.current.scrollHeight}px`;
+    }
+  }, [value]);
+
   const setRefs = (el: HTMLTextAreaElement) => {
     internalRef.current = el;
-    if (typeof ref === 'function') {
+    if (typeof ref === "function") {
       ref(el);
     } else if (ref) {
       (ref as React.MutableRefObject<HTMLTextAreaElement>).current = el;
@@ -28,18 +42,23 @@ export const LineNumberedTextarea = React.forwardRef<HTMLTextAreaElement, Props>
   };
 
   return (
-    <div className={`flex w-full h-full relative overflow-hidden bg-[var(--app-bg-input)] rounded border border-[var(--app-border-light)] ${className}`}>
-      <div 
+    <div
+      className={`flex w-full lg:h-full relative overflow-hidden bg-[var(--app-bg-input)] rounded border border-[var(--app-border-light)] lg:flex-1 ${className}`}
+    >
+      <div
         ref={lineNumRef}
         className="w-12 shrink-0 py-4 select-none flex flex-col items-end px-2 sm:px-3 text-xs font-mono text-[var(--app-text-muted)] bg-[var(--app-bg-panel-alt)] border-r border-[var(--app-border-base)] overflow-hidden"
       >
         {/* We add extra padding-bottom to match the textarea scroll height padding if needed */}
-        <div style={{ paddingBottom: '20vh' }}>
-            {linesArr.map(num => (
-            <div key={num} className="leading-relaxed min-h-[1.5rem] opacity-60">
-                {num}
+        <div style={{ paddingBottom: "20vh" }}>
+          {linesArr.map((num) => (
+            <div
+              key={num}
+              className="leading-relaxed min-h-[1.5rem] opacity-60"
+            >
+              {num}
             </div>
-            ))}
+          ))}
         </div>
       </div>
       <textarea
@@ -55,4 +74,4 @@ export const LineNumberedTextarea = React.forwardRef<HTMLTextAreaElement, Props>
   );
 });
 
-LineNumberedTextarea.displayName = 'LineNumberedTextarea';
+LineNumberedTextarea.displayName = "LineNumberedTextarea";

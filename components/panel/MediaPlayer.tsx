@@ -865,7 +865,7 @@ export function MediaPlayer() {
 
             {/* Compact Time Display */}
             <div 
-              className="font-mono text-[13px] tracking-tighter text-[var(--app-accent)] flex-1 text-center font-bold tabular-nums pointer-events-none select-none"
+              className={`font-mono text-[13px] tracking-tighter text-[var(--app-accent)] flex-1 text-center font-bold tabular-nums pointer-events-none select-none ${isMobile && !isTall ? '' : 'hidden'}`}
             >
               {formatTime(syncCurrTime)}
             </div>

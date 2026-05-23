@@ -575,7 +575,7 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
   const interactiveShellClass = isElectron ? 'app-region-no-drag' : '';
 
   const renderButtonsRow = (className: string) => (
-      <div className={`relative z-30 flex-row flex-wrap items-center justify-center lg:justify-between w-full px-2 py-2 gap-y-2 gap-x-4 ${className}`}>
+      <div className={`relative z-[200] flex-row flex-wrap items-center justify-center lg:justify-between w-full px-2 py-2 gap-y-2 gap-x-4 ${className}`}>
         {/* Left Group */}
         <div className={`flex items-center gap-2 flex-wrap justify-center lg:justify-start ${interactiveShellClass}`}>
           {renderTitlebarLeftSpacer('h-8')}
@@ -986,7 +986,7 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
       </div>
 
       {/* Desktop Buttons */}
-      {renderButtonsRow('hidden lg:flex flex-1 z-30 relative')}
+      {renderButtonsRow('hidden lg:flex flex-1 z-[200] relative')}
     </header>
     {/* Mobile Buttons — wrapped so --top-toolbar-display: none also hides this row on Linux Tauri */}
     <div style={{ display: 'var(--top-toolbar-display, flex)' }} className={`transition-opacity duration-300 relative z-[100] ${unfocusedClass}`}>

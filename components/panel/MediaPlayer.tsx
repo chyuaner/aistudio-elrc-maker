@@ -583,7 +583,7 @@ export function MediaPlayer() {
       <div
         className={
           isMobile
-            ? "flex flex-col shrink-0 w-full mb-2 bg-[var(--app-bg-input)]"
+            ? "flex flex-col shrink-0 w-full mb-2 bg-[var(--app-bg-input)] relative z-[60]"
             : "contents"
         }
       >

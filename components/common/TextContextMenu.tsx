@@ -19,20 +19,28 @@ export function TextContextMenu() {
       }
       const target = e.target as HTMLElement;
       
-      // Always prevent native context menu if it's within the web app
-      e.preventDefault();
-
       const isReadonlyElement = 
          target.closest('[data-context-menu="readonly"]') !== null ||
          (target.tagName === 'TEXTAREA' && (target as HTMLTextAreaElement).readOnly) ||
          (target.tagName === 'INPUT' && (target as HTMLInputElement).readOnly);
 
+      const isEditableInput = 
+         !isReadonlyElement && 
+         (target.tagName === 'TEXTAREA' || 
+         (target.tagName === 'INPUT' && ((target as HTMLInputElement).type === 'text' || (target as HTMLInputElement).type === 'number')) || 
+         target.isContentEditable);
+
+      if (isEditableInput) {
+          setVisible(false);
+          return; // Let the native context menu appear
+      }
+      
+      // Always prevent native context menu if it's within the web app (except for editable inputs above)
+      e.preventDefault();
+
       if (
         target &&
-        (target.tagName === 'TEXTAREA' ||
-          (target.tagName === 'INPUT' && ((target as HTMLInputElement).type === 'text' || (target as HTMLInputElement).type === 'number')) ||
-          target.isContentEditable ||
-          target.closest('[data-context-menu="readonly"]'))
+        target.closest('[data-context-menu="readonly"]')
       ) {
         targetElementRef.current = (target.closest('[data-context-menu="readonly"]') || target) as HTMLElement;
         setIsReadOnly(isReadonlyElement);

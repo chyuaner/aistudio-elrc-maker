@@ -51,7 +51,7 @@ function UndoRedoDropdown({
       </button>
 
       {open && (
-        <div className="absolute top-full left-0 mt-1 w-48 bg-[var(--app-bg-panel)] border border-[var(--app-border-base)] rounded shadow-xl z-50 overflow-hidden py-1">
+        <div className="absolute top-full left-0 mt-1 w-48 bg-[var(--app-bg-panel)] border border-[var(--app-border-base)] rounded shadow-xl z-[9999] overflow-hidden py-1">
           {Array.from({length: Math.min(count, 15)}, (_, i) => i + 1).map(n => {
             // For undo, list from latest to earliest (end of array backwards)
             // For redo, list from earliest to latest (start of array forwards)

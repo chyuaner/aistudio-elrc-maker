@@ -1038,7 +1038,7 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
             </div>
             
             {loadMediaDropdownOpen && (
-               <div className="absolute top-full left-0 mt-1 w-48 bg-[var(--app-bg-panel)] border border-[var(--app-border-base)] rounded shadow-xl z-50 overflow-hidden py-1">
+               <div className="absolute top-full left-0 mt-1 w-48 bg-[var(--app-bg-panel)] border border-[var(--app-border-base)] rounded shadow-xl z-[9999] overflow-hidden py-1">
                   <button 
                     disabled={!audioFileName}
                     onClick={() => { clearMedia(); setLoadMediaDropdownOpen(false); }}
@@ -1068,7 +1068,7 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
             </div>
             
             {loadDropdownOpen && (
-               <div className="absolute top-full left-0 mt-1 w-56 bg-[var(--app-bg-panel)] border border-[var(--app-border-base)] rounded shadow-xl z-50 overflow-hidden py-1">
+               <div className="absolute top-full left-0 mt-1 w-56 bg-[var(--app-bg-panel)] border border-[var(--app-border-base)] rounded shadow-xl z-[9999] overflow-hidden py-1">
                   <button className="w-full text-left px-3 py-2 text-xs text-[var(--app-text-secondary)] hover:bg-[var(--app-accent)] hover:text-black transition-colors" onClick={() => { lyricInputRef.current?.click(); setLoadDropdownOpen(false); }}>
                     {i18n.loadFileLyrics}
                   </button>
@@ -1163,7 +1163,7 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
              </div>
 
              {exportDropdownOpen && (
-               <div className="absolute top-full right-0 mt-1 w-max min-w-[14rem] bg-[var(--app-bg-panel)] border border-[var(--app-border-base)] rounded shadow-xl z-50 overflow-hidden py-1 whitespace-nowrap">
+               <div className="absolute top-full right-0 mt-1 w-max min-w-[14rem] bg-[var(--app-bg-panel)] border border-[var(--app-border-base)] rounded shadow-xl z-[9999] overflow-hidden py-1 whitespace-nowrap">
                   {AppCommands.getExportOptions().map((opt, i) => (
                       opt.action === 'separator' ? (
                           <div key={i} className="my-1 border-t border-[var(--app-border-base)] mx-2"></div>
@@ -1196,7 +1196,7 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
                <MoreVertical className="w-5 h-5" />
             </button>
             {moreMenuOpen && (
-               <div className="absolute top-full right-0 mt-1 w-max min-w-[12rem] bg-[var(--app-bg-panel)] border border-[var(--app-border-base)] rounded shadow-xl z-50 overflow-hidden py-1 whitespace-nowrap">
+               <div className="absolute top-full right-0 mt-1 w-max min-w-[12rem] bg-[var(--app-bg-panel)] border border-[var(--app-border-base)] rounded shadow-xl z-[9999] overflow-hidden py-1 whitespace-nowrap">
                   {MORE_MENU_ITEMS.map((opt, i) => {
                       if (opt.type === 'link' && opt.url) {
                         return (
@@ -1309,10 +1309,7 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
       }}
       className={`bg-[var(--app-bg-panel-alt)] border-b border-[var(--app-border-base)] shrink-0 relative select-none flex flex-col lg:flex-row lg:items-center lg:justify-between sticky top-0 z-[60] w-full transition-opacity duration-300 ${isElectron ? 'app-region-drag' : ''} ${unfocusedClass}`}
       style={{ 
-        display: 'var(--top-toolbar-display, flex)', 
-        paddingTop: 'env(safe-area-inset-top, 0px)',
-        paddingLeft: 'env(safe-area-inset-left, 0px)',
-        paddingRight: 'env(safe-area-inset-right, 0px)'
+        display: 'var(--top-toolbar-display, flex)'
       }}
       onDoubleClick={(e) => {
         if (!isElectron) return;

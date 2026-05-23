@@ -12,9 +12,25 @@ export default function Page() {
       <WebSystemIntegration />
       <TextContextMenu />
       <EditorProvider>
-        <main className="h-[100dvh] w-full bg-[var(--app-bg-base)] text-[var(--app-text-secondary)] font-sans flex flex-col overflow-hidden selection:bg-[var(--app-accent)]/30">
-          <TopToolbar />
-          <ResizableLayout />
+        <main 
+          className="h-[100dvh] w-full bg-[var(--app-bg-base)] text-[var(--app-text-secondary)] font-sans flex flex-col overflow-hidden selection:bg-[var(--app-accent)]/30"
+          style={{
+            paddingTop: 'env(safe-area-inset-top, 0px)',
+            paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+            paddingLeft: 'env(safe-area-inset-left, 0px)',
+            paddingRight: 'env(safe-area-inset-right, 0px)'
+          }}
+        >
+          <div className="flex flex-col flex-1 overflow-hidden" 
+               style={{
+                 borderBottom: '1px solid var(--app-border-base)',
+                 borderRight: '1px solid var(--app-border-base)',
+                 borderLeft: '1px solid var(--app-border-base)',
+               }}
+          >
+            <TopToolbar />
+            <ResizableLayout />
+          </div>
         </main>
       </EditorProvider>
     </DialogProvider>

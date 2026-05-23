@@ -104,7 +104,7 @@ export function SyncEditor() {
     syncMode, setSyncMode, setMode, hotkeys, commitLines, playerRef,
     dualLineGapSec, setDualLineGapSec,
     autoScrollEnabled, setAutoScrollEnabled, trackAssignments, paragraphStarts, shiftTimeFromIndex,
-    shiftTime
+    shiftTime, touchUIMode
   } = useEditor();
   
   const dialogs = useDialogs();
@@ -346,6 +346,7 @@ export function SyncEditor() {
         handleDeleteLine={handleDeleteLine}
         onMergeToPrevious={handleMergeToPrevious}
         onLineContextMenu={(e: React.MouseEvent, globalIndex: number) => {
+            if (touchUIMode) return;
             e.preventDefault();
             setActiveLineIndex(globalIndex);
             setActiveWordIndex(0);
@@ -358,6 +359,7 @@ export function SyncEditor() {
             setCtxMenu({ type: 'line', x: e.clientX, y: e.clientY, globalIndex });
         }}
         onWordContextMenu={(e: React.MouseEvent, globalIndex: number, wordIndex: number) => {
+            if (touchUIMode) return;
             e.preventDefault();
             setActiveLineIndex(globalIndex);
             setActiveWordIndex(wordIndex);
@@ -370,6 +372,7 @@ export function SyncEditor() {
             setCtxMenu({ type: 'word', x: e.clientX, y: e.clientY, globalIndex, wordIndex });
         }}
         onTimeContextMenu={(e: React.MouseEvent, globalIndex: number) => {
+            if (touchUIMode) return;
             e.preventDefault();
             setActiveLineIndex(globalIndex);
             setActiveWordIndex(0);
@@ -615,7 +618,7 @@ export function SyncEditor() {
 
       {ctxMenu && (
         <div 
-          className="fixed z-50 bg-[var(--app-bg-panel)] border border-[var(--app-border-base)] shadow-lg rounded-md min-w-[200px] text-xs font-sans max-h-[85vh] overflow-y-auto py-1"
+          className="fixed z-[9999] bg-[var(--app-bg-panel)] border border-[var(--app-border-base)] shadow-lg rounded-md min-w-[200px] text-xs font-sans max-h-[85vh] overflow-y-auto py-1"
           ref={(el) => {
               if (el && ctxMenu) {
                   const rect = el.getBoundingClientRect();

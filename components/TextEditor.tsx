@@ -82,26 +82,6 @@ export function TextEditor() {
     saveChanges();
   };
 
-  const convertToSimple = async () => {
-    const parsed = parseRawLyrics(text);
-    let metaStr = '';
-    for (const [key, value] of Object.entries(parsed.metadata)) {
-      if (value) metaStr += `[${key}:${value}]\n`;
-    }
-    const newText = metaStr + parsed.lines.map(l => l.words.map(w=>w.text).join('')).join('\n');
-    setText(newText);
-    isDirty.current = true;
-    saveChanges(newText);
-  };
-
-  const convertToStandard = async () => {
-    const parsed = parseRawLyrics(text);
-    const newText = exportLrc(parsed.lines, parsed.metadata, false, false); // force standard
-    setText(newText);
-    isDirty.current = true;
-    saveChanges(newText);
-  };
-
   return (
     <div className="flex flex-col h-full bg-[var(--app-bg-panel-alt)]">
       <div className="p-2 bg-[var(--app-bg-panel)] border-b border-[var(--app-border-base)] flex flex-wrap gap-2 items-center justify-between shrink-0">
@@ -117,7 +97,7 @@ export function TextEditor() {
                  setText(t => {
                      const next = convertToTraditional(t);
                      isDirty.current = true;
-                     saveChanges(next);
+                     setTimeout(() => saveChanges(next), 0);
                      return next;
                  });
              }}
@@ -131,7 +111,7 @@ export function TextEditor() {
                  setText(t => {
                      const next = convertToSimplified(t);
                      isDirty.current = true;
-                     saveChanges(next);
+                     setTimeout(() => saveChanges(next), 0);
                      return next;
                  });
              }}
@@ -143,13 +123,33 @@ export function TextEditor() {
            <div className="w-px bg-[var(--app-border-light)] opacity-50 my-1 mx-1"></div>
 
            <button 
-             onClick={convertToStandard}
+             onClick={() => {
+                setText(t => {
+                  const parsed = parseRawLyrics(t);
+                  const next = exportLrc(parsed.lines, parsed.metadata, false, false);
+                  isDirty.current = true;
+                  setTimeout(() => saveChanges(next), 0);
+                  return next;
+                });
+             }}
              className="px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded border border-[var(--app-border-light)] text-[var(--app-text-muted)] hover:text-orange-400 transition-colors"
            >
              轉成 標準LRC (逐行同步)
            </button>
            <button 
-             onClick={convertToSimple}
+             onClick={() => {
+                setText(t => {
+                  const parsed = parseRawLyrics(t);
+                  let metaStr = '';
+                  for (const [key, value] of Object.entries(parsed.metadata)) {
+                    if (value) metaStr += `[${key}:${value}]\n`;
+                  }
+                  const next = metaStr + parsed.lines.map(l => l.words.map(w=>w.text).join('')).join('\n');
+                  isDirty.current = true;
+                  setTimeout(() => saveChanges(next), 0);
+                  return next;
+                });
+             }}
              className="px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded border border-red-900/30 text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors"
            >
              轉成 簡易歌詞 (無時間戳)

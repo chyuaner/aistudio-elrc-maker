@@ -12,9 +12,11 @@ export function TextContextMenu() {
 
   useEffect(() => {
     const handleContextMenu = (e: MouseEvent) => {
+      if (window.matchMedia('(pointer: coarse)').matches) {
+          return;
+      }
       const target = e.target as HTMLElement;
       
-      const inApp = target.closest('#app-root') || document.body.contains(target); // Broad check, we just want to prevent native
       // Always prevent native context menu if it's within the web app
       e.preventDefault();
 

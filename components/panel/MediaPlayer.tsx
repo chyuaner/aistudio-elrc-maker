@@ -509,7 +509,7 @@ export function MediaPlayer() {
     try {
       // @ts-ignore
       navigator.mediaSession.setActionHandler(
-        "playbackratechange",
+        "playbackratechange" as any,
         (details: any) => {
           if (details.playbackRate) setPlaybackRate(details.playbackRate);
         },

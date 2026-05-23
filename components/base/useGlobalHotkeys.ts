@@ -89,15 +89,19 @@ export function useGlobalHotkeys() {
       } else if (e.key === 'ArrowRight') {
         e.preventDefault();
         player.currentTime = Math.min(player.duration, player.currentTime + 5);
-      } else if (e.key === 'ArrowUp' && mode === 'sync') {
+      } else if (e.key === 'ArrowUp' && (mode === 'sync' || mode === 'dual-sync' || mode === 'raw')) {
         e.preventDefault();
-        const scrollContainer = document.getElementById('sync-editor-scroll-container');
+        const scrollContainer = mode === 'raw' 
+            ? document.getElementById('raw-editor-scroll-container') 
+            : document.getElementById('sync-editor-scroll-container');
         if (scrollContainer) {
           scrollContainer.scrollBy({ top: -100, behavior: 'smooth' });
         }
-      } else if (e.key === 'ArrowDown' && mode === 'sync') {
+      } else if (e.key === 'ArrowDown' && (mode === 'sync' || mode === 'dual-sync' || mode === 'raw')) {
         e.preventDefault();
-        const scrollContainer = document.getElementById('sync-editor-scroll-container');
+        const scrollContainer = mode === 'raw' 
+            ? document.getElementById('raw-editor-scroll-container') 
+            : document.getElementById('sync-editor-scroll-container');
         if (scrollContainer) {
           scrollContainer.scrollBy({ top: 100, behavior: 'smooth' });
         }

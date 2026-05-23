@@ -91,19 +91,32 @@ export function useGlobalHotkeys() {
         player.currentTime = Math.min(player.duration, player.currentTime + 5);
       } else if (e.key === 'ArrowUp' && (mode === 'sync' || mode === 'dual-sync' || mode === 'raw')) {
         e.preventDefault();
+        const mainContainer = document.getElementById('main-scroll-container');
         const scrollContainer = mode === 'raw' 
             ? document.getElementById('raw-editor-scroll-container') 
             : document.getElementById('sync-editor-scroll-container');
-        if (scrollContainer) {
-          scrollContainer.scrollBy({ top: -100, behavior: 'smooth' });
+        
+        // Use main container if it's currently scrolling the view (narrow mode), otherwise use the specific panel container
+        const targetContainer = (mainContainer && mainContainer.scrollHeight > mainContainer.clientHeight) 
+            ? mainContainer 
+            : scrollContainer;
+
+        if (targetContainer) {
+          targetContainer.scrollBy({ top: -100, behavior: 'smooth' });
         }
       } else if (e.key === 'ArrowDown' && (mode === 'sync' || mode === 'dual-sync' || mode === 'raw')) {
         e.preventDefault();
+        const mainContainer = document.getElementById('main-scroll-container');
         const scrollContainer = mode === 'raw' 
             ? document.getElementById('raw-editor-scroll-container') 
             : document.getElementById('sync-editor-scroll-container');
-        if (scrollContainer) {
-          scrollContainer.scrollBy({ top: 100, behavior: 'smooth' });
+            
+        const targetContainer = (mainContainer && mainContainer.scrollHeight > mainContainer.clientHeight) 
+            ? mainContainer 
+            : scrollContainer;
+
+        if (targetContainer) {
+          targetContainer.scrollBy({ top: 100, behavior: 'smooth' });
         }
       }
 

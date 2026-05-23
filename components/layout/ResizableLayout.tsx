@@ -55,6 +55,7 @@ export function ResizableLayout() {
 
   return (
     <div
+      id="main-scroll-container"
       className={`flex-1 flex flex-col lg:flex-row lg:overflow-hidden border-t border-[var(--app-border-base)] relative ${isMobile && !isTall ? "overflow-y-auto custom-scrollbar" : "overflow-hidden"}`}
     >
       {/* Left side: Media Player Component and Info Tabs */}

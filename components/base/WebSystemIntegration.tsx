@@ -129,6 +129,14 @@ export function WebSystemIntegration() {
     }
 
     function updateMetaThemeColor(color: string) {
+        let themeColor = color;
+        if (typeof window !== 'undefined') {
+            const cssVar = getComputedStyle(document.documentElement).getPropertyValue('--app-bg-panel-alt').trim();
+            if (cssVar && /^#[0-9a-fA-F]{6}$/.test(cssVar)) {
+                themeColor = cssVar;
+            }
+        }
+
         let metaThemeColor = document.querySelector('meta[name="theme-color"]:not([media])');
         if (!metaThemeColor) {
             metaThemeColor = document.createElement("meta");
@@ -138,10 +146,10 @@ export function WebSystemIntegration() {
         
         document.querySelectorAll('meta[name="theme-color"][media]').forEach(el => el.remove());
         
-        metaThemeColor.setAttribute("content", color);
+        metaThemeColor.setAttribute("content", themeColor);
 
         if (isCapacitor) {
-            syncCapacitorStatusBar(color);
+            syncCapacitorStatusBar(themeColor);
         }
     }
     
@@ -151,7 +159,12 @@ export function WebSystemIntegration() {
     
     // Initial sync
     let isCurrentlyDarkInit = root.classList.contains('dark') || (!root.classList.contains('light') && isSystemDarkQuery.matches);
-    updateMetaThemeColor(isCurrentlyDarkInit ? '#16191E' : '#f0f2f5');
+    const defaultFallback = isCurrentlyDarkInit ? '#16191E' : '#f0f2f5';
+    setTimeout(() => {
+        const cssVar = getComputedStyle(root).getPropertyValue('--app-bg-panel-alt').trim();
+        updateMetaThemeColor(cssVar || defaultFallback);
+    }, 0);
+    
     if (isTauri) {
         (window as any).__TAURI__.core.invoke('set_gtk_theme', { theme: isCurrentlyDarkInit ? 'dark' : 'light' }).catch(() => {});
     }
@@ -159,7 +172,10 @@ export function WebSystemIntegration() {
     // Also listen to system theme changes dynamically if no forced theme!
     isSystemDarkQuery.addEventListener('change', (e) => {
         if (!root.classList.contains('dark') && !root.classList.contains('light')) {
-             updateMetaThemeColor(e.matches ? '#16191E' : '#f0f2f5');
+             setTimeout(() => {
+                 const cssVar = getComputedStyle(root).getPropertyValue('--app-bg-panel-alt').trim();
+                 updateMetaThemeColor(cssVar || (e.matches ? '#16191E' : '#f0f2f5'));
+             }, 0);
              if (isTauri) {
                  (window as any).__TAURI__.core.invoke('set_gtk_theme', { theme: e.matches ? 'dark' : 'light' }).catch(() => {});
              }
@@ -181,7 +197,10 @@ export function WebSystemIntegration() {
             root.classList.remove('light');
             root.classList.add('dark');
             root.style.colorScheme = 'dark';
-            updateMetaThemeColor('#16191E');
+            setTimeout(() => {
+                const cssVar = getComputedStyle(root).getPropertyValue('--app-bg-panel-alt').trim();
+                updateMetaThemeColor(cssVar || '#16191E');
+            }, 0);
             if (isTauri) {
                 (window as any).__TAURI__.core.invoke('set_gtk_theme', { theme: 'dark' }).catch(() => {});
             }
@@ -189,7 +208,10 @@ export function WebSystemIntegration() {
             root.classList.remove('dark');
             root.classList.add('light');
             root.style.colorScheme = 'light';
-            updateMetaThemeColor('#f0f2f5');
+            setTimeout(() => {
+                const cssVar = getComputedStyle(root).getPropertyValue('--app-bg-panel-alt').trim();
+                updateMetaThemeColor(cssVar || '#f0f2f5');
+            }, 0);
             if (isTauri) {
                 (window as any).__TAURI__.core.invoke('set_gtk_theme', { theme: 'light' }).catch(() => {});
             }

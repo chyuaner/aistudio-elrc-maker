@@ -14,7 +14,15 @@ export function TextContextMenu() {
 
   useEffect(() => {
     const handleContextMenu = (e: MouseEvent) => {
+      // 在觸控模式或行動裝置下，不攔截原生的長按選單
+      if (touchUIMode || window.matchMedia('(pointer: coarse)').matches) {
+          return;
+      }
+
       const target = e.target as HTMLElement;
+      
+      // 當在非觸控模式時，阻擋預設的右鍵選單
+      e.preventDefault();
       
       const isReadonlyElement = 
          target.closest('[data-context-menu="readonly"]') !== null ||
@@ -27,18 +35,7 @@ export function TextContextMenu() {
          (target.tagName === 'INPUT' && ((target as HTMLInputElement).type === 'text' || (target as HTMLInputElement).type === 'number')) || 
          target.isContentEditable);
 
-      if (isEditableInput) {
-          setVisible(false);
-          return; // Let the native context menu appear
-      }
-      
-      // Always prevent native context menu if it's within the web app (except for editable inputs above)
-      e.preventDefault();
-
-      if (
-        target &&
-        target.closest('[data-context-menu="readonly"]')
-      ) {
+      if (isEditableInput || target.closest('[data-context-menu="readonly"]')) {
         targetElementRef.current = (target.closest('[data-context-menu="readonly"]') || target) as HTMLElement;
         setIsReadOnly(isReadonlyElement);
         

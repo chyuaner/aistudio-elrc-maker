@@ -8,10 +8,14 @@ import { EditorView } from '@/components/layout/EditorView';
 export function ResizableLayout() {
   const [leftWidth, setLeftWidth] = useState(380);
   const [isMobile, setIsMobile] = useState(false);
+  const [isTall, setIsTall] = useState(false);
   const isDragging = useRef(false);
 
   useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 1024);
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 1024);
+      setIsTall(window.innerHeight > 1110);
+    };
     handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
@@ -50,13 +54,13 @@ export function ResizableLayout() {
   }, []);
 
   return (
-    <div className={`flex-1 flex flex-col lg:flex-row lg:overflow-hidden border-t border-[var(--app-border-base)] relative ${isMobile ? 'overflow-y-auto custom-scrollbar' : ''}`}>
+    <div className={`flex-1 flex flex-col lg:flex-row lg:overflow-hidden border-t border-[var(--app-border-base)] relative ${isMobile && !isTall ? 'overflow-y-auto custom-scrollbar' : 'overflow-hidden'}`}>
       {/* Left side: Media Player Component and Info Tabs */}
         <div 
           style={isMobile ? undefined : { width: `${leftWidth}px`, minWidth: `${leftWidth}px` }} 
-          className={isMobile ? 'contents' : 'flex flex-col lg:border-r border-[var(--app-border-base)] bg-[var(--app-bg-panel-alt)] shrink-0 w-full lg:w-auto z-10 lg:h-full lg:overflow-hidden relative'}
+          className={isMobile && !isTall ? 'contents' : 'flex flex-col lg:border-r border-[var(--app-border-base)] bg-[var(--app-bg-panel-alt)] shrink-0 w-full lg:w-auto z-10 lg:h-full lg:overflow-hidden relative'}
         >
-          <div className={isMobile ? 'contents' : 'bg-[var(--app-bg-input)] lg:border-b border-[var(--app-border-base)] p-0 flex flex-col justify-center shrink-0'}>
+          <div className={isMobile && !isTall ? 'contents' : 'bg-[var(--app-bg-input)] lg:border-b border-[var(--app-border-base)] p-0 flex flex-col justify-center shrink-0'}>
             <MediaPlayer />
           </div>
           {!isMobile && (
@@ -78,7 +82,7 @@ export function ResizableLayout() {
           
         {/* Right side: Editor View */}
         <div 
-          className={isMobile ? 'contents' : 'flex-1 lg:h-full flex flex-col bg-[var(--app-bg-base)] lg:overflow-hidden min-w-0 relative z-30 lg:w-auto w-full'}
+          className={isMobile && !isTall ? 'contents' : 'flex-1 h-full flex flex-col bg-[var(--app-bg-base)] overflow-hidden min-w-0 relative z-30 lg:w-auto w-full'}
         >
            <EditorView />
         </div>

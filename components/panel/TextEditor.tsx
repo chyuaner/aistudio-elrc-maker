@@ -107,8 +107,19 @@ export function TextEditor() {
     saveChanges();
   };
 
+  const [isResponsiveTall, setIsResponsiveTall] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsResponsiveTall(window.innerWidth >= 1024 || window.innerHeight > 1110);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   return (
-    <div className="flex flex-col flex-1 min-h-[50vh] lg:min-h-0 lg:h-full bg-[var(--app-bg-panel-alt)]">
+    <div className={`flex flex-col flex-1 ${isResponsiveTall ? 'min-h-0 h-full' : 'min-h-[50vh]'} bg-[var(--app-bg-panel-alt)]`}>
       <div className="p-2 bg-[var(--app-bg-panel)] border-b border-[var(--app-border-base)] flex flex-wrap gap-2 items-center justify-between shrink-0">
         <div className="flex items-center">
           <span className="px-3 py-1 bg-[var(--app-border-base)] rounded text-[10px] font-bold uppercase tracking-widest border border-[var(--app-border-light)] text-[var(--app-text-secondary)]">

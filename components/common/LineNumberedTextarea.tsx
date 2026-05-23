@@ -24,13 +24,29 @@ export const LineNumberedTextarea = React.forwardRef<
     }
   };
 
+  const [isResponsiveTall, setIsResponsiveTall] = React.useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsResponsiveTall(window.innerWidth >= 1024 || window.innerHeight > 1110);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   useEffect(() => {
     if (internalRef.current) {
-      // Auto-resize textarea to prevent inner scrollbars on mobile tall screens
-      internalRef.current.style.height = "auto";
-      internalRef.current.style.height = `${internalRef.current.scrollHeight}px`;
+      if (!isResponsiveTall) {
+        // Auto-resize textarea to prevent inner scrollbars on mobile tall screens
+        internalRef.current.style.height = 'auto';
+        internalRef.current.style.height = `${internalRef.current.scrollHeight}px`;
+      } else {
+        // Restore default height
+        internalRef.current.style.height = '100%';
+      }
     }
-  }, [value]);
+  }, [value, isResponsiveTall]);
 
   const setRefs = (el: HTMLTextAreaElement) => {
     internalRef.current = el;
@@ -43,7 +59,7 @@ export const LineNumberedTextarea = React.forwardRef<
 
   return (
     <div
-      className={`flex w-full lg:h-full relative overflow-hidden bg-[var(--app-bg-input)] rounded border border-[var(--app-border-light)] lg:flex-1 ${className}`}
+      className={`flex w-full relative overflow-hidden bg-[var(--app-bg-input)] rounded border border-[var(--app-border-light)] ${isResponsiveTall ? 'h-full flex-1' : ''} ${className}`}
     >
       <div
         ref={lineNumRef}

@@ -113,6 +113,19 @@ export function SyncEditor() {
   const i18n = useI18n();
   
   const containerRef = useRef<HTMLDivElement>(null);
+  
+  const [isTall, setIsTall] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 1024);
+      setIsTall(window.innerHeight > 1110);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     if (containerRef.current && autoScrollEnabled) {
@@ -590,10 +603,10 @@ export function SyncEditor() {
       <div 
         ref={containerRef}
         id="sync-editor-scroll-container"
-        className="flex-1 lg:overflow-y-auto w-full custom-scrollbar"
+        className={`flex-1 w-full custom-scrollbar ${(!isMobile || isTall) ? 'overflow-y-auto' : ''}`}
       >
         <table className="w-full text-left text-xs border-collapse table-fixed">
-          <thead className="lg:sticky lg:top-0 bg-[var(--app-bg-panel)] text-[var(--app-text-muted)] z-10 text-[10px] uppercase tracking-widest font-bold outline outline-1 outline-b-[var(--app-border-base)]">
+          <thead className={`${(!isMobile || isTall) ? 'sticky top-0' : ''} bg-[var(--app-bg-panel)] text-[var(--app-text-muted)] z-10 text-[10px] uppercase tracking-widest font-bold outline outline-1 outline-b-[var(--app-border-base)]`}>
             <tr>
               {isDual ? (
                 <>

@@ -14,11 +14,13 @@ export function EditorView() {
   useGlobalHotkeys();
 
   const [isNarrow, setIsNarrow] = useState(false);
+  const [isTall, setIsTall] = useState(false);
 
   useEffect(() => {
     const handleResize = () => {
       const narrow = window.innerWidth < 768; // sm
       setIsNarrow(narrow);
+      setIsTall(window.innerHeight > 1110);
       if (narrow && mode === 'dual-sync') {
          setMode('sync');
       }
@@ -29,8 +31,8 @@ export function EditorView() {
   }, [mode, setMode]);
 
   return (
-    <div className="contents lg:flex-1 lg:w-full lg:h-full lg:overflow-hidden lg:flex lg:flex-col">
-      <div className="flex bg-[var(--app-bg-panel)] border-b border-[var(--app-border-base)] shrink-0 z-20 lg:static">
+    <div className={(isNarrow && !isTall) ? "contents" : "flex-1 w-full h-full overflow-hidden flex flex-col"}>
+      <div className={`flex bg-[var(--app-bg-panel)] border-b border-[var(--app-border-base)] shrink-0 z-20 ${isNarrow && !isTall ? 'static' : ''}`}>
         <button
           onClick={() => setMode('text')}
           className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-widest border-b-2 hover:bg-[var(--app-bg-hover)] transition-colors ${mode === 'text' ? 'border-[var(--app-accent)] text-[var(--app-accent)]' : 'border-transparent text-[var(--app-text-muted)] hover:text-[var(--app-text-secondary)]'}`}
@@ -59,7 +61,7 @@ export function EditorView() {
         </button>
       </div>
 
-      <div className="contents lg:flex-1 lg:overflow-hidden lg:flex lg:flex-col">
+      <div className={(isNarrow && !isTall) ? "contents" : "flex-1 overflow-hidden flex flex-col"}>
         {mode === 'text' && <TextEditor />}
         {(mode === 'sync' || mode === 'dual-sync') && <SyncEditor />}
         {mode === 'raw' && <RawTextDisplay />}

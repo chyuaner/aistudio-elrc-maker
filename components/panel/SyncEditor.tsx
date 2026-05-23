@@ -6,6 +6,7 @@ import { KaraokePreview } from '@/components/panel/KaraokePreview';
 import { Tooltip } from '@/components/common/Tooltip';
 import { Edit2, Trash2, X, ArrowRight, MoreVertical, ArrowUpFromLine, Copy, Play, SplitSquareVertical, Clock, Scissors, Type, Plus, FileText, Eraser, SlidersHorizontal, Settings2 } from 'lucide-react';
 
+import { ContextMenu, ContextMenuItem, ContextMenuSeparator } from '@/components/common/ContextMenu';
 import { useAutoScroll } from '@/components/base/useAutoScroll';
 import { useDialogs } from '@/components/dialog/DialogProvider';
 import { useI18n } from '@/hooks/useI18n';
@@ -627,56 +628,38 @@ export function SyncEditor() {
       </div>
 
       {ctxMenu && (
-        <div 
-          className="fixed z-[9999] bg-[var(--app-bg-panel)] border border-[var(--app-border-base)] shadow-lg rounded-md min-w-[200px] text-xs font-sans max-h-[85vh] overflow-y-auto py-1"
-          ref={(el) => {
-              if (el && ctxMenu) {
-                  const rect = el.getBoundingClientRect();
-                  if (ctxMenu.y + rect.height > window.innerHeight) {
-                      el.style.top = 'auto';
-                      el.style.bottom = '10px';
-                  } else {
-                      el.style.top = `${ctxMenu.y}px`;
-                      el.style.bottom = 'auto';
-                  }
-                  if (ctxMenu.x + rect.width > window.innerWidth) {
-                      el.style.left = 'auto';
-                      el.style.right = '10px';
-                  } else {
-                      el.style.left = `${ctxMenu.x}px`;
-                      el.style.right = 'auto';
-                  }
-              }
-          }}
-          style={{ visibility: 'visible' }}
-          onClick={(e) => e.stopPropagation()}
+        <ContextMenu
+          x={ctxMenu.x}
+          y={ctxMenu.y}
+          onClose={() => setCtxMenu(null)}
+          className="max-h-[85vh] overflow-y-auto"
         >
           {ctxMenu.type === 'line' && (
             <>
-              <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors flex items-center gap-2" onClick={() => { handleJumpTo(ctxMenu.globalIndex); setCtxMenu(null); }}><Play className="w-3.5 h-3.5" /> 歌曲跳轉至該行開頭</button>
-              <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors flex items-center gap-2" onClick={() => { navigator.clipboard.writeText(getLineText(lines[ctxMenu.globalIndex])); setCtxMenu(null); }}><Copy className="w-3.5 h-3.5" /> 複製這行字</button>
-              <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors flex items-center gap-2" onClick={() => { navigator.clipboard.writeText(lines[ctxMenu.globalIndex]?.start !== null ? formatTime(lines[ctxMenu.globalIndex].start!) : ''); setCtxMenu(null); }}><Clock className="w-3.5 h-3.5" /> 複製時間戳</button>
-              <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors flex items-center gap-2" onClick={() => { navigator.clipboard.writeText(getLineRawText(lines[ctxMenu.globalIndex])); setCtxMenu(null); }}><Copy className="w-3.5 h-3.5 opacity-70" /> 複製這行字RAW（含時間戳）</button>
-              <div className="h-px bg-[var(--app-border-base)] my-1"></div>
-              <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors flex items-center gap-2" onClick={() => { handleEditTextOnly(ctxMenu.globalIndex); setCtxMenu(null); }}><Type className="w-3.5 h-3.5" /> 編輯這行字</button>
-              <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors flex items-center gap-2" onClick={() => { handleEditRawText(ctxMenu.globalIndex); setCtxMenu(null); }}><Edit2 className="w-3.5 h-3.5" /> 編輯這行字RAW（含時間戳）</button>
-              <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors flex items-center gap-2" onClick={() => { handleLineConvertToTraditional(ctxMenu.globalIndex); setCtxMenu(null); }}><span className="w-3.5 h-3.5 flex items-center justify-center font-bold text-[10px]">繁</span>這行字轉繁體</button>
-              <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors flex items-center gap-2" onClick={() => { handleLineConvertToSimplified(ctxMenu.globalIndex); setCtxMenu(null); }}><span className="w-3.5 h-3.5 flex items-center justify-center font-bold text-[10px]">簡</span>這行字轉簡體</button>
-              <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors flex items-center gap-2" onClick={() => { 
+              <ContextMenuItem icon={<Play className="w-3.5 h-3.5" />} label="歌曲跳轉至該行開頭" onClick={() => { handleJumpTo(ctxMenu.globalIndex); setCtxMenu(null); }} />
+              <ContextMenuItem icon={<Copy className="w-3.5 h-3.5" />} label="複製這行字" onClick={() => { navigator.clipboard.writeText(getLineText(lines[ctxMenu.globalIndex])); setCtxMenu(null); }} />
+              <ContextMenuItem icon={<Clock className="w-3.5 h-3.5" />} label="複製時間戳" onClick={() => { navigator.clipboard.writeText(lines[ctxMenu.globalIndex]?.start !== null ? formatTime(lines[ctxMenu.globalIndex].start!) : ''); setCtxMenu(null); }} />
+              <ContextMenuItem icon={<Copy className="w-3.5 h-3.5 opacity-70" />} label="複製這行字RAW（含時間戳）" onClick={() => { navigator.clipboard.writeText(getLineRawText(lines[ctxMenu.globalIndex])); setCtxMenu(null); }} />
+              <ContextMenuSeparator />
+              <ContextMenuItem icon={<Type className="w-3.5 h-3.5" />} label="編輯這行字" onClick={() => { handleEditTextOnly(ctxMenu.globalIndex); setCtxMenu(null); }} />
+              <ContextMenuItem icon={<Edit2 className="w-3.5 h-3.5" />} label="編輯這行字RAW（含時間戳）" onClick={() => { handleEditRawText(ctxMenu.globalIndex); setCtxMenu(null); }} />
+              <ContextMenuItem icon={<span className="w-3.5 h-3.5 flex items-center justify-center font-bold text-[10px]">繁</span>} label="這行字轉繁體" onClick={() => { handleLineConvertToTraditional(ctxMenu.globalIndex); setCtxMenu(null); }} />
+              <ContextMenuItem icon={<span className="w-3.5 h-3.5 flex items-center justify-center font-bold text-[10px]">簡</span>} label="這行字轉簡體" onClick={() => { handleLineConvertToSimplified(ctxMenu.globalIndex); setCtxMenu(null); }} />
+              <ContextMenuItem icon={<FileText className="w-3.5 h-3.5" />} label="到編輯原始文字" onClick={() => { 
                 const targetIndex = ctxMenu.globalIndex;
                 setCtxMenu(null);
                 setMode('text');
                 setTimeout(() => window.dispatchEvent(new CustomEvent('focus-raw-text-line', { detail: { lineIndex: targetIndex } })), 50);
-              }}><FileText className="w-3.5 h-3.5" /> 到編輯原始文字</button>
-              <div className="h-px bg-[var(--app-border-base)] my-1"></div>
-              <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors flex items-center gap-2" onClick={() => { handleInsertLineBefore(ctxMenu.globalIndex); setCtxMenu(null); }}><Plus className="w-3.5 h-3.5" /> 插入上一行</button>
-              <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors flex items-center gap-2" onClick={() => { handleInsertLineAfter(ctxMenu.globalIndex); setCtxMenu(null); }}><Plus className="w-3.5 h-3.5" /> 插入下一行</button>
-              <div className="h-px bg-[var(--app-border-base)] my-1"></div>
-              <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors flex items-center gap-2" onClick={() => { handleMergeToPrevious(ctxMenu.globalIndex); setCtxMenu(null); }}><ArrowUpFromLine className="w-3.5 h-3.5" /> 合併到上一行</button>
-              <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors flex items-center gap-2" onClick={() => { handleOffsetFromHere(ctxMenu.globalIndex); setCtxMenu(null); }}><ArrowRight className="w-3.5 h-3.5" /> 平移後續時間</button>
-              <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors text-red-400 flex items-center gap-2" onClick={() => { handleClearTime(ctxMenu.globalIndex); setCtxMenu(null); }}><X className="w-3.5 h-3.5" /> 清除時間戳</button>
-              <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors text-red-500 flex items-center gap-2" onClick={() => { handleDeleteLine(ctxMenu.globalIndex); setCtxMenu(null); }}><Trash2 className="w-3.5 h-3.5" /> 刪除行</button>
-              <div className="px-3 py-2 flex flex-col gap-0.5 border-t border-[var(--app-border-base)]/50 mb-1">
+              }} />
+              <ContextMenuSeparator />
+              <ContextMenuItem icon={<Plus className="w-3.5 h-3.5" />} label="插入上一行" onClick={() => { handleInsertLineBefore(ctxMenu.globalIndex); setCtxMenu(null); }} />
+              <ContextMenuItem icon={<Plus className="w-3.5 h-3.5" />} label="插入下一行" onClick={() => { handleInsertLineAfter(ctxMenu.globalIndex); setCtxMenu(null); }} />
+              <ContextMenuSeparator />
+              <ContextMenuItem icon={<ArrowUpFromLine className="w-3.5 h-3.5" />} label="合併到上一行" onClick={() => { handleMergeToPrevious(ctxMenu.globalIndex); setCtxMenu(null); }} />
+              <ContextMenuItem icon={<ArrowRight className="w-3.5 h-3.5" />} label="平移後續時間" onClick={() => { handleOffsetFromHere(ctxMenu.globalIndex); setCtxMenu(null); }} />
+              <ContextMenuItem danger icon={<X className="w-3.5 h-3.5" />} label="清除時間戳" onClick={() => { handleClearTime(ctxMenu.globalIndex); setCtxMenu(null); }} />
+              <ContextMenuItem danger icon={<Trash2 className="w-3.5 h-3.5" />} label="刪除行" onClick={() => { handleDeleteLine(ctxMenu.globalIndex); setCtxMenu(null); }} />
+              <div className="px-3 py-2 flex flex-col gap-0.5 border-t border-[var(--app-border-base)]/50 mb-1 pointer-events-none">
                  <div className="flex items-center justify-between gap-4">
                      <span className="text-[10px] text-[var(--app-text-muted)] font-bold uppercase tracking-widest">目前選擇的行</span>
                      <span className="text-[11px] font-mono text-[var(--app-text-muted)] opacity-60">
@@ -690,20 +673,20 @@ export function SyncEditor() {
 
           {ctxMenu.type === 'word' && ctxMenu.wordIndex !== undefined && (
             <>
-              <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors flex items-center gap-2" onClick={() => { handleJumpTo(ctxMenu.globalIndex, ctxMenu.wordIndex); setCtxMenu(null); }}><Play className="w-3.5 h-3.5" /> 歌曲跳轉至該字</button>
-              <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors flex items-center gap-2" onClick={() => { navigator.clipboard.writeText(lines[ctxMenu.globalIndex].words[ctxMenu.wordIndex!].text); setCtxMenu(null); }}><Copy className="w-3.5 h-3.5" /> 複製這字</button>
-              <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors flex items-center gap-2" onClick={() => { const word = lines[ctxMenu.globalIndex].words[ctxMenu.wordIndex!]; navigator.clipboard.writeText(word.start !== null ? formatTime(word.start, true) : ''); setCtxMenu(null); }}><Clock className="w-3.5 h-3.5" /> 複製字的時間戳</button>
-              <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors flex items-center gap-2" onClick={() => { const word = lines[ctxMenu.globalIndex].words[ctxMenu.wordIndex!]; navigator.clipboard.writeText(word.start !== null ? `<${formatTime(word.start, true)}>${word.text}` : word.text); setCtxMenu(null); }}><Copy className="w-3.5 h-3.5 opacity-70" /> 複製這字RAW（含時間戳）</button>
-              <div className="h-px bg-[var(--app-border-base)] my-1"></div>
-              <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors flex items-center gap-2" onClick={() => { handleEditWordText(ctxMenu.globalIndex, ctxMenu.wordIndex!); setCtxMenu(null); }}><Type className="w-3.5 h-3.5" /> 編輯這段字</button>
-              <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors flex items-center gap-2" onClick={() => { handleEditWordRaw(ctxMenu.globalIndex, ctxMenu.wordIndex!); setCtxMenu(null); }}><Edit2 className="w-3.5 h-3.5" /> 編輯這段字RAW（含時間戳）</button>
-              <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors flex items-center gap-2" onClick={() => { handleWordConvertToTraditional(ctxMenu.globalIndex, ctxMenu.wordIndex!); setCtxMenu(null); }}><span className="w-3.5 h-3.5 flex items-center justify-center font-bold text-[10px]">繁</span>這段字轉繁體</button>
-              <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors flex items-center gap-2" onClick={() => { handleWordConvertToSimplified(ctxMenu.globalIndex, ctxMenu.wordIndex!); setCtxMenu(null); }}><span className="w-3.5 h-3.5 flex items-center justify-center font-bold text-[10px]">簡</span>這段字轉簡體</button>
-              <div className="h-px bg-[var(--app-border-base)] my-1"></div>
-              <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors flex items-center gap-2" onClick={() => { handleSplitWordToNextLine(ctxMenu.globalIndex, ctxMenu.wordIndex!); setCtxMenu(null); }}><SplitSquareVertical className="w-3.5 h-3.5" /> 從該字分割斷行到下一行</button>
-              <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors flex items-center gap-2" onClick={() => { handleOffsetFromHere(ctxMenu.globalIndex); setCtxMenu(null); }}><ArrowRight className="w-3.5 h-3.5" /> 平移後續時間</button>
-              <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors text-red-500 flex items-center gap-2" onClick={() => { handleDeleteWord(ctxMenu.globalIndex, ctxMenu.wordIndex!); setCtxMenu(null); }}><Scissors className="w-3.5 h-3.5" /> 刪除該段字</button>
-              <div className="px-3 py-2 flex flex-col gap-0.5 border-t border-[var(--app-border-base)]/50 mb-1">
+              <ContextMenuItem icon={<Play className="w-3.5 h-3.5" />} label="歌曲跳轉至該字" onClick={() => { handleJumpTo(ctxMenu.globalIndex, ctxMenu.wordIndex); setCtxMenu(null); }} />
+              <ContextMenuItem icon={<Copy className="w-3.5 h-3.5" />} label="複製這字" onClick={() => { navigator.clipboard.writeText(lines[ctxMenu.globalIndex].words[ctxMenu.wordIndex!].text); setCtxMenu(null); }} />
+              <ContextMenuItem icon={<Clock className="w-3.5 h-3.5" />} label="複製字的時間戳" onClick={() => { const word = lines[ctxMenu.globalIndex].words[ctxMenu.wordIndex!]; navigator.clipboard.writeText(word.start !== null ? formatTime(word.start, true) : ''); setCtxMenu(null); }} />
+              <ContextMenuItem icon={<Copy className="w-3.5 h-3.5 opacity-70" />} label="複製這字RAW（含時間戳）" onClick={() => { const word = lines[ctxMenu.globalIndex].words[ctxMenu.wordIndex!]; navigator.clipboard.writeText(word.start !== null ? `<${formatTime(word.start, true)}>${word.text}` : word.text); setCtxMenu(null); }} />
+              <ContextMenuSeparator />
+              <ContextMenuItem icon={<Type className="w-3.5 h-3.5" />} label="編輯這段字" onClick={() => { handleEditWordText(ctxMenu.globalIndex, ctxMenu.wordIndex!); setCtxMenu(null); }} />
+              <ContextMenuItem icon={<Edit2 className="w-3.5 h-3.5" />} label="編輯這段字RAW（含時間戳）" onClick={() => { handleEditWordRaw(ctxMenu.globalIndex, ctxMenu.wordIndex!); setCtxMenu(null); }} />
+              <ContextMenuItem icon={<span className="w-3.5 h-3.5 flex items-center justify-center font-bold text-[10px]">繁</span>} label="這段字轉繁體" onClick={() => { handleWordConvertToTraditional(ctxMenu.globalIndex, ctxMenu.wordIndex!); setCtxMenu(null); }} />
+              <ContextMenuItem icon={<span className="w-3.5 h-3.5 flex items-center justify-center font-bold text-[10px]">簡</span>} label="這段字轉簡體" onClick={() => { handleWordConvertToSimplified(ctxMenu.globalIndex, ctxMenu.wordIndex!); setCtxMenu(null); }} />
+              <ContextMenuSeparator />
+              <ContextMenuItem icon={<SplitSquareVertical className="w-3.5 h-3.5" />} label="從該字分割斷行到下一行" onClick={() => { handleSplitWordToNextLine(ctxMenu.globalIndex, ctxMenu.wordIndex!); setCtxMenu(null); }} />
+              <ContextMenuItem icon={<ArrowRight className="w-3.5 h-3.5" />} label="平移後續時間" onClick={() => { handleOffsetFromHere(ctxMenu.globalIndex); setCtxMenu(null); }} />
+              <ContextMenuItem danger icon={<Scissors className="w-3.5 h-3.5" />} label="刪除該段字" onClick={() => { handleDeleteWord(ctxMenu.globalIndex, ctxMenu.wordIndex!); setCtxMenu(null); }} />
+              <div className="px-3 py-2 flex flex-col gap-0.5 border-t border-[var(--app-border-base)]/50 mb-1 pointer-events-none">
                  <div className="flex items-center justify-between gap-4">
                      <span className="text-[10px] text-[var(--app-text-muted)] font-bold uppercase tracking-widest">目前選擇的字</span>
                      <span className="text-[11px] font-mono text-[var(--app-text-muted)] opacity-60">
@@ -717,12 +700,12 @@ export function SyncEditor() {
 
           {ctxMenu.type === 'time' && (
             <>
-              <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors flex items-center gap-2" onClick={() => { handleJumpTo(ctxMenu.globalIndex); setCtxMenu(null); }}><Play className="w-3.5 h-3.5" /> 歌曲跳轉至該行開頭</button>
-              <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors flex items-center gap-2" onClick={() => { navigator.clipboard.writeText(lines[ctxMenu.globalIndex].start !== null ? formatTime(lines[ctxMenu.globalIndex].start!) : ''); setCtxMenu(null); }}><Clock className="w-3.5 h-3.5" /> 複製時間戳</button>
-              <div className="h-px bg-[var(--app-border-base)] my-1"></div>
-              <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors flex items-center gap-2" onClick={() => { handleEditTimeOnly(ctxMenu.globalIndex); setCtxMenu(null); }}><Edit2 className="w-3.5 h-3.5" /> 編輯這行時間戳（手打輸入）</button>
-              <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--app-bg-hover)] transition-colors flex items-center gap-2" onClick={() => { handleOffsetFromHere(ctxMenu.globalIndex); setCtxMenu(null); }}><ArrowRight className="w-3.5 h-3.5" /> 平移後續時間</button>
-              <div className="px-3 py-2 flex flex-col gap-0.5 border-t border-[var(--app-border-base)]/50 mb-1">
+              <ContextMenuItem icon={<Play className="w-3.5 h-3.5" />} label="歌曲跳轉至該行開頭" onClick={() => { handleJumpTo(ctxMenu.globalIndex); setCtxMenu(null); }} />
+              <ContextMenuItem icon={<Clock className="w-3.5 h-3.5" />} label="複製時間戳" onClick={() => { navigator.clipboard.writeText(lines[ctxMenu.globalIndex].start !== null ? formatTime(lines[ctxMenu.globalIndex].start!) : ''); setCtxMenu(null); }} />
+              <ContextMenuSeparator />
+              <ContextMenuItem icon={<Edit2 className="w-3.5 h-3.5" />} label="編輯這行時間戳（手打輸入）" onClick={() => { handleEditTimeOnly(ctxMenu.globalIndex); setCtxMenu(null); }} />
+              <ContextMenuItem icon={<ArrowRight className="w-3.5 h-3.5" />} label="平移後續時間" onClick={() => { handleOffsetFromHere(ctxMenu.globalIndex); setCtxMenu(null); }} />
+              <div className="px-3 py-2 flex flex-col gap-0.5 border-t border-[var(--app-border-base)]/50 mb-1 pointer-events-none">
                  <div className="flex items-center justify-between gap-4">
                      <span className="text-[10px] text-[var(--app-text-muted)] font-bold uppercase tracking-widest">時間戳操作</span>
                      <span className="text-[11px] font-mono text-[var(--app-text-muted)] opacity-60">
@@ -732,7 +715,7 @@ export function SyncEditor() {
               </div>
             </>
           )}
-        </div>
+        </ContextMenu>
       )}
 
       {editingText && (

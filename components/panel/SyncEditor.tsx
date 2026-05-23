@@ -359,7 +359,6 @@ export function SyncEditor() {
         handleDeleteLine={handleDeleteLine}
         onMergeToPrevious={handleMergeToPrevious}
         onLineContextMenu={(e: React.MouseEvent, globalIndex: number) => {
-            if (touchUIMode) return;
             e.preventDefault();
             setActiveLineIndex(globalIndex);
             setActiveWordIndex(0);
@@ -372,7 +371,6 @@ export function SyncEditor() {
             setCtxMenu({ type: 'line', x: e.clientX, y: e.clientY, globalIndex });
         }}
         onWordContextMenu={(e: React.MouseEvent, globalIndex: number, wordIndex: number) => {
-            if (touchUIMode) return;
             e.preventDefault();
             setActiveLineIndex(globalIndex);
             setActiveWordIndex(wordIndex);
@@ -385,7 +383,6 @@ export function SyncEditor() {
             setCtxMenu({ type: 'word', x: e.clientX, y: e.clientY, globalIndex, wordIndex });
         }}
         onTimeContextMenu={(e: React.MouseEvent, globalIndex: number) => {
-            if (touchUIMode) return;
             e.preventDefault();
             setActiveLineIndex(globalIndex);
             setActiveWordIndex(0);

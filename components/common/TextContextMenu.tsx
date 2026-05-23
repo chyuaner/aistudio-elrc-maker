@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { Scissors, Copy, ClipboardPaste, ListChecks } from 'lucide-react';
+import { useEditor } from '@/components/base/EditorProvider';
 
 export function TextContextMenu() {
   const [visible, setVisible] = useState(false);
@@ -9,10 +10,11 @@ export function TextContextMenu() {
   const [isReadOnly, setIsReadOnly] = useState(false);
   const targetElementRef = useRef<HTMLElement | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const { touchUIMode } = useEditor();
 
   useEffect(() => {
     const handleContextMenu = (e: MouseEvent) => {
-      if (window.matchMedia('(pointer: coarse)').matches) {
+      if (touchUIMode || window.matchMedia('(pointer: coarse)').matches) {
           return;
       }
       const target = e.target as HTMLElement;
@@ -62,7 +64,7 @@ export function TextContextMenu() {
       window.removeEventListener('contextmenu', handleContextMenu);
       window.removeEventListener('click', handleClick);
     };
-  }, []);
+  }, [touchUIMode]);
 
   const handleAction = async (action: 'cut' | 'copy' | 'paste' | 'selectAll' | 'toTraditional' | 'toSimplified') => {
     setVisible(false);

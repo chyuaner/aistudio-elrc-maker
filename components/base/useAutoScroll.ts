@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { useEditor } from './EditorProvider';
+import { useEditor } from '@/components/base/EditorProvider';
 
 export function useAutoScroll() {
   const { lines, isPlaying, autoScrollEnabled, activeLineIndex, activeWordIndex, setActiveLineIndex, setActiveWordIndex, playerRef } = useEditor();

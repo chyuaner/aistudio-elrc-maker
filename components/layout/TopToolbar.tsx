@@ -1,106 +1,20 @@
 'use client';
 
 import React, { useRef, useState, useEffect } from 'react';
-import { useEditor } from './EditorProvider';
+import { useEditor } from '@/components/base/EditorProvider';
 import { parseRawLyrics, exportLrc, exportSrt } from '@/lib/lyric-utils';
 import { Music, Download, ChevronDown, X, FileText, Maximize, Moon, Tag, Edit2, Hand, MoreVertical, RotateCw } from 'lucide-react';
-import { UndoRedoControls } from './UndoRedo';
-import { useDialogs } from './DialogProvider';
+import { UndoRedoControls } from '@/components/common/UndoRedo';
+import { useDialogs } from '@/components/dialog/DialogProvider';
 import { AppCommands } from '@/lib/app-commands';
-import { Tooltip } from './Tooltip';
+import { Tooltip } from '@/components/common/Tooltip';
 import { useI18n } from '@/hooks/useI18n';
-import { LrcMetadataDialog } from './LrcMetadataDialog';
-import { ElectronWindowControls } from './ElectronWindowControls';
-import { AboutDialog } from './AboutDialog';
+import { LrcMetadataDialog } from '@/components/dialog/LrcMetadataDialog';
+import { ElectronWindowControls } from '@/components/base/ElectronWindowControls';
+import { AboutDialog } from '@/components/dialog/AboutDialog';
+import { extractFlacMetadata } from '@/lib/media-utils';
 
-function extractFlacMetadata(buffer: ArrayBuffer) {
-    const view = new DataView(buffer);
-    const decoder = new TextDecoder('utf-8');
-    const tagsMap = new Map<string, string>();
-    const covers: { mime: string, url: string }[] = [];
-
-    if (view.getUint32(0) !== 0x664C6143) {
-        throw new Error("非標準 FLAC 檔案格式");
-    }
-
-    let offset = 4;
-    let isLastBlock = false;
-
-    while (!isLastBlock && offset < view.byteLength) {
-        if (offset + 4 > view.byteLength) break;
-        const blockHeader = view.getUint8(offset);
-        isLastBlock = (blockHeader & 0x80) !== 0;
-        const blockType = blockHeader & 0x7F;
-
-        const length = (view.getUint8(offset + 1) << 16) |
-                       (view.getUint8(offset + 2) << 8) |
-                       view.getUint8(offset + 3);
-
-        offset += 4; // Shift to block content
-
-        if (offset + length > view.byteLength) break;
-
-        if (blockType === 4) {
-            let p = offset;
-            const vendorLength = view.getUint32(p, true);
-            p += 4 + vendorLength; // Skip vendor string
-
-            const commentListLength = view.getUint32(p, true);
-            p += 4;
-
-            for (let i = 0; i < commentListLength; i++) {
-                const commentLength = view.getUint32(p, true);
-                p += 4;
-
-                const commentBytes = new Uint8Array(buffer, p, commentLength);
-                const commentStr = decoder.decode(commentBytes);
-                p += commentLength;
-
-                const equalIndex = commentStr.indexOf('=');
-                if (equalIndex !== -1) {
-                    const key = commentStr.substring(0, equalIndex).toUpperCase();
-                    const value = commentStr.substring(equalIndex + 1);
-                    tagsMap.set(key, value);
-                }
-            }
-        } else if (blockType === 6) {
-            let p = offset;
-
-            // Picture type (4 bytes)
-            const pictureType = view.getUint32(p);
-            p += 4;
-
-            const mimeLength = view.getUint32(p);
-            p += 4;
-
-            const mimeBytes = new Uint8Array(buffer, p, mimeLength);
-            const mimeTypeStr = decoder.decode(mimeBytes);
-            p += mimeLength;
-
-            const descLength = view.getUint32(p);
-            p += 4 + descLength;
-
-            p += 16;
-
-            const dataLength = view.getUint32(p);
-            p += 4;
-
-            if (p + dataLength <= view.byteLength) {
-                const pictureBytes = new Uint8Array(buffer, p, dataLength);
-                const base64String = Array.from(pictureBytes).map(byte => String.fromCharCode(byte)).join('');
-                const dataUrl = `data:${mimeTypeStr};base64,${window.btoa(base64String)}`;
-
-                covers.push({
-                   mime: mimeTypeStr,
-                   url: dataUrl
-                });
-            }
-        }
-        offset += length; 
-    }
-
-    return { tags: tagsMap, covers };
-}
+import { useFileActions } from '@/components/base/useFileActions';
 
 export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
   const { undo, redo, pastActions, futureActions, file, setFile, commitLines, resetHistory, lines, syncMode, setMetadata, metadata, audioFileName, lyricFileName, setLyricFileName, exportFormat, shiftTime, setAudioSpecs, setIsPlaying, playerRef, duration, setDuration, setPlaybackRate, lrcMetadata, setLrcMetadata, touchUIMode, setTouchUIMode } = useEditor();
@@ -109,6 +23,7 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
   const mixedInputRef = useRef<HTMLInputElement>(null);
   const dialogs = useDialogs();
   const i18n = useI18n();
+  const { processAudioFile, processLyricFile, handleExport, clearMedia, clearLyrics, loadEmbeddedLyrics } = useFileActions();
   
   const [loadMediaDropdownOpen, setLoadMediaDropdownOpen] = useState(false);
   const [loadDropdownOpen, setLoadDropdownOpen] = useState(false);
@@ -333,319 +248,7 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
   const titleColor = isUnfocused ? 'text-[var(--app-text-muted)]' : 'text-[var(--app-text-secondary)]';
   const unfocusedClass = isUnfocused ? 'toolbar-unfocused' : '';
 
-  const processAudioFile = React.useCallback(async (f: File) => {
-    setIsPlaying(false);
-    if (playerRef.current) {
-        playerRef.current.pause();
-        playerRef.current.currentTime = 0;
-    }
-    setDuration(0);
-    setPlaybackRate(1.0);
-    setFile(f);
-    resetHistory([]);
-    setLyricFileName(null);
-    
-    // Parse audio specs with music-metadata
-    import('music-metadata').then(async (mm) => {
-      try {
-        const parsedMetadata = await mm.parseBlob(f);
-        setAudioSpecs({
-          format: parsedMetadata.format?.container || f.name.split('.').pop()?.toUpperCase(),
-          bitrate: parsedMetadata.format?.bitrate ? Math.round(parsedMetadata.format.bitrate / 1000).toString() : undefined,
-          sampleRate: parsedMetadata.format?.sampleRate?.toString(),
-          bitsPerSample: parsedMetadata.format?.bitsPerSample?.toString()
-        });
-      } catch (e) {
-        setAudioSpecs({ format: f.name.split('.').pop()?.toUpperCase() });
-      }
-    }).catch(() => {
-        setAudioSpecs({ format: f.name.split('.').pop()?.toUpperCase() });
-    });
-    
-    if (f.name.toLowerCase().endsWith('.flac') && typeof window !== 'undefined') {
-       try {
-          const slice = f.slice(0, 20 * 1024 * 1024); // Expand slice to 20MB for cover images
-          const arrayBuffer = await slice.arrayBuffer();
-          const { tags, covers } = extractFlacMetadata(arrayBuffer);
-          let foundLyrics = tags.get('LYRICS') || tags.get('UNSYNCEDLYRICS') || tags.get('UNSYNCED LYRICS');
-          
-          if (!foundLyrics) {
-             for (const [key, value] of tags.entries()) {
-                if (key === 'LYRICS' || key.startsWith('LYRICS:') || key.startsWith('©LYR')) {
-                   foundLyrics = value;
-                   break;
-                }
-             }
-          }
-          
-          if (foundLyrics || tags.size > 0 || covers.length > 0) {
-             setMetadata({
-                title: tags.get('TITLE'),
-                artist: tags.get('ARTIST'),
-                album: tags.get('ALBUM'),
-                year: tags.get('DATE'),
-                track: tags.get('TRACKNUMBER'),
-                lyric: foundLyrics,
-                picture: covers.length > 0 ? covers[0].url : null,
-                pictures: covers.map(c => c.url),
-                rawTags: Object.fromEntries(tags)
-             });
-             if (foundLyrics) {
-                 setLyricFileName('Embedded Tag');
-                 const parsed = parseRawLyrics(foundLyrics);
-                 setLrcMetadata(parsed.metadata);
-                 resetHistory(parsed.lines);
-             }
-             return;
-          }
-       } catch (e) {
-          console.error(e);
-       }
-    }
-
-    // Try parsing ID3 / Vorbis tags (fallback)
-    if (typeof window !== 'undefined') {
-      const jsmediatags = require('jsmediatags');
-      jsmediatags.read(f, {
-        onSuccess: async function(tag: any) {
-           const { title, artist, album, year, comment, track, picture } = tag.tags;
-           
-           let picUrl = null;
-           if (picture) {
-              try {
-                const base64String = picture.data.reduce((acc: string, byte: number) => acc + String.fromCharCode(byte), '');
-                picUrl = `data:${picture.format};base64,${window.btoa(base64String)}`;
-              } catch(e) {}
-           }
-           
-           let foundLyrics: any = tag.tags.USLT?.lyrics || tag.tags.SYLT?.lyrics || tag.tags.LYRICS || tag.tags.lyrics || tag.tags['©lyr'] || tag.tags.COMMENT?.text || tag.tags.comment?.text;
-           
-           if (!foundLyrics) {
-              for (const key of Object.keys(tag.tags)) {
-                 const k = key.toLowerCase();
-                 if (k === 'lyrics' || k.startsWith('lyrics:') || k.startsWith('©lyr')) {
-                    foundLyrics = typeof tag.tags[key] === 'string' ? tag.tags[key] : tag.tags[key]?.data || tag.tags[key]?.text;
-                    if (foundLyrics) break;
-                 }
-              }
-           }
-
-           if (foundLyrics && typeof foundLyrics !== 'string' && foundLyrics.data) {
-              foundLyrics = foundLyrics.data;
-           }
-           if (typeof foundLyrics !== 'string') {
-              foundLyrics = undefined;
-           }
-
-           setMetadata({
-             title, artist, album, year, track,
-             comment: comment?.text || (typeof comment === 'string' ? comment : undefined),
-             format: picture?.format, picture: picUrl, lyric: foundLyrics, rawTags: tag.tags
-           });
-           
-           if (foundLyrics) {
-               setLyricFileName('Embedded Tag');
-               const parsed = parseRawLyrics(foundLyrics);
-               setLrcMetadata(parsed.metadata);
-               resetHistory(parsed.lines);
-           }
-        },
-        onError: function(error: any) {
-          console.log('No ID3 tags or error', error);
-          setMetadata(null);
-        }
-      });
-    }
-  }, [resetHistory, setFile, setLyricFileName, setMetadata, setAudioSpecs, setIsPlaying, playerRef, setDuration, setPlaybackRate, setLrcMetadata]);
-
-  const processLyricFile = React.useCallback(async (f: File) => {
-    if (lines.length > 0) {
-      const confirmed = await dialogs.confirm('Loading a new lyrics file will discard your current ones. Continue?');
-      if (!confirmed) return;
-    }
-    setLyricFileName(f.name);
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      const text = evt.target?.result as string;
-      const parsed = parseRawLyrics(text);
-      setLrcMetadata(parsed.metadata);
-      resetHistory(parsed.lines);
-    };
-    reader.readAsText(f);
-  }, [lines.length, dialogs, resetHistory, setLyricFileName, setLrcMetadata]);
-
-  const handleExport = React.useCallback(async (format: 'standard' | 'enhanced' | 'simple' | 'srt', saveType: 'file' | 'embedded' = 'file') => {
-    if (lines.length === 0) return;
-    
-    let lrcText = '';
-    if (format === 'srt') {
-        lrcText = exportSrt(lines, duration);
-    } else {
-        lrcText = exportLrc(lines, lrcMetadata, format === 'enhanced', format === 'simple');
-    }
-
-    let defaultName = 'lyrics.lrc';
-    if (lyricFileName && lyricFileName !== 'Embedded Tag' && lyricFileName !== 'New Lyrics') {
-        defaultName = lyricFileName;
-    } else if (audioFileName) {
-        defaultName = audioFileName.replace(/\.[^/.]+$/, "") + ".lrc";
-    }
-
-    if (format === 'simple') {
-        defaultName = defaultName.replace(/\.[^/.]+$/, "") + ".txt";
-    } else if (format === 'srt') {
-        defaultName = defaultName.replace(/\.[^/.]+$/, "") + ".srt";
-    }
-
-    const isTauri = typeof window !== 'undefined' && ((window as any).__TAURI__);
-    const isCapacitor = typeof window !== 'undefined' && !!(window as any).Capacitor;
-    if (isTauri) {
-        try {
-            if (saveType === 'embedded' && file) {
-                // Tauri 的 embedded 匯出：先在前端嵌入歌詞到媒體 binary，
-                // 再透過 save_binary_dialog 讓使用者選擇儲存路徑並寫入磁碟。
-                const lowerName = file.name.toLowerCase();
-                if (lowerName.endsWith('.flac') || lowerName.endsWith('.m4a') || lowerName.endsWith('.mp4')) {
-                    const arrayBuffer = await file.arrayBuffer();
-                    let blob: Blob;
-                    if (lowerName.endsWith('.flac')) {
-                        const { embedLyricsIntoFlac } = await import('@/lib/flac-utils');
-                        blob = embedLyricsIntoFlac(arrayBuffer, lrcText, format === 'enhanced');
-                    } else {
-                        const { embedLyricsIntoM4a } = await import('@/lib/m4a-utils');
-                        blob = embedLyricsIntoM4a(arrayBuffer, lrcText, format === 'enhanced');
-                    }
-                    const bytes = Array.from(new Uint8Array(await blob.arrayBuffer()));
-                    await (window as any).__TAURI__.core.invoke('save_binary_dialog', {
-                        bytes,
-                        defaultName: file.name,
-                    });
-                }
-            } else {
-                await (window as any).__TAURI__.core.invoke('save_lyrics_dialog', {
-                    lyricsText: lrcText,
-                    defaultName: defaultName,
-                    format: format,
-                });
-            }
-        } catch (err) {
-            console.error("Tauri save dialog failed", err);
-        }
-    } else if (isCapacitor) {
-        try {
-            const { Filesystem, Directory, Encoding } = await import('@capacitor/filesystem');
-            const { Share } = await import('@capacitor/share');
-
-            if (saveType === 'embedded' && file) {
-                const lowerName = file.name.toLowerCase();
-                if (lowerName.endsWith('.flac') || lowerName.endsWith('.m4a') || lowerName.endsWith('.mp4')) {
-                    const arrayBuffer = await file.arrayBuffer();
-                    let blob: Blob;
-                    if (lowerName.endsWith('.flac')) {
-                        const { embedLyricsIntoFlac } = await import('@/lib/flac-utils');
-                        blob = embedLyricsIntoFlac(arrayBuffer, lrcText, format === 'enhanced');
-                    } else {
-                        const { embedLyricsIntoM4a } = await import('@/lib/m4a-utils');
-                        blob = embedLyricsIntoM4a(arrayBuffer, lrcText, format === 'enhanced');
-                    }
-
-                    const reader = new FileReader();
-                    reader.readAsDataURL(blob);
-                    reader.onloadend = async () => {
-                        try {
-                            const base64data = (reader.result as string).split(',')[1];
-                            const writeResult = await Filesystem.writeFile({
-                                path: file.name,
-                                data: base64data,
-                                directory: Directory.Cache,
-                            });
-                            await Share.share({
-                                title: file.name,
-                                url: writeResult.uri,
-                            });
-                        } catch (e) {
-                            console.error("Capacitor write/share embedded file failed", e);
-                            alert("無法嵌入並儲存媒體檔案");
-                        }
-                    };
-                }
-            } else {
-                const writeResult = await Filesystem.writeFile({
-                    path: defaultName,
-                    data: lrcText,
-                    directory: Directory.Cache,
-                    encoding: Encoding.UTF8,
-                });
-                await Share.share({
-                    title: defaultName,
-                    url: writeResult.uri,
-                });
-            }
-        } catch (err) {
-            console.error("Capacitor save/share failed", err);
-            alert("儲存檔案失敗: " + (err as Error).message);
-        }
-      } else {
-       if (saveType === 'embedded' && file) {
-             const lowerName = file.name.toLowerCase();
-             if (lowerName.endsWith('.flac') || lowerName.endsWith('.m4a') || lowerName.endsWith('.mp4')) {
-                 try {
-                     const arrayBuffer = await file.arrayBuffer();
-                     let blob: Blob;
-                     if (lowerName.endsWith('.flac')) {
-                         const { embedLyricsIntoFlac } = await import('@/lib/flac-utils');
-                         blob = embedLyricsIntoFlac(arrayBuffer, lrcText, format === 'enhanced');
-                     } else {
-                         const { embedLyricsIntoM4a } = await import('@/lib/m4a-utils');
-                         blob = embedLyricsIntoM4a(arrayBuffer, lrcText, format === 'enhanced');
-                     }
-                     
-                     const url = URL.createObjectURL(blob);
-                     const a = document.createElement('a');
-                     a.href = url;
-                     a.download = file.name;
-                     document.body.appendChild(a);
-                     a.click();
-                     document.body.removeChild(a);
-                     URL.revokeObjectURL(url);
-                 } catch (e) {
-                     console.error(e);
-                     alert("Failed to embed lyrics into media file");
-                 }
-                 setExportDropdownOpen(false);
-                 return;
-             }
-        }
-        
-        const blob = new Blob([lrcText], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = defaultName;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-    }
-    setExportDropdownOpen(false);
-  }, [lines, lyricFileName, audioFileName, lrcMetadata, file, duration]);
-
   // AppCommands mapping extracted from useEditor hooks above
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
-        e.preventDefault();
-        handleExport('enhanced');
-      }
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'o') {
-        e.preventDefault();
-        mixedInputRef.current?.click();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleExport]);
 
   useEffect(() => {
     // Expose state for Tauri
@@ -662,37 +265,9 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
       },
       loadMedia: () => fileInputRef.current?.click(),
       loadLyrics: () => lyricInputRef.current?.click(),
-      clearMedia: async () => {
-        if (audioFileName) {
-          if (await dialogs.confirm('Are you sure you want to discard current media?')) {
-            setFile(null);
-            setMetadata(null);
-            resetHistory([]);
-            setLyricFileName(null);
-            setAudioSpecs(null);
-          }
-        }
-      },
-      clearLyrics: async () => {
-        if (lines.length > 0) {
-          if (await dialogs.confirm('Are you sure you want to discard current lyrics?')) {
-            commitLines([], 'Clear Lyrics');
-            setLyricFileName(null);
-          }
-        }
-      },
-      loadEmbeddedLyrics: async () => {
-        if (metadata?.lyric) {
-           if (lines.length > 0) {
-               const confirmed = await dialogs.confirm('Loading embedded lyrics will discard your current ones. Continue?');
-               if (!confirmed) return;
-           }
-           const parsed = parseRawLyrics(metadata.lyric);
-           setLrcMetadata(parsed.metadata);
-           resetHistory(parsed.lines);
-           setLyricFileName(null);
-        }
-      },
+      clearMedia: clearMedia,
+      clearLyrics: clearLyrics,
+      loadEmbeddedLyrics: async () => { loadEmbeddedLyrics(metadata); },
       showLrcMetadata: () => setMetadataDialogOpen(true),
       exportStandard: () => handleExport('standard'),
       exportEnhanced: () => handleExport('enhanced'),
@@ -959,24 +534,7 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
     if (f) processAudioFile(f);
   };
 
-  const clearLyrics = async () => {
-    if (lines.length > 0) {
-      if (await dialogs.confirm('Are you sure you want to discard current lyrics?')) {
-        commitLines([], 'Clear Lyrics');
-        setLyricFileName(null);
-      }
-    }
-  };
 
-  const clearMedia = async () => {
-    if (audioFileName) {
-      setFile(null);
-      setMetadata(null);
-      resetHistory([]);
-      setLyricFileName(null);
-      setAudioSpecs(null);
-    }
-  };
 
   const handleLyricSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];

@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { useEditor } from './EditorProvider';
+import { useEditor } from '@/components/base/EditorProvider';
 import { parseRawLyrics, exportLrc, splitWordsAegisub } from '@/lib/lyric-utils';
-import { LineNumberedTextarea } from './LineNumberedTextarea';
+import { LineNumberedTextarea } from '@/components/common/LineNumberedTextarea';
 import { useI18n } from '@/hooks/useI18n';
-import { useDialogs } from './DialogProvider';
+import { useDialogs } from '@/components/dialog/DialogProvider';
 
 export function TextEditor() {
   const { lines, setLines, commitLines, exportFormat, setActiveLineIndex, setActiveWordIndex, lrcMetadata, setLrcMetadata, activeLineIndex } = useEditor();

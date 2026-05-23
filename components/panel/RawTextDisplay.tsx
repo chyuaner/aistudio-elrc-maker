@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useRef, useEffect, useState } from 'react';
-import { useEditor } from './EditorProvider';
+import { useEditor } from '@/components/base/EditorProvider';
 import { exportLrc, exportSrt } from '@/lib/lyric-utils';
 import { useI18n } from '@/hooks/useI18n';
-import { KaraokePreview } from './KaraokePreview';
-import { useAutoScroll } from './useAutoScroll';
+import { KaraokePreview } from '@/components/panel/KaraokePreview';
+import { useAutoScroll } from '@/components/base/useAutoScroll';
 
 export function RawTextDisplay() {
   const { lines, activeLineIndex, lrcMetadata, exportFormat, setExportFormat, setAutoScrollEnabled, dualLineGapSec, setDualLineGapSec, paragraphStarts, duration } = useEditor();

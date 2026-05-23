@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useCallback } from 'react';
-import { useEditor } from './EditorProvider';
+import { useEditor } from '@/components/base/EditorProvider';
 import { isTextEditable } from '@/lib/utils';
 
 export function useSyncHotkeys() {

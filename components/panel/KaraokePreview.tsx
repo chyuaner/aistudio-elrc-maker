@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { useEditor } from './EditorProvider';
+import { useEditor } from '@/components/base/EditorProvider';
 import { ChevronDown, ChevronUp } from 'lucide-react';
-import { useSyncHotkeys } from './useSyncHotkeys';
+import { useSyncHotkeys } from '@/components/base/useSyncHotkeys';
 
 export function KaraokePreview({ hideTouchUI = false }: { hideTouchUI?: boolean }) {
   const { lines, activeLineIndex, activeWordIndex, trackAssignments, paragraphStarts, dualLineGapSec, syncMode, autoScrollEnabled, playerRef, isPlaying, touchUIMode } = useEditor();

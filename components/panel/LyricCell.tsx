@@ -1,6 +1,6 @@
 import React from 'react';
 import { formatTime } from '@/lib/lyric-utils';
-import { Tooltip } from './Tooltip';
+import { Tooltip } from '@/components/common/Tooltip';
 
 export function LyricCellContent({ 
   line, 

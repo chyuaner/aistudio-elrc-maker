@@ -1,15 +1,15 @@
 import React, { useEffect, useRef, memo, useCallback, useState } from 'react';
-import { useEditor } from './EditorProvider';
-import { useSyncHotkeys } from './useSyncHotkeys';
+import { useEditor } from '@/components/base/EditorProvider';
+import { useSyncHotkeys } from '@/components/base/useSyncHotkeys';
 import { formatTime } from '@/lib/lyric-utils';
-import { KaraokePreview } from './KaraokePreview';
-import { Tooltip } from './Tooltip';
+import { KaraokePreview } from '@/components/panel/KaraokePreview';
+import { Tooltip } from '@/components/common/Tooltip';
 import { Edit2, Trash2, X, ArrowRight, MoreVertical, ArrowUpFromLine, Copy, Play, SplitSquareVertical, Clock, Scissors, Type, Plus, FileText, Eraser, SlidersHorizontal, Settings2 } from 'lucide-react';
 
-import { useAutoScroll } from './useAutoScroll';
-import { useDialogs } from './DialogProvider';
+import { useAutoScroll } from '@/components/base/useAutoScroll';
+import { useDialogs } from '@/components/dialog/DialogProvider';
 import { useI18n } from '@/hooks/useI18n';
-import { LyricCellContent } from './LyricCell';
+import { LyricCellContent } from '@/components/panel/LyricCell';
 
 const SyncCell = memo(({ 
   data, isDual, isActive, isPassed, activeWordIndex, syncMode, paragraphStart, playerRef, i18n, 
@@ -478,7 +478,7 @@ export function SyncEditor() {
 
   return (
     <div className="contents lg:flex lg:flex-col lg:h-full lg:bg-[var(--app-bg-base)]">
-      <div className="p-3 bg-[var(--app-bg-panel-alt)] flex flex-wrap items-center justify-between shrink-0 gap-2 lg:static z-40">
+      <div className="p-3 bg-[var(--app-bg-panel-alt)] flex flex-wrap items-center justify-between shrink-0 gap-2 lg:static z-20">
         <div className="flex bg-[var(--app-bg-input)] p-1 rounded-md border border-[var(--app-border-base)] shadow-inner">
           <button
             onClick={() => {

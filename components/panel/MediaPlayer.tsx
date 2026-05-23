@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { useEditor } from './EditorProvider';
+import { useEditor } from '@/components/base/EditorProvider';
 import WaveSurfer from 'wavesurfer.js';
 import { Play, Pause, Square, Rewind, FastForward, ChevronLeft, ChevronRight, Volume2, VolumeX, Settings2, SkipBack, StepForward, Music, Repeat } from 'lucide-react';
 import { formatTime } from '@/lib/lyric-utils';
-import { Tooltip } from './Tooltip';
+import { Tooltip } from '@/components/common/Tooltip';
 
 // ── CSS 色彩解析用 常駐 Probe 元素 ───────────────────────────────────────
 // 問題：Canvas 2D API 不接受 CSS var() 字串，必須先用 getComputedStyle 解析成 rgb(...)。
@@ -563,7 +563,7 @@ export function MediaPlayer() {
           observer.observe(el);
           return () => observer.disconnect();
         }}
-        className={`flex flex-col w-full shrink-0 ${isMobile ? 'z-[45] sticky shadow-sm' : 'lg:static lg:z-auto'}`}
+        className={`flex flex-col w-full shrink-0 ${isMobile ? 'z-30 sticky shadow-sm' : 'lg:static lg:z-auto'}`}
         style={{ top: isMobile ? 0 : undefined }}
       >
         

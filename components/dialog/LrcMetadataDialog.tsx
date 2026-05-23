@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useEditor } from './EditorProvider';
+import { useEditor } from '@/components/base/EditorProvider';
 import { X, Plus, Trash2, Download } from 'lucide-react';
 import { LrcMetadata } from '@/lib/lyric-utils';
 

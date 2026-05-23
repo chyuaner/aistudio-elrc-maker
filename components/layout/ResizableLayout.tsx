@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState, useRef, useEffect, MouseEvent } from 'react';
-import { MediaPlayer } from './MediaPlayer';
-import { LeftPanelInfo } from './LeftPanelInfo';
-import { EditorView } from './EditorView';
+import { MediaPlayer } from '@/components/panel/MediaPlayer';
+import { LeftPanelInfo } from '@/components/panel/LeftPanelInfo';
+import { EditorView } from '@/components/layout/EditorView';
 
 export function ResizableLayout() {
   const [leftWidth, setLeftWidth] = useState(380);

@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useEditor } from './EditorProvider';
-import { TextEditor } from './TextEditor';
-import { SyncEditor } from './SyncEditor';
-import { RawTextDisplay } from './RawTextDisplay';
-import { useGlobalHotkeys } from './useGlobalHotkeys';
+import { useEditor } from '@/components/base/EditorProvider';
+import { TextEditor } from '@/components/panel/TextEditor';
+import { SyncEditor } from '@/components/panel/SyncEditor';
+import { RawTextDisplay } from '@/components/panel/RawTextDisplay';
+import { useGlobalHotkeys } from '@/components/base/useGlobalHotkeys';
 import { useI18n } from '@/hooks/useI18n';
 
 export function EditorView() {
@@ -30,7 +30,7 @@ export function EditorView() {
 
   return (
     <div className="contents lg:flex-1 lg:w-full lg:h-full lg:overflow-hidden lg:flex lg:flex-col">
-      <div className="flex bg-[var(--app-bg-panel)] border-b border-[var(--app-border-base)] shrink-0 z-40 lg:static">
+      <div className="flex bg-[var(--app-bg-panel)] border-b border-[var(--app-border-base)] shrink-0 z-20 lg:static">
         <button
           onClick={() => setMode('text')}
           className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-widest border-b-2 hover:bg-[var(--app-bg-hover)] transition-colors ${mode === 'text' ? 'border-[var(--app-accent)] text-[var(--app-accent)]' : 'border-transparent text-[var(--app-text-muted)] hover:text-[var(--app-text-secondary)]'}`}

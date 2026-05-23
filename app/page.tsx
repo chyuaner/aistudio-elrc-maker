@@ -5,6 +5,7 @@ import { ResizableLayout } from '@/components/layout/ResizableLayout';
 import { DialogProvider } from '@/components/dialog/DialogProvider';
 import { WebSystemIntegration } from '@/components/base/WebSystemIntegration';
 import { TextContextMenu } from '@/components/common/TextContextMenu';
+import { GlobalToast } from '@/components/common/GlobalToast';
 
 export default function Page() {
   return (
@@ -30,6 +31,7 @@ export default function Page() {
           >
             <TopToolbar />
             <ResizableLayout />
+            <GlobalToast />
           </div>
         </main>
       </EditorProvider>

@@ -3,11 +3,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useEditor } from '@/components/base/EditorProvider';
 import { useI18n } from '@/hooks/useI18n';
+import { LrcMetadataEditor } from '@/components/panel/LrcMetadataEditor';
 
 export function LeftPanelInfo() {
   const { metadata } = useEditor();
   const i18n = useI18n();
-  const [activeTab, setActiveTab] = useState<'instructions' | 'metadata'>(
+  const [activeTab, setActiveTab] = useState<'instructions' | 'metadata' | 'lrcMetadata'>(
     metadata ? 'metadata' : 'instructions'
   );
   const [pictureIndex, setPictureIndex] = useState(0);
@@ -40,6 +41,12 @@ export function LeftPanelInfo() {
           {i18n.tabMetadata}
         </button>
         <button
+          onClick={() => setActiveTab('lrcMetadata')}
+          className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-widest border-b-2 hover:bg-[var(--app-bg-hover)] transition-colors ${activeTab === 'lrcMetadata' ? 'border-[var(--app-accent)] text-[var(--app-accent)]' : 'border-transparent text-[var(--app-text-muted)] hover:text-[var(--app-text-secondary)]'}`}
+        >
+          LRC屬性
+        </button>
+        <button
           onClick={() => setActiveTab('instructions')}
           className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-widest border-b-2 hover:bg-[var(--app-bg-hover)] transition-colors ${activeTab === 'instructions' ? 'border-[var(--app-accent)] text-[var(--app-accent)]' : 'border-transparent text-[var(--app-text-muted)] hover:text-[var(--app-text-secondary)]'}`}
         >
@@ -47,8 +54,10 @@ export function LeftPanelInfo() {
         </button>
       </div>
       
-      <div className="p-6 flex-1 overflow-y-auto custom-scrollbar text-xs text-[var(--app-text-muted)] space-y-6 select-text">
-        {activeTab === 'instructions' ? (
+      <div className="p-6 flex-1 overflow-y-auto custom-scrollbar text-xs text-[var(--app-text-muted)] space-y-6 select-text flex flex-col">
+        {activeTab === 'lrcMetadata' ? (
+          <LrcMetadataEditor />
+        ) : activeTab === 'instructions' ? (
           <>
             <div>
               <h3 className="font-bold text-[var(--app-text-secondary)] uppercase tracking-widest text-[10px] mb-3 border-b border-[var(--app-border-base)] pb-1">{i18n.howToSyncTitle}</h3>

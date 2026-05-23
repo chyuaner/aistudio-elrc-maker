@@ -58,7 +58,7 @@ function getCssBgColor(cssValue: string): string {
   return resolved;
 }
 
-function TimeDisplay({ className = "" }: { className?: string }) {
+function TimeDisplay({ className = "", observerRef }: { className?: string; observerRef?: React.Ref<HTMLDivElement> }) {
   const { duration, playerRef } = useEditor();
   const [currentTime, setCurrentTime] = useState(0);
 
@@ -160,6 +160,7 @@ function TimeDisplay({ className = "" }: { className?: string }) {
 
   return (
     <div
+      ref={observerRef}
       className={`flex justify-between items-end relative overflow-hidden h-16 w-full px-3 pb-2 pt-4 ${className}`}
     >
       <canvas
@@ -244,6 +245,21 @@ export function MediaPlayer() {
   const [isLooping, setIsLooping] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isTall, setIsTall] = useState(false);
+  const [isTimeVisible, setIsTimeVisible] = useState(true);
+  const timeDisplayRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = timeDisplayRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsTimeVisible(entry.isIntersecting);
+      },
+      { threshold: 0 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     const handleResize = () => {
@@ -667,7 +683,7 @@ export function MediaPlayer() {
       </div>
 
       {/* Time Display */}
-      <TimeDisplay className={`w-full shrink-0 relative pointer-events-none`} />
+      <TimeDisplay className={`w-full shrink-0 relative pointer-events-none`} observerRef={timeDisplayRef} />
 
       <div
         ref={(el) => {
@@ -862,6 +878,13 @@ export function MediaPlayer() {
                 />
               </div>
             </Tooltip>
+
+            {/* Compact Time Display */}
+            <div 
+              className={`transition-opacity duration-300 font-mono text-[13px] tracking-tighter text-[var(--app-accent)] flex-1 text-center font-bold tabular-nums pointer-events-none select-none ${isTimeVisible ? 'opacity-0' : 'opacity-100'}`}
+            >
+              {formatTime(syncCurrTime)}
+            </div>
 
             <div className="flex items-center gap-0.5 relative shrink-0 settings-dropdown-container">
               <Tooltip

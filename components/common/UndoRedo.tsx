@@ -35,6 +35,7 @@ function UndoRedoDropdown({
   return (
     <div className="relative flex items-center h-full" ref={ref}>
       <button 
+        type="button"
         className="px-2 h-full bg-[var(--app-border-base)] hover:bg-[var(--app-bg-hover)] rounded-l text-[var(--app-text-secondary)] disabled:opacity-30 disabled:hover:bg-[var(--app-border-base)] border border-[var(--app-border-light)] border-r-0 flex items-center justify-center transition-colors"
         onClick={() => { action(1); setOpen(false); }}
         disabled={count === 0}
@@ -43,6 +44,7 @@ function UndoRedoDropdown({
         <Icon className="w-4 h-4" />
       </button>
       <button
+        type="button"
         className="px-1 h-full bg-[var(--app-border-base)] hover:bg-[var(--app-bg-hover)] rounded-r text-[var(--app-text-secondary)] disabled:opacity-30 disabled:hover:bg-[var(--app-border-base)] border border-[var(--app-border-light)] flex items-center justify-center transition-colors"
         onClick={() => setOpen(!open)}
         disabled={count === 0}
@@ -59,6 +61,7 @@ function UndoRedoDropdown({
             return (
               <button
                  key={n}
+                 type="button"
                  onClick={() => { action(n); setOpen(false); }}
                  className="w-full text-left px-3 py-1.5 text-xs text-[var(--app-text-secondary)] hover:bg-[var(--app-accent)] hover:text-black transition-colors flex justify-between gap-2"
               >

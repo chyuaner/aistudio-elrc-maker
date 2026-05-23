@@ -8,7 +8,8 @@ export function useFileActions() {
   const {
     lines, resetHistory, setFile, setMetadata, setAudioSpecs, setIsPlaying, playerRef,
     setDuration, setPlaybackRate, setLyricFileName, setLrcMetadata, lrcMetadata,
-    duration, file, lyricFileName, audioFileName, commitLines
+    duration, file, lyricFileName, audioFileName, commitLines,
+    autoLoadLyrics, showToast
   } = useEditor();
   const dialogs = useDialogs();
 
@@ -21,8 +22,10 @@ export function useFileActions() {
     setDuration(0);
     setPlaybackRate(1.0);
     setFile(f);
-    resetHistory([]);
-    setLyricFileName(null);
+    if (autoLoadLyrics) {
+      resetHistory([]);
+      setLyricFileName(null);
+    }
     
     import('music-metadata').then(async (mm) => {
       try {
@@ -68,11 +71,12 @@ export function useFileActions() {
                 pictures: covers.map(c => c.url),
                 rawTags: Object.fromEntries(tags)
              });
-             if (foundLyrics) {
+             if (foundLyrics && autoLoadLyrics) {
                  setLyricFileName('Embedded Tag');
                  const parsed = parseRawLyrics(foundLyrics);
                  setLrcMetadata(parsed.metadata);
                  resetHistory(parsed.lines);
+                 showToast('已從 "Embedded Tag" 載入歌詞');
              }
              return;
           }
@@ -120,11 +124,12 @@ export function useFileActions() {
              format: picture?.format, picture: picUrl, lyric: foundLyrics, rawTags: tag.tags
            });
            
-           if (foundLyrics) {
+           if (foundLyrics && autoLoadLyrics) {
                setLyricFileName('Embedded Tag');
                const parsed = parseRawLyrics(foundLyrics);
                setLrcMetadata(parsed.metadata);
                resetHistory(parsed.lines);
+               showToast('已從 "Embedded Tag" 載入歌詞');
            }
         },
         onError: function(error: any) {
@@ -133,7 +138,7 @@ export function useFileActions() {
         }
       });
     }
-  }, [resetHistory, setFile, setLyricFileName, setMetadata, setAudioSpecs, setIsPlaying, playerRef, setDuration, setPlaybackRate, setLrcMetadata]);
+  }, [resetHistory, setFile, setLyricFileName, setMetadata, setAudioSpecs, setIsPlaying, playerRef, setDuration, setPlaybackRate, setLrcMetadata, autoLoadLyrics, showToast]);
 
   const processLyricFile = useCallback(async (f: File) => {
     if (lines.length > 0) {
@@ -147,9 +152,10 @@ export function useFileActions() {
       const parsed = parseRawLyrics(text);
       setLrcMetadata(parsed.metadata);
       resetHistory(parsed.lines);
+      showToast(`已從 "${f.name}" 載入歌詞`);
     };
     reader.readAsText(f);
-  }, [lines.length, dialogs, resetHistory, setLyricFileName, setLrcMetadata]);
+  }, [lines.length, dialogs, resetHistory, setLyricFileName, setLrcMetadata, showToast]);
 
   const handleExport = useCallback(async (format: 'standard' | 'enhanced' | 'simple' | 'srt', saveType: 'file' | 'embedded' = 'file') => {
     if (lines.length === 0) return;
@@ -333,9 +339,10 @@ export function useFileActions() {
        const parsed = parseRawLyrics(metadata.lyric);
        setLrcMetadata(parsed.metadata);
        resetHistory(parsed.lines);
-       setLyricFileName(null);
+       setLyricFileName('Embedded Tag');
+       showToast('已從 "Embedded Tag" 載入歌詞');
     }
-  }, [lines.length, dialogs, setLrcMetadata, resetHistory, setLyricFileName]);
+  }, [lines.length, dialogs, setLrcMetadata, resetHistory, setLyricFileName, showToast]);
 
   return { processAudioFile, processLyricFile, handleExport, clearMedia, clearLyrics, loadEmbeddedLyrics };
 }

@@ -3,7 +3,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useEditor } from '@/components/base/EditorProvider';
 import { parseRawLyrics, exportLrc, exportSrt } from '@/lib/lyric-utils';
-import { Music, Download, ChevronDown, X, FileText, Maximize, Moon, Tag, Edit2, Hand, MoreVertical, RotateCw } from 'lucide-react';
+import { Music, Download, ChevronDown, X, FileText, Maximize, Moon, Tag, Edit2, Hand, MoreVertical, RotateCw, Film } from 'lucide-react';
 import { UndoRedoControls } from '@/components/common/UndoRedo';
 import { useDialogs } from '@/components/dialog/DialogProvider';
 import { AppCommands } from '@/lib/app-commands';
@@ -17,8 +17,10 @@ import { extractFlacMetadata } from '@/lib/media-utils';
 import { useFileActions } from '@/components/base/useFileActions';
 
 export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
-  const { undo, redo, pastActions, futureActions, file, setFile, commitLines, resetHistory, lines, syncMode, setMetadata, metadata, audioFileName, lyricFileName, setLyricFileName, exportFormat, shiftTime, setAudioSpecs, setIsPlaying, playerRef, duration, setDuration, setPlaybackRate, lrcMetadata, setLrcMetadata, touchUIMode, setTouchUIMode } = useEditor();
+  const { undo, redo, pastActions, futureActions, file, setFile, commitLines, resetHistory, lines, syncMode, setMetadata, metadata, audioFileName, lyricFileName, setLyricFileName, exportFormat, shiftTime, setAudioSpecs, setIsPlaying, playerRef, duration, setDuration, setPlaybackRate, lrcMetadata, setLrcMetadata, touchUIMode, setTouchUIMode, autoLoadLyrics, setAutoLoadLyrics } = useEditor();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const audioInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
   const lyricInputRef = useRef<HTMLInputElement>(null);
   const mixedInputRef = useRef<HTMLInputElement>(null);
   const dialogs = useDialogs();
@@ -329,7 +331,7 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
             }).catch(() => {});
         } catch (e) {}
     }
-  }, [dialogs, audioFileName, lyricFileName, lines.length, metadata, setFile, setMetadata, commitLines, setLyricFileName, resetHistory, shiftTime, undo, redo, pastActions, futureActions, handleExport, setAudioSpecs, exportFormat, setLrcMetadata]);
+  }, [dialogs, audioFileName, lyricFileName, lines.length, metadata, setFile, setMetadata, commitLines, setLyricFileName, resetHistory, shiftTime, undo, redo, pastActions, futureActions, handleExport, setAudioSpecs, exportFormat, setLrcMetadata, clearLyrics, clearMedia, loadEmbeddedLyrics]);
 
   const [dragOverlay, setDragOverlay] = useState<'media' | 'lyric' | 'file' | null>(null);
 
@@ -573,7 +575,7 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
   const interactiveShellClass = isElectron ? 'app-region-no-drag' : '';
 
   const renderButtonsRow = (className: string) => (
-      <div className={`flex-row flex-wrap items-center justify-center lg:justify-between w-full px-2 py-2 gap-y-2 gap-x-4 ${className}`}>
+      <div className={`relative z-30 flex-row flex-wrap items-center justify-center lg:justify-between w-full px-2 py-2 gap-y-2 gap-x-4 ${className}`}>
         {/* Left Group */}
         <div className={`flex items-center gap-2 flex-wrap justify-center lg:justify-start ${interactiveShellClass}`}>
           {renderTitlebarLeftSpacer('h-8')}
@@ -597,6 +599,29 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
             
             {loadMediaDropdownOpen && (
                <div className="absolute top-full left-0 mt-1 w-48 bg-[var(--app-bg-panel)] border border-[var(--app-border-base)] rounded shadow-xl z-[9999] overflow-hidden py-1">
+                  <label className="flex items-center gap-2 px-3 py-2 text-xs text-[var(--app-text-secondary)] hover:bg-[var(--app-bg-hover)] cursor-pointer">
+                    <input 
+                       type="checkbox" 
+                       checked={autoLoadLyrics} 
+                       onChange={(e) => setAutoLoadLyrics(e.target.checked)} 
+                       className="accent-[var(--app-accent)]"
+                    />
+                    自動載入歌詞
+                  </label>
+                  <div className="h-px bg-[var(--app-border-base)] mx-2 my-1" />
+                  <button 
+                    onClick={() => { audioInputRef.current?.click(); setLoadMediaDropdownOpen(false); }}
+                    className="w-full text-left px-3 py-2 text-xs text-[var(--app-text-secondary)] hover:bg-[var(--app-accent)] hover:text-black transition-colors flex items-center gap-2"
+                  >
+                    <Music className="w-3.5 h-3.5" /> 載入音樂
+                  </button>
+                  <button 
+                    onClick={() => { videoInputRef.current?.click(); setLoadMediaDropdownOpen(false); }}
+                    className="w-full text-left px-3 py-2 text-xs text-[var(--app-text-secondary)] hover:bg-[var(--app-accent)] hover:text-black transition-colors flex items-center gap-2"
+                  >
+                    <Film className="w-3.5 h-3.5" /> 載入MV影片
+                  </button>
+                  <div className="h-px bg-[var(--app-border-base)] mx-2 my-1" />
                   <button 
                     disabled={!audioFileName}
                     onClick={() => { clearMedia(); setLoadMediaDropdownOpen(false); }}
@@ -627,12 +652,13 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
             
             {loadDropdownOpen && (
                <div className="absolute top-full left-0 mt-1 w-56 bg-[var(--app-bg-panel)] border border-[var(--app-border-base)] rounded shadow-xl z-[9999] overflow-hidden py-1">
-                  <button className="w-full text-left px-3 py-2 text-xs text-[var(--app-text-secondary)] hover:bg-[var(--app-accent)] hover:text-black transition-colors" onClick={() => { lyricInputRef.current?.click(); setLoadDropdownOpen(false); }}>
+                  <button className="w-full flex items-center gap-2 text-left px-3 py-2 text-xs text-[var(--app-text-secondary)] hover:bg-[var(--app-accent)] hover:text-black transition-colors" onClick={() => { lyricInputRef.current?.click(); setLoadDropdownOpen(false); }}>
+                    <FileText className="w-3.5 h-3.5" />
                     {i18n.loadFileLyrics}
                   </button>
                   <button 
                     disabled={!metadata?.lyric}
-                    className="w-full text-left px-3 py-2 text-xs text-[var(--app-text-secondary)] disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-[var(--app-text-secondary)] hover:bg-[var(--app-accent)] hover:text-black transition-colors" 
+                    className="w-full flex items-center gap-2 text-left px-3 py-2 text-xs text-[var(--app-text-secondary)] disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-[var(--app-text-secondary)] hover:bg-[var(--app-accent)] hover:text-black transition-colors" 
                     onClick={async () => { 
                        if (metadata?.lyric) {
                           if (lines.length > 0) {
@@ -646,6 +672,7 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
                        setLoadDropdownOpen(false); 
                     }}
                   >
+                    <Download className="w-3.5 h-3.5" />
                     {i18n.loadEmbeddedLyrics}
                   </button>
                   <div className="h-px bg-[var(--app-border-base)] mx-2 my-1" />
@@ -661,7 +688,9 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
           </div>
 
           <div className="h-6 w-px bg-[var(--app-border-base)] mx-1 hidden sm:block"></div>
-          <UndoRedoControls />
+          <div className="relative z-30">
+            <UndoRedoControls />
+          </div>
         </div>
         
         {/* Right Group */}
@@ -815,6 +844,22 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
       />
       <input 
         type="file" 
+        accept="audio/*" 
+        className="hidden" 
+        ref={audioInputRef} 
+        onChange={handleAudioSelect} 
+        onClick={(e) => { (e.target as HTMLInputElement).value = ''; }}
+      />
+      <input 
+        type="file" 
+        accept="video/*" 
+        className="hidden" 
+        ref={videoInputRef} 
+        onChange={handleAudioSelect} 
+        onClick={(e) => { (e.target as HTMLInputElement).value = ''; }}
+      />
+      <input 
+        type="file" 
         accept=".txt,.lrc" 
         className="hidden" 
         ref={lyricInputRef} 
@@ -888,7 +933,7 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none whitespace-nowrap overflow-hidden px-8 z-20 hidden lg:flex gap-4">
         <button 
           onClick={() => setMetadataDialogOpen(true)}
-          title="歌詞屬性"
+          title="LRC屬性"
           className="app-region-no-drag pointer-events-auto p-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-accent)] hover:bg-[var(--app-bg-hover)] rounded transition-colors relative group shrink-0"
         >
           <Tag className="w-5 h-5" />
@@ -916,7 +961,7 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
          <div className="flex items-center justify-center pointer-events-none whitespace-nowrap overflow-hidden px-2 z-0 flex-1 gap-2">
              <button 
                onClick={() => setMetadataDialogOpen(true)}
-               title="歌詞屬性"
+               title="LRC屬性"
                className="app-region-no-drag pointer-events-auto p-1 text-[var(--app-text-muted)] hover:text-[var(--app-accent)] hover:bg-[var(--app-bg-hover)] rounded transition-colors relative group shrink-0"
              >
                <Tag className="w-4 h-4" />
@@ -941,7 +986,7 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
       </div>
 
       {/* Desktop Buttons */}
-      {renderButtonsRow('hidden lg:flex flex-1 z-10')}
+      {renderButtonsRow('hidden lg:flex flex-1 z-30 relative')}
     </header>
     {/* Mobile Buttons — wrapped so --top-toolbar-display: none also hides this row on Linux Tauri */}
     <div style={{ display: 'var(--top-toolbar-display, flex)' }} className={`transition-opacity duration-300 ${unfocusedClass}`}>

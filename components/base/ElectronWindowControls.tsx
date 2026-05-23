@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Minus, Square, X, Copy } from 'lucide-react';
+import { ChevronDown, ChevronUp, X } from 'lucide-react';
 
 type ElectronAPI = {
   shell?: { useCustomWindowControls?: boolean };
@@ -55,13 +55,12 @@ export function ElectronWindowControls({ className = '' }: { className?: string 
 
   const disabled = dialogOpen;
   const btnClass =
-    'flex items-center justify-center w-[46px] h-full border-none bg-transparent text-[var(--app-text-muted)] hover:bg-[var(--app-bg-hover)] hover:text-[var(--app-text-primary)] transition-colors disabled:opacity-40 disabled:pointer-events-none app-region-no-drag shrink-0';
-  const closeClass =
-    `${btnClass} hover:!bg-[#e81123] hover:!text-white`;
+    'flex items-center justify-center w-[24px] h-[24px] rounded-full border-none bg-black/[0.06] dark:bg-white/10 text-[var(--app-text-secondary)] hover:bg-black/10 dark:hover:bg-white/20 transition-colors disabled:opacity-40 disabled:pointer-events-none app-region-no-drag shrink-0';
+  const closeClass = btnClass;
 
   return (
     <div
-      className={`flex items-stretch app-region-no-drag shrink-0 ${className}`}
+      className={`flex items-center gap-x-3 gap-y-2 px-2 app-region-no-drag shrink-0 ${className}`}
       data-electron-window-controls
     >
       <button
@@ -72,7 +71,7 @@ export function ElectronWindowControls({ className = '' }: { className?: string 
         title="最小化"
         onClick={() => api.windowMinimize?.()}
       >
-        <Minus className="w-3.5 h-3.5" strokeWidth={1.5} />
+        <ChevronDown className="w-5 h-5" strokeWidth={1.5} />
       </button>
       <button
         type="button"
@@ -82,11 +81,7 @@ export function ElectronWindowControls({ className = '' }: { className?: string 
         title={isMaximized ? '還原' : '最大化'}
         onClick={() => api.windowToggleMaximize?.()}
       >
-        {isMaximized ? (
-          <Copy className="w-3 h-3" strokeWidth={1.5} />
-        ) : (
-          <Square className="w-3 h-3" strokeWidth={1.5} />
-        )}
+        <ChevronUp className="w-5 h-5" strokeWidth={1.5} />
       </button>
       <button
         type="button"
@@ -96,7 +91,7 @@ export function ElectronWindowControls({ className = '' }: { className?: string 
         title="關閉"
         onClick={() => api.windowClose?.()}
       >
-        <X className="w-3.5 h-3.5" strokeWidth={1.5} />
+        <X className="w-5 h-5" strokeWidth={1.5} />
       </button>
     </div>
   );

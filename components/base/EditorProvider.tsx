@@ -164,6 +164,11 @@ interface EditorContextType {
   audioSpecs: { format?: string, bitrate?: string, sampleRate?: string, bitsPerSample?: string } | null;
   setAudioSpecs: (specs: { format?: string, bitrate?: string, sampleRate?: string, bitsPerSample?: string } | null) => void;
   
+  autoLoadLyrics: boolean;
+  setAutoLoadLyrics: (val: boolean) => void;
+  toastMessage: string | null;
+  showToast: (msg: string) => void;
+
   handleFormatWords: () => void;
 }
 
@@ -217,6 +222,13 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
   const [playbackRate, setPlaybackRate] = useState(1);
   const [touchUIMode, setTouchUIMode] = useState(false);
   const [audioSpecs, setAudioSpecs] = useState<{ format?: string, bitrate?: string, sampleRate?: string } | null>(null);
+  const [autoLoadLyrics, setAutoLoadLyrics] = useState(true);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = React.useCallback((msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3000);
+  }, []);
   
   const playerRef = useRef<HTMLVideoElement | HTMLAudioElement | null>(null);
 
@@ -447,6 +459,8 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
       touchUIMode, setTouchUIMode,
       audioSpecs, setAudioSpecs,
       playerRef,
+      autoLoadLyrics, setAutoLoadLyrics,
+      toastMessage, showToast,
       handleFormatWords,
     }}>
       {children}

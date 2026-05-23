@@ -13,15 +13,18 @@ export function EditorView() {
   const i18n = useI18n();
   useGlobalHotkeys();
 
-  const [isNarrow, setIsNarrow] = useState(false);
+  const [isMobileLayout, setIsMobileLayout] = useState(false);
+  const [isReallyNarrow, setIsReallyNarrow] = useState(false);
   const [isTall, setIsTall] = useState(false);
 
   useEffect(() => {
     const handleResize = () => {
-      const narrow = window.innerWidth < 768; // sm
-      setIsNarrow(narrow);
+      const mobileLayout = window.innerWidth < 1024;
+      const reallyNarrow = window.innerWidth < 768; // sm
+      setIsMobileLayout(mobileLayout);
+      setIsReallyNarrow(reallyNarrow);
       setIsTall(window.innerHeight > 1110);
-      if (narrow && mode === 'dual-sync') {
+      if (reallyNarrow && mode === 'dual-sync') {
          setMode('sync');
       }
     };
@@ -31,8 +34,8 @@ export function EditorView() {
   }, [mode, setMode]);
 
   return (
-    <div className={(isNarrow && !isTall) ? "contents" : "flex-1 w-full h-full overflow-hidden flex flex-col"}>
-      <div className={`flex bg-[var(--app-bg-panel)] border-b border-[var(--app-border-base)] shrink-0 z-20 ${isNarrow && !isTall ? 'static' : ''}`}>
+    <div className={(isMobileLayout && !isTall) ? "contents" : "flex-1 w-full h-full overflow-hidden flex flex-col"}>
+      <div className={`flex bg-[var(--app-bg-panel)] border-b border-[var(--app-border-base)] shrink-0 z-20 ${isMobileLayout && !isTall ? 'static' : ''}`}>
         <button
           onClick={() => setMode('text')}
           className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-widest border-b-2 hover:bg-[var(--app-bg-hover)] transition-colors ${mode === 'text' ? 'border-[var(--app-accent)] text-[var(--app-accent)]' : 'border-transparent text-[var(--app-text-muted)] hover:text-[var(--app-text-secondary)]'}`}
@@ -45,7 +48,7 @@ export function EditorView() {
         >
           {i18n.tabSync}
         </button>
-        {!isNarrow && (
+        {!isReallyNarrow && (
           <button
             onClick={() => setMode('dual-sync')}
             className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-widest border-b-2 hover:bg-[var(--app-bg-hover)] transition-colors ${mode === 'dual-sync' ? 'border-[var(--app-accent)] text-[var(--app-accent)]' : 'border-transparent text-[var(--app-text-muted)] hover:text-[var(--app-text-secondary)]'}`}
@@ -61,7 +64,7 @@ export function EditorView() {
         </button>
       </div>
 
-      <div className={(isNarrow && !isTall) ? "contents" : "flex-1 overflow-hidden flex flex-col"}>
+      <div className={(isMobileLayout && !isTall) ? "contents" : "flex-1 overflow-hidden flex flex-col"}>
         {mode === 'text' && <TextEditor />}
         {(mode === 'sync' || mode === 'dual-sync') && <SyncEditor />}
         {mode === 'raw' && <RawTextDisplay />}

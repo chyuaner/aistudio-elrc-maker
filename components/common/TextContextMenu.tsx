@@ -14,9 +14,6 @@ export function TextContextMenu() {
 
   useEffect(() => {
     const handleContextMenu = (e: MouseEvent) => {
-      if (touchUIMode || window.matchMedia('(pointer: coarse)').matches) {
-          return;
-      }
       const target = e.target as HTMLElement;
       
       const isReadonlyElement = 

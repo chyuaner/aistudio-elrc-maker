@@ -81,7 +81,11 @@ export function ElectronWindowControls({ className = '' }: { className?: string 
         title={isMaximized ? '還原' : '最大化'}
         onClick={() => api.windowToggleMaximize?.()}
       >
-        <ChevronUp className="w-5 h-5" strokeWidth={1.5} />
+        {isMaximized ? (
+          <div className="w-2.5 h-2.5 border-[1.5px] border-current rotate-45 rounded-sm"></div>
+        ) : (
+          <ChevronUp className="w-5 h-5" strokeWidth={1.5} />
+        )}
       </button>
       <button
         type="button"

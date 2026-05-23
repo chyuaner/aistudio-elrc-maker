@@ -691,7 +691,7 @@ export function MediaPlayer() {
           observer.observe(el);
           return () => observer.disconnect();
         }}
-        className={`flex flex-col w-full shrink-0 ${isMobile && !isTall ? "z-30 sticky shadow-sm" : "lg:static lg:z-auto"}`}
+        className={`flex flex-col w-full shrink-0 relative z-[50] ${isMobile && !isTall ? "sticky shadow-sm" : "lg:static lg:z-auto"}`}
         style={{ top: isMobile && !isTall ? 0 : undefined }}
       >
         <div className="bg-[var(--app-bg-panel)] p-3 border-t border-[var(--app-border-base)] @container flex flex-wrap @[600px]:flex-nowrap w-full shrink-0">

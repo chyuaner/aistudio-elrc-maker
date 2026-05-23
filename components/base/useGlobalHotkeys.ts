@@ -11,7 +11,7 @@ export function useGlobalHotkeys() {
     const onKeyDownCapture = (e: KeyboardEvent) => {
       const target = document.activeElement;
       if (target && !isTextEditable(target)) {
-         if ([' ', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Enter'].includes(e.key)) {
+         if ([' ', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Enter'].includes(e.key) || /^[0-9p\[\]]$/i.test(e.key)) {
              if (target instanceof HTMLElement && target.tagName !== 'BODY') {
                  target.blur();
              }

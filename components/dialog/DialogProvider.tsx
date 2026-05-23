@@ -71,7 +71,7 @@ export function DialogProvider({ children }: { children: ReactNode }) {
       {/* Confirm Modal */}
       {confirmState && (
         <div 
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200 app-region-no-drag"
           style={{
             paddingLeft: 'env(safe-area-inset-left, 0px)',
             paddingRight: 'env(safe-area-inset-right, 0px)',
@@ -102,7 +102,7 @@ export function DialogProvider({ children }: { children: ReactNode }) {
       {/* Prompt Modal */}
       {promptState && (
         <div 
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200 app-region-no-drag"
           style={{
             paddingLeft: 'env(safe-area-inset-left, 0px)',
             paddingRight: 'env(safe-area-inset-right, 0px)',

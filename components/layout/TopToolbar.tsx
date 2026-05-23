@@ -930,11 +930,11 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
       }}
     >
       {/* Desktop Title (Absolute centered) */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none whitespace-nowrap overflow-hidden px-8 z-20 hidden lg:flex gap-4">
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center whitespace-nowrap overflow-hidden z-20 hidden lg:flex gap-4 px-2 py-1">
         <button 
           onClick={() => setMetadataDialogOpen(true)}
           title="LRC屬性"
-          className="app-region-no-drag pointer-events-auto p-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-accent)] hover:bg-[var(--app-bg-hover)] rounded transition-colors relative group shrink-0"
+          className="app-region-no-drag p-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-accent)] hover:bg-[var(--app-bg-hover)] rounded transition-colors relative group shrink-0"
         >
           <Tag className="w-5 h-5" />
           <div className="absolute bottom-1 right-1 bg-[var(--app-bg-panel-alt)] group-hover:bg-[var(--app-bg-hover)] rounded-sm p-[1px] transition-colors border border-transparent group-hover:border-[var(--app-accent)]/30">
@@ -958,11 +958,11 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
       {/* Mobile Title Row */}
       <div className="lg:hidden items-center justify-between w-full py-2 app-region-drag relative bg-[var(--app-bg-panel-alt)] z-10 flex">
          {renderTitlebarLeftSpacer('h-6', false)}
-         <div className="flex items-center justify-center pointer-events-none whitespace-nowrap overflow-hidden px-2 z-0 flex-1 gap-2">
+         <div className="flex items-center justify-center whitespace-nowrap overflow-hidden px-2 z-0 flex-1 gap-2">
              <button 
                onClick={() => setMetadataDialogOpen(true)}
                title="LRC屬性"
-               className="app-region-no-drag pointer-events-auto p-1 text-[var(--app-text-muted)] hover:text-[var(--app-accent)] hover:bg-[var(--app-bg-hover)] rounded transition-colors relative group shrink-0"
+               className="app-region-no-drag p-1 text-[var(--app-text-muted)] hover:text-[var(--app-accent)] hover:bg-[var(--app-bg-hover)] rounded transition-colors relative group shrink-0"
              >
                <Tag className="w-4 h-4" />
                <div className="absolute bottom-0 right-0 bg-[var(--app-bg-panel-alt)] group-hover:bg-[var(--app-bg-hover)] rounded-sm p-[1px] transition-colors border border-transparent group-hover:border-[var(--app-accent)]/30">

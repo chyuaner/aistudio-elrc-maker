@@ -55,7 +55,7 @@ export function ElectronWindowControls({ className = '' }: { className?: string 
 
   const disabled = dialogOpen;
   const btnClass =
-    'flex items-center justify-center w-[24px] h-[24px] rounded-full border-none bg-black/[0.06] dark:bg-white/10 text-[var(--app-text-secondary)] hover:bg-black/10 dark:hover:bg-white/20 transition-colors disabled:opacity-40 disabled:pointer-events-none app-region-no-drag shrink-0';
+    'flex items-center justify-center w-[24px] h-[24px] rounded-full border-none bg-[var(--app-winctrl-bg)] text-[var(--app-text-secondary)] hover:bg-[var(--app-winctrl-hover)] transition-colors disabled:opacity-40 disabled:pointer-events-none app-region-no-drag shrink-0';
   const closeClass = btnClass;
 
   return (

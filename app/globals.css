@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@custom-variant dark (&:is(.dark *), .dark &);
 
 @layer base {
   body {
@@ -37,6 +38,9 @@ body.is-dragging-resizer * {
   --app-accent-hover: #E26D16;
   --app-visualizer-color: #3D444D;
 
+  --app-winctrl-bg: rgba(255, 255, 255, 0.1);
+  --app-winctrl-hover: rgba(255, 255, 255, 0.2);
+
   --titlebar-left-padding: 0px;
   --titlebar-right-padding: 0px;
   --top-toolbar-display: flex;
@@ -57,6 +61,8 @@ body.is-dragging-resizer * {
     --app-accent: #F27D26; /* Kept same accent */
     --app-accent-hover: #E26D16;
     --app-visualizer-color: #F0F1F2;
+    --app-winctrl-bg: rgba(0, 0, 0, 0.06);
+    --app-winctrl-hover: rgba(0, 0, 0, 0.1);
   }
 }
 
@@ -125,6 +131,8 @@ html.light {
   --app-accent: #F27D26;
   --app-accent-hover: #E26D16;
   --app-visualizer-color: #F0F1F2;
+  --app-winctrl-bg: rgba(0, 0, 0, 0.06);
+  --app-winctrl-hover: rgba(0, 0, 0, 0.1);
 }
 
 @layer base {
@@ -148,7 +156,22 @@ html.light {
     background-clip: padding-box;
     border-radius: 9999px;
   }
-  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background-color: var(--app-text-muted);
   }
 }
+
+/* Theme swapping for icons */
+.theme-icon-light { display: none; }
+.theme-icon-dark { display: block; }
+
+@media (prefers-color-scheme: light) {
+  :root:not(.dark) .theme-icon-dark { display: none; }
+  :root:not(.dark) .theme-icon-light { display: block; }
+}
+
+html.light .theme-icon-dark { display: none; }
+html.light .theme-icon-light { display: block; }
+
+html.dark .theme-icon-light { display: none; }
+html.dark .theme-icon-dark { display: block; }

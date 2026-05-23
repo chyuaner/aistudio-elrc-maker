@@ -932,14 +932,12 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
       {/* Desktop Title (Absolute centered) */}
       <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center whitespace-nowrap overflow-hidden z-20 hidden lg:flex gap-4 px-2 py-1">
         <button 
-          onClick={() => setMetadataDialogOpen(true)}
-          title="LRC屬性"
-          className="app-region-no-drag p-1.5 text-[var(--app-text-muted)] hover:text-[var(--app-accent)] hover:bg-[var(--app-bg-hover)] rounded transition-colors relative group shrink-0"
+          onClick={() => setAboutDialogOpen(true)}
+          title="關於 Enhanced LRC Maker"
+          className="app-region-no-drag p-1 rounded transition-colors relative group shrink-0"
         >
-          <Tag className="w-5 h-5" />
-          <div className="absolute bottom-1 right-1 bg-[var(--app-bg-panel-alt)] group-hover:bg-[var(--app-bg-hover)] rounded-sm p-[1px] transition-colors border border-transparent group-hover:border-[var(--app-accent)]/30">
-            <Edit2 className="w-2 h-2" />
-          </div>
+          <img src="/icon-light.svg" alt="App Icon" className="w-5 h-5 theme-icon-light opacity-80 group-hover:opacity-100 transition-opacity" />
+          <img src="/icon-dark.svg" alt="App Icon" className="w-5 h-5 theme-icon-dark opacity-80 group-hover:opacity-100 transition-opacity" />
         </button>
         <div className="flex flex-col items-center">
           {!finalHideTitle && (

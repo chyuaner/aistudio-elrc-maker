@@ -175,9 +175,12 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
 
   // Track Fullscreen state for hiding titlebar spacers
   useEffect(() => {
+    const isCapacitor = typeof window !== 'undefined' && !!(window as any).Capacitor;
+
     const checkFs = () => {
       const isDOMFs = !!document.fullscreenElement;
-      const isWindowFs = window.innerWidth === window.screen.width && window.innerHeight === window.screen.height;
+      // 在 Capacitor 中，視窗尺寸判斷極不準確（因為 Edge-to-Edge 模式），故排除之
+      const isWindowFs = !isCapacitor && window.innerWidth === window.screen.width && window.innerHeight === window.screen.height;
       const isAndroidFs = !!(window as any).isAndroidFullscreen;
       setIsFullscreen(isDOMFs || isWindowFs || isAndroidFs);
     };
@@ -990,7 +993,7 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
         className={`bg-[var(--app-bg-panel-alt)] border-b border-[var(--app-border-base)] shrink-0 relative select-none flex flex-col lg:flex-row lg:items-center lg:justify-between sticky top-0 z-[60] w-full transition-opacity duration-300 ${isElectron ? 'app-region-drag' : ''} ${unfocusedClass}`}
         style={{
           display: 'var(--top-toolbar-display, flex)',
-          paddingTop: 'max(var(--android-safe-top, 0px), env(safe-area-inset-top, 0px))'
+          paddingTop: isFullscreen ? '0px' : 'max(var(--android-safe-top, 0px), env(safe-area-inset-top, 0px))'
         }}
         onDoubleClick={(e) => {
           if (!isElectron) return;

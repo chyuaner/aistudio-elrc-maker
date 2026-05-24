@@ -17,6 +17,10 @@ export function WebSystemIntegration() {
     const electronShell = (window as any).electronAPI?.shell;
     const ua = typeof navigator !== 'undefined' ? navigator.userAgent.toLowerCase() : '';
 
+    if (isCapacitor) {
+        (window as any).isAndroidFullscreen = false;
+    }
+    
     if (isElectron && electronShell) {
       const root = document.documentElement;
       root.classList.add('electron-shell');

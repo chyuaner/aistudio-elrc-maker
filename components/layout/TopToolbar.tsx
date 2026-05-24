@@ -88,8 +88,8 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
 
   const MORE_MENU_ITEMS: { type: 'link' | 'action', label: string, url?: string, action?: () => void }[] = [
     // { type: 'link', label: 'Buy me a Coffee', url: 'https://buymeacoffee.com/' },
-    { type: 'link', label: 'Project Homepage', url: 'https://github.com/chyuaner/aistudio-elrc-maker' },
-    { type: 'link', label: 'My Homepage', url: 'https://yuaner.tw' },
+    { type: 'link', label: '專案首頁', url: 'https://elrc.yuaner.tw' },
+    { type: 'link', label: '作者首頁', url: 'https://yuaner.tw' },
   ];
 
   useEffect(() => {

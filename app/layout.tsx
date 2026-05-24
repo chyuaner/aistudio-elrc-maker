@@ -38,6 +38,15 @@ export default function RootLayout({children}: {children: React.ReactNode}) {
             // Set defaults for web
             document.documentElement.style.setProperty('--top-toolbar-display', 'flex');
 
+            // Force viewport-fit=cover for mobile
+            const viewportMeta = document.querySelector('meta[name="viewport"]');
+            if (viewportMeta) {
+                let content = viewportMeta.getAttribute('content');
+                if (!content.includes('viewport-fit=cover')) {
+                    viewportMeta.setAttribute('content', content + ', viewport-fit=cover');
+                }
+            }
+
             if (isElectron && electronAPI.shell) {
                 document.documentElement.classList.add('electron-shell');
                 var sh = electronAPI.shell;

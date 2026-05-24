@@ -735,10 +735,10 @@ export function SyncEditor() {
          <div 
            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
            style={{
-             paddingLeft: 'max(1rem, env(safe-area-inset-left))',
-             paddingRight: 'max(1rem, env(safe-area-inset-right))',
-             paddingTop: 'max(1rem, env(safe-area-inset-top))',
-             paddingBottom: 'max(1rem, env(safe-area-inset-bottom))'
+             paddingLeft: 'max(1rem, var(--app-safe-area-left))',
+             paddingRight: 'max(1rem, var(--app-safe-area-right))',
+             paddingTop: 'max(1rem, var(--app-safe-area-top))',
+             paddingBottom: 'max(1rem, var(--app-safe-area-bottom))'
            }}
          >
             <div className="bg-[var(--app-bg-panel)] rounded-xl shadow-2xl w-full max-w-xl border border-[var(--app-border-base)] flex flex-col overflow-hidden">

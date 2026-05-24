@@ -24,10 +24,10 @@ export function LrcMetadataDialog({ isOpen, onClose }: { isOpen: boolean; onClos
     <div 
       className="fixed inset-0 z-[150] flex flex-col items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200 app-region-no-drag"
       style={{
-        paddingLeft: 'max(1rem, env(safe-area-inset-left))',
-        paddingRight: 'max(1rem, env(safe-area-inset-right))',
-        paddingTop: 'max(1rem, env(safe-area-inset-top))',
-        paddingBottom: 'max(1rem, env(safe-area-inset-bottom))'
+        paddingLeft: 'max(1rem, var(--app-safe-area-left))',
+        paddingRight: 'max(1rem, var(--app-safe-area-right))',
+        paddingTop: 'max(1rem, var(--app-safe-area-top))',
+        paddingBottom: 'max(1rem, var(--app-safe-area-bottom))'
       }}
     >
       <div className="bg-[var(--app-bg-panel)] border border-[var(--app-border-base)] rounded-xl shadow-2xl w-full max-w-xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">

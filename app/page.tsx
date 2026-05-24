@@ -17,9 +17,9 @@ export default function Page() {
           className="h-[100dvh] w-full bg-[var(--app-bg-base)] text-[var(--app-text-secondary)] font-sans flex flex-col overflow-hidden selection:bg-[var(--app-accent)]/30"
           style={{
             paddingTop: '0px',
-            paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-            paddingLeft: 'env(safe-area-inset-left, 0px)',
-            paddingRight: 'env(safe-area-inset-right, 0px)'
+            paddingBottom: 'var(--app-safe-area-bottom)',
+            paddingLeft: 'var(--app-safe-area-left)',
+            paddingRight: 'var(--app-safe-area-right)'
           }}
         >
           <div className="flex flex-col flex-1 overflow-hidden relative" 

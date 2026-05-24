@@ -964,10 +964,10 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
         <div
           className="fixed inset-0 z-[100] bg-[var(--app-bg-base)]/80 backdrop-blur-sm flex items-center justify-center border-[3px] border-dashed border-[var(--app-accent)] m-4 rounded-xl pointer-events-none"
           style={{
-            marginTop: 'max(1rem, env(safe-area-inset-top))',
-            marginBottom: 'max(1rem, env(safe-area-inset-bottom))',
-            marginLeft: 'max(1rem, env(safe-area-inset-left))',
-            marginRight: 'max(1rem, env(safe-area-inset-right))'
+            marginTop: 'max(1rem, var(--app-safe-area-top))',
+            marginBottom: 'max(1rem, var(--app-safe-area-bottom))',
+            marginLeft: 'max(1rem, var(--app-safe-area-left))',
+            marginRight: 'max(1rem, var(--app-safe-area-right))'
           }}
         >
           <div className="text-center flex flex-col items-center gap-4 text-[var(--app-accent)] bg-[var(--app-bg-panel)] px-12 py-8 rounded-2xl shadow-2xl animate-pulse">
@@ -990,7 +990,7 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
         className={`bg-[var(--app-bg-panel-alt)] border-b border-[var(--app-border-base)] shrink-0 relative select-none flex flex-col lg:flex-row lg:items-center lg:justify-between sticky top-0 z-[60] w-full transition-opacity duration-300 ${isElectron ? 'app-region-drag' : ''} ${unfocusedClass}`}
         style={{
           display: 'var(--top-toolbar-display, flex)',
-          paddingTop: 'env(safe-area-inset-top, 0px)'
+          paddingTop: 'max(var(--android-safe-top, 0px), env(safe-area-inset-top, 0px))'
         }}
         onDoubleClick={(e) => {
           if (!isElectron) return;

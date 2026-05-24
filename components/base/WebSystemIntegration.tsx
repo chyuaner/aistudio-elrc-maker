@@ -31,6 +31,33 @@ export function WebSystemIntegration() {
     }
     const isLinuxTauri = isTauri && ua.includes('linux');
 
+    // ── Capacitor Status Bar Initialization ──
+    if (isCapacitor) {
+        console.log("!!! BUILD_SUCCESS_VER_2 !!! - Dynamic Height Active");
+        (async () => {
+            try {
+                const { StatusBar } = await import('@capacitor/status-bar');
+                await StatusBar.setOverlaysWebView({ overlay: true });
+
+                // 動態從原生插件獲取精確的狀態列高度
+                const { registerPlugin } = await import('@capacitor/core');
+                const ThemeControl = registerPlugin<any>('ThemeControl');
+                const result = await ThemeControl.getStatusBarHeight();
+
+                if (result && result.height) {
+                    // 將原生抓到的高度動態寫入 CSS 變數
+                    document.documentElement.style.setProperty('--android-safe-top', `${result.height}px`);
+                    console.log(`Successfully set dynamic status bar height: ${result.height}px`);
+                } else {
+                    document.documentElement.style.setProperty('--android-safe-top', '38px');
+                }
+            } catch (err) {
+                console.warn('Initial Capacitor StatusBar overlay failed:', err);
+                document.documentElement.style.setProperty('--android-safe-top', '38px');
+            }
+        })();
+    }
+
     // Prevent tab focus on buttons globally to avoid confusion with keyboard shortcuts
     const updateTabIndexes = () => {
       document.querySelectorAll('button, input[type="checkbox"], input[type="radio"], [role="switch"], [role="button"]').forEach((el) => {

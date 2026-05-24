@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useRef } from 'react';
-import { Scissors, Copy, ClipboardPaste, ListChecks } from 'lucide-react';
+import { Scissors, Copy, ClipboardPaste, ListChecks, Search } from 'lucide-react';
 import { useEditor } from '@/components/base/EditorProvider';
 import { ContextMenu, ContextMenuItem, ContextMenuSeparator } from '@/components/common/ContextMenu';
 
@@ -10,7 +10,7 @@ export function TextContextMenu() {
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isReadOnly, setIsReadOnly] = useState(false);
   const targetElementRef = useRef<HTMLElement | null>(null);
-  const { touchUIMode } = useEditor();
+  const { touchUIMode, mode } = useEditor();
 
   useEffect(() => {
     const handleContextMenu = (e: MouseEvent) => {
@@ -60,8 +60,15 @@ export function TextContextMenu() {
     };
   }, [touchUIMode]);
 
-  const handleAction = async (action: 'cut' | 'copy' | 'paste' | 'selectAll' | 'toTraditional' | 'toSimplified') => {
+  const handleAction = async (action: 'cut' | 'copy' | 'paste' | 'selectAll' | 'toTraditional' | 'toSimplified' | 'search' | 'searchIgnoreTags') => {
     setVisible(false);
+    
+    if (action === 'search' || action === 'searchIgnoreTags') {
+      const selectedText = window.getSelection()?.toString() || '';
+      const event = new CustomEvent('context-menu-search', { detail: { text: selectedText, ignoreTimeTags: action === 'searchIgnoreTags' } });
+      window.dispatchEvent(event);
+      return;
+    }
     
     const targetElement = targetElementRef.current;
     if (!targetElement) return;
@@ -180,6 +187,20 @@ export function TextContextMenu() {
         icon={<ClipboardPaste className="w-3.5 h-3.5" />}
         label="貼上"
       />
+      {(mode === 'text' || mode === 'raw') && (
+         <>
+           <ContextMenuItem
+             onClick={() => handleAction('search')}
+             icon={<Search className="w-3.5 h-3.5" />}
+             label="搜尋"
+           />
+           <ContextMenuItem
+             onClick={() => handleAction('searchIgnoreTags')}
+             icon={<Search className="w-3.5 h-3.5" />}
+             label="搜尋 (無視時間標籤)"
+           />
+         </>
+      )}
       <ContextMenuSeparator />
       <ContextMenuItem
         onClick={() => handleAction('selectAll')}

@@ -78,6 +78,16 @@ export function TextEditor() {
       let finalEnd = ignoreTimeTags && mapping ? mapping[matchEnd] : matchEnd;
 
       if (ignoreTimeTags && !selectWholeLine) {
+          let hasContentOnRight = false;
+          let tempEnd = finalEnd;
+          while (tempEnd < text.length && text[tempEnd] !== '\n' && text[tempEnd] !== '\r') {
+              if (text[tempEnd] !== ' ' && text[tempEnd] !== '\t') {
+                  hasContentOnRight = true;
+                  break;
+              }
+              tempEnd++;
+          }
+
           while (finalStart > 0) {
               const charBefore = text[finalStart - 1];
               if (charBefore === '>' || charBefore === ']') {
@@ -89,6 +99,9 @@ export function TextEditor() {
                   if (tagStart >= 0) {
                       const tagText = text.substring(tagStart, finalStart);
                       if (/^[<\[]\d{2}:\d{2}(?:\.\d{2,3})?[>\]]$/.test(tagText)) {
+                          if (openChar === '[' && hasContentOnRight) {
+                              break;
+                          }
                           finalStart = tagStart;
                           continue;
                       }
@@ -137,7 +150,7 @@ export function TextEditor() {
         setCurrentMatchIndex(matches.length - 1);
       }
     } else {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+       
       setCurrentMatchIndex(0);
     }
   }, [matches.length, currentMatchIndex]);
@@ -271,6 +284,36 @@ export function TextEditor() {
     return () => window.removeEventListener("focus-raw-text-line", handler);
   }, [text, lrcMetadata]);
 
+  useEffect(() => {
+    const searchHandler = (e: any) => {
+      const selectedHtmlText = e.detail?.text || "";
+      const shouldIgnoreTags = e.detail?.ignoreTimeTags;
+      
+      let searchTextToUse = selectedHtmlText;
+      // also check if textarea has selection, if it was directly selected
+      if (!searchTextToUse && textareaRef.current) {
+         const t = textareaRef.current;
+         if (t.selectionStart !== t.selectionEnd) {
+             searchTextToUse = t.value.substring(t.selectionStart, t.selectionEnd);
+         }
+      }
+
+      if (shouldIgnoreTags) {
+         searchTextToUse = searchTextToUse.replace(/(?:\[\d{2}:\d{2}(?:\.\d{2,3})?\])|(?:<\d{2}:\d{2}(?:\.\d{2,3})?>)/g, "");
+      }
+      
+      if (searchTextToUse) {
+         setSearchText(searchTextToUse);
+      }
+      setIsSearchOpen(true);
+      setTimeout(() => {
+        document.getElementById("search-input")?.focus();
+      }, 50);
+    };
+    window.addEventListener("context-menu-search", searchHandler);
+    return () => window.removeEventListener("context-menu-search", searchHandler);
+  }, []);
+
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setText(e.target.value);
     textRef.current = e.target.value; // Sync ref immediately
@@ -303,7 +346,7 @@ export function TextEditor() {
   };
 
   const saveChangesRef = useRef(saveChanges);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   useEffect(() => {
     saveChangesRef.current = saveChanges;
   }, [saveChanges]);

@@ -102,6 +102,16 @@ export function RawTextDisplay() {
       let finalEnd = ignoreTimeTags && mapping ? mapping[matchEnd] : matchEnd;
 
       if (ignoreTimeTags && !selectWholeLine) {
+          let hasContentOnRight = false;
+          let tempEnd = finalEnd;
+          while (tempEnd < text.length && text[tempEnd] !== '\n' && text[tempEnd] !== '\r') {
+              if (text[tempEnd] !== ' ' && text[tempEnd] !== '\t') {
+                  hasContentOnRight = true;
+                  break;
+              }
+              tempEnd++;
+          }
+
           while (finalStart > 0) {
               const charBefore = text[finalStart - 1];
               if (charBefore === '>' || charBefore === ']') {
@@ -113,6 +123,9 @@ export function RawTextDisplay() {
                   if (tagStart >= 0) {
                       const tagText = text.substring(tagStart, finalStart);
                       if (/^[<\[]\d{2}:\d{2}(?:\.\d{2,3})?[>\]]$/.test(tagText)) {
+                          if (openChar === '[' && hasContentOnRight) {
+                              break;
+                          }
                           finalStart = tagStart;
                           continue;
                       }
@@ -161,7 +174,7 @@ export function RawTextDisplay() {
         setCurrentMatchIndex(matches.length - 1);
       }
     } else {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+       
       setCurrentMatchIndex(0);
     }
   }, [matches.length, currentMatchIndex]);
@@ -253,6 +266,34 @@ export function RawTextDisplay() {
     setCurrentMatchIndex(prevIndex);
     scrollToMatch(prevIndex);
   };
+
+  useEffect(() => {
+    const searchHandler = (e: any) => {
+      const selectedHtmlText = e.detail?.text || "";
+      const shouldIgnoreTags = e.detail?.ignoreTimeTags;
+      
+      let searchTextToUse = selectedHtmlText;
+      // check window selection
+      if (!searchTextToUse) {
+         const selText = window.getSelection()?.toString();
+         if (selText) searchTextToUse = selText;
+      }
+
+      if (shouldIgnoreTags) {
+         searchTextToUse = searchTextToUse.replace(/(?:\[\d{2}:\d{2}(?:\.\d{2,3})?\])|(?:<\d{2}:\d{2}(?:\.\d{2,3})?>)/g, "");
+      }
+
+      if (searchTextToUse) {
+         setSearchText(searchTextToUse);
+      }
+      setIsSearchOpen(true);
+      setTimeout(() => {
+        document.getElementById("preview-search-input")?.focus();
+      }, 50);
+    };
+    window.addEventListener("context-menu-search", searchHandler);
+    return () => window.removeEventListener("context-menu-search", searchHandler);
+  }, []);
 
   
   let currentRawIndex = 0;

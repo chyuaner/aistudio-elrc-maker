@@ -250,6 +250,17 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
   const titleColor = isUnfocused ? 'text-[var(--app-text-muted)]' : 'text-[var(--app-text-secondary)]';
   const unfocusedClass = isUnfocused ? 'toolbar-unfocused' : '';
 
+  const isLyricNameMismatch = React.useMemo(() => {
+    if (!lyricFileName || !audioFileName) return false;
+    if (lyricFileName === 'Embedded Tag' || lyricFileName === 'New Lyrics' || lyricFileName === i18n.embeddedTag) return false;
+    const audioBase = audioFileName.includes('.') ? audioFileName.substring(0, audioFileName.lastIndexOf('.')) : audioFileName;
+    const lyricBase = lyricFileName.includes('.') ? lyricFileName.substring(0, lyricFileName.lastIndexOf('.')) : lyricFileName;
+    return audioBase !== lyricBase;
+  }, [audioFileName, lyricFileName, i18n.embeddedTag]);
+
+  const lyricNameClass = isLyricNameMismatch ? 'text-red-500 font-bold' : 'text-[var(--app-text-secondary)]';
+  const noAudioClass = (!audioFileName && lyricFileName) ? 'text-red-500 font-bold' : '';
+
   // AppCommands mapping extracted from useEditor hooks above
 
   useEffect(() => {
@@ -945,10 +956,10 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
               <span className="font-bold">E</span><span>nhanced</span> <span className="font-bold">LRC Maker</span>
             </h1>
           )}
-          <div className={`${finalHideTitle ? 'text-sm' : 'text-[10px] mt-0.5'} text-[var(--app-text-muted)] font-mono truncate flex items-center justify-center gap-2 max-w-full transition-all`}>
-            {audioFileName ? <span>{i18n.audio}: <span className="text-[var(--app-text-secondary)] truncate max-w-[200px] inline-block align-bottom">{audioFileName}</span></span> : <span>{i18n.noAudio}</span>}
+          <div className={`${finalHideTitle ? 'text-sm' : 'text-[10px] mt-0.5'} text-[var(--app-text-muted)] font-mono flex items-center justify-center gap-2 max-w-full transition-all overflow-hidden whitespace-nowrap`}>
+            {audioFileName ? <span>{i18n.audio}: <span className="text-[var(--app-text-secondary)]">{audioFileName}</span></span> : <span className={noAudioClass}>{i18n.noAudio}</span>}
             <span className="opacity-50 shrink-0">|</span>
-            {lyricFileName ? <span>{i18n.lyrics}: <span className="text-[var(--app-text-secondary)] truncate max-w-[200px] inline-block align-bottom">{lyricFileName}</span></span> : metadata?.lyric ? <span>{i18n.lyrics}: <span className="text-[var(--app-text-secondary)]">{i18n.embeddedTag}</span></span> : <span>{i18n.noLyrics}</span>}
+            {lyricFileName ? <span>{i18n.lyrics}: <span className={lyricNameClass}>{lyricFileName === 'Embedded Tag' ? i18n.embeddedTag : lyricFileName}</span></span> : metadata?.lyric ? <span>{i18n.lyrics}: <span className="text-[var(--app-text-secondary)]">{i18n.embeddedTag}</span></span> : <span>{i18n.noLyrics}</span>}
           </div>
         </div>
       </div>
@@ -973,10 +984,10 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
                       <span className="font-bold">E</span><span>nhanced</span> <span className="font-bold">LRC Maker</span>
                     </h1>
                  )}
-                 <div className={`${finalHideTitle ? 'text-sm' : 'text-[10px] mt-0.5'} text-[var(--app-text-muted)] font-mono truncate flex items-center justify-start gap-2 max-w-full transition-all`}>
-                    {audioFileName ? <span className="truncate max-w-[120px] text-[var(--app-text-secondary)]">{audioFileName}</span> : <span>{i18n.noAudio}</span>}
+                 <div className={`${finalHideTitle ? 'text-sm' : 'text-[10px] mt-0.5'} text-[var(--app-text-muted)] font-mono flex items-center justify-start gap-2 max-w-full transition-all overflow-hidden whitespace-nowrap`}>
+                    {audioFileName ? <span className="text-[var(--app-text-secondary)]">{audioFileName}</span> : <span className={noAudioClass}>{i18n.noAudio}</span>}
                     <span className="opacity-50 shrink-0">|</span>
-                    {lyricFileName ? <span className="truncate max-w-[120px] text-[var(--app-text-secondary)]">{lyricFileName}</span> : metadata?.lyric ? <span className="text-[var(--app-text-secondary)]">{i18n.embeddedTag}</span> : <span>{i18n.noLyrics}</span>}
+                    {lyricFileName ? <span className={lyricNameClass}>{lyricFileName === 'Embedded Tag' ? i18n.embeddedTag : lyricFileName}</span> : metadata?.lyric ? <span className="text-[var(--app-text-secondary)]">{i18n.embeddedTag}</span> : <span>{i18n.noLyrics}</span>}
                  </div>
              </div>
          </div>

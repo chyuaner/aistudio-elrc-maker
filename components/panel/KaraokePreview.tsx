@@ -22,9 +22,13 @@ export function KaraokePreview({ hideTouchUI = false }: { hideTouchUI?: boolean 
 
   useEffect(() => {
     let rafId: number;
-    const updateTime = () => {
-      if (playerRef.current) {
-        setCurrentTime(playerRef.current.currentTime);
+    let lastTime = 0;
+    const updateTime = (timestamp: number) => {
+      if (timestamp - lastTime > 33) { // ~30fps throttle
+        if (playerRef.current) {
+          setCurrentTime(playerRef.current.currentTime);
+        }
+        lastTime = timestamp;
       }
       rafId = requestAnimationFrame(updateTime);
     };

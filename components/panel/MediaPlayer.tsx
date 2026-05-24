@@ -375,8 +375,12 @@ export function MediaPlayer() {
 
   useEffect(() => {
     let id: number;
-    const loop = () => {
-      if (playerRef.current) setSyncCurrTime(playerRef.current.currentTime);
+    let lastTime = 0;
+    const loop = (timestamp: number) => {
+      if (timestamp - lastTime > 66) { // ~15fps throttle
+         if (playerRef.current) setSyncCurrTime(playerRef.current.currentTime);
+         lastTime = timestamp;
+      }
       id = requestAnimationFrame(loop);
     };
     id = requestAnimationFrame(loop);

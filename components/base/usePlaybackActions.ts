@@ -27,8 +27,12 @@ export function usePlaybackActions() {
 
   useEffect(() => {
     let id: number;
-    const loop = () => {
-      if (playerRef.current) setSyncCurrTime(playerRef.current.currentTime);
+    let lastTime = 0;
+    const loop = (timestamp: number) => {
+      if (timestamp - lastTime > 66) {
+        if (playerRef.current) setSyncCurrTime(playerRef.current.currentTime);
+        lastTime = timestamp;
+      }
       id = requestAnimationFrame(loop);
     };
     id = requestAnimationFrame(loop);

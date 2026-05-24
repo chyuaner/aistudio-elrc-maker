@@ -35,21 +35,99 @@ export function TextEditor() {
   const [searchText, setSearchText] = useState("");
   const [replaceText, setReplaceText] = useState("");
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
+  const [ignoreTimeTags, setIgnoreTimeTags] = useState(true);
+  const [selectWholeLine, setSelectWholeLine] = useState(false);
 
   const matches = useMemo(() => {
     if (!searchText) return [];
-    const lowerSource = text.toLowerCase();
+    
+    let sourceText = text;
+    let mapping: number[] | null = null;
+    
+    if (ignoreTimeTags) {
+       mapping = [];
+       sourceText = "";
+       const tagRegex = /(?:\[\d{2}:\d{2}(?:\.\d{2,3})?\])|(?:<\d{2}:\d{2}(?:\.\d{2,3})?>)/g;
+       let lastIndex = 0;
+       let match;
+       while ((match = tagRegex.exec(text)) !== null) {
+          for(let i = lastIndex; i < match.index; i++) {
+             sourceText += text[i];
+             mapping.push(i);
+          }
+          lastIndex = tagRegex.lastIndex;
+       }
+       for(let i = lastIndex; i < text.length; i++) {
+          sourceText += text[i];
+          mapping.push(i);
+       }
+       mapping.push(text.length);
+    }
+    
+    const lowerSource = sourceText.toLowerCase();
     const lowerSearch = searchText.toLowerCase();
-    const newMatches = [];
+    const newMatches: {start: number, end: number}[] = [];
     let startIndex = 0;
     while (true) {
       const index = lowerSource.indexOf(lowerSearch, startIndex);
       if (index === -1) break;
-      newMatches.push({ start: index, end: index + searchText.length });
+      
+      const matchEnd = index + searchText.length;
+      let finalStart = ignoreTimeTags && mapping ? mapping[index] : index;
+      let finalEnd = ignoreTimeTags && mapping ? mapping[matchEnd] : matchEnd;
+
+      if (ignoreTimeTags && !selectWholeLine) {
+          while (finalStart > 0) {
+              const charBefore = text[finalStart - 1];
+              if (charBefore === '>' || charBefore === ']') {
+                  const openChar = charBefore === '>' ? '<' : '[';
+                  let tagStart = finalStart - 1;
+                  while (tagStart >= 0 && text[tagStart] !== openChar) {
+                      tagStart--;
+                  }
+                  if (tagStart >= 0) {
+                      const tagText = text.substring(tagStart, finalStart);
+                      if (/^[<\[]\d{2}:\d{2}(?:\.\d{2,3})?[>\]]$/.test(tagText)) {
+                          finalStart = tagStart;
+                          continue;
+                      }
+                  }
+              }
+              break;
+          }
+      }
+
+      if (selectWholeLine) {
+          while (finalStart > 0 && text[finalStart - 1] !== '\n') {
+              finalStart--;
+          }
+          while (finalEnd < text.length && text[finalEnd] !== '\n') {
+              finalEnd++;
+          }
+          if (finalEnd < text.length && text[finalEnd] === '\n') {
+              finalEnd++;
+          }
+      }
+
+      newMatches.push({ start: finalStart, end: finalEnd });
       startIndex = index + searchText.length;
     }
-    return newMatches;
-  }, [text, searchText]);
+
+    const mergedMatches: { start: number, end: number }[] = [];
+    for (const match of newMatches) {
+        if (mergedMatches.length === 0) {
+            mergedMatches.push(match);
+        } else {
+            const lastMatch = mergedMatches[mergedMatches.length - 1];
+            if (match.start <= lastMatch.end) {
+                lastMatch.end = Math.max(lastMatch.end, match.end);
+            } else {
+                mergedMatches.push(match);
+            }
+        }
+    }
+    return mergedMatches;
+  }, [text, searchText, ignoreTimeTags, selectWholeLine]);
 
   useEffect(() => {
     if (matches.length > 0) {
@@ -201,6 +279,26 @@ export function TextEditor() {
     saveChanges();
   };
 
+  const textRef = useRef(text);
+  useEffect(() => {
+    textRef.current = text;
+  }, [text]);
+
+  const saveChangesRef = useRef(saveChanges);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    saveChangesRef.current = saveChanges;
+  }, [saveChanges]);
+
+  useEffect(() => {
+    return () => {
+      // Auto-save on unmount if dirty
+      if (isDirty.current) {
+        saveChangesRef.current(textRef.current);
+      }
+    };
+  }, []);
+
   const [isResponsiveTall, setIsResponsiveTall] = useState(false);
 
   useEffect(() => {
@@ -233,6 +331,17 @@ export function TextEditor() {
           </button>
         </div>
         <div className="flex gap-2">
+          <button
+            onClick={() => {
+              if (isDirty.current) saveChanges();
+            }}
+            className="px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded border transition-colors border-green-500/50 bg-green-500/10 text-green-400 hover:bg-green-500/20 hover:text-green-300"
+          >
+            套用變更
+          </button>
+          
+          <div className="w-px bg-[var(--app-border-light)] opacity-50 my-1 mx-1"></div>
+
           <button
             onClick={async () => {
               const { convertToTraditional } =
@@ -371,6 +480,32 @@ export function TextEditor() {
           </div>
 
           <div className="flex items-center gap-2">
+            <label className="flex items-center gap-1.5 text-[10px] text-[var(--app-text-muted)] hover:text-white cursor-pointer mr-2 select-none">
+              <input 
+                type="checkbox" 
+                checked={ignoreTimeTags} 
+                onChange={(e) => {
+                  setIgnoreTimeTags(e.target.checked);
+                  textareaRef.current?.focus();
+                }} 
+                className="w-3 h-3 rounded appearance-none border border-[var(--app-border-light)] checked:bg-blue-500 checked:border-blue-500 cursor-pointer" 
+              />
+              無視時間標籤 (ELRC)
+            </label>
+
+            <label className="flex items-center gap-1.5 text-[10px] text-[var(--app-text-muted)] hover:text-white cursor-pointer mr-2 select-none">
+              <input 
+                type="checkbox" 
+                checked={selectWholeLine} 
+                onChange={(e) => {
+                  setSelectWholeLine(e.target.checked);
+                  textareaRef.current?.focus();
+                }} 
+                className="w-3 h-3 rounded appearance-none border border-[var(--app-border-light)] checked:bg-blue-500 checked:border-blue-500 cursor-pointer" 
+              />
+              選取整行
+            </label>
+
             <div className="relative flex-1 max-w-[300px]">
               <Replace className="w-4 h-4 absolute left-2 top-1/2 -translate-y-1/2 text-[var(--app-text-muted)]" />
               <input
@@ -427,9 +562,7 @@ export function TextEditor() {
             }, 0);
           }
         }}
-        startLineNumber={
-          Object.values(lrcMetadata || {}).filter(Boolean).length + 1
-        }
+        startLineNumber={1}
       />
     </div>
   );

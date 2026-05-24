@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { useEditor } from '@/components/base/EditorProvider';
 import { exportLrc, exportSrt } from '@/lib/lyric-utils';
 import { useI18n } from '@/hooks/useI18n';
 import { KaraokePreview } from '@/components/panel/KaraokePreview';
 import { useAutoScroll } from '@/components/base/useAutoScroll';
+import { Search, X, ChevronUp, ChevronDown } from "lucide-react";
 
 const RawLine = React.memo(({ 
   idx, 
@@ -42,6 +43,11 @@ export function RawTextDisplay() {
   const i18n = useI18n();
   const containerRef = useRef<HTMLDivElement>(null);
   const [simpleIncludeInstrumental, setSimpleIncludeInstrumental] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchText, setSearchText] = useState("");
+  const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
+  const [ignoreTimeTags, setIgnoreTimeTags] = useState(true);
+  const [selectWholeLine, setSelectWholeLine] = useState(false);
 
   useAutoScroll();
   
@@ -56,6 +62,198 @@ export function RawTextDisplay() {
       text = exportLrc(lines, lrcMetadata, exportFormat === 'enhanced', exportFormat === 'simple', simpleIncludeInstrumental, paragraphStarts);
   }
   const allLines = text.split('\n');
+
+  const matches = useMemo(() => {
+    if (!searchText) return [];
+    
+    let sourceText = text;
+    let mapping: number[] | null = null;
+    
+    if (ignoreTimeTags) {
+       mapping = [];
+       sourceText = "";
+       const tagRegex = /(?:\[\d{2}:\d{2}(?:\.\d{2,3})?\])|(?:<\d{2}:\d{2}(?:\.\d{2,3})?>)/g;
+       let lastIndex = 0;
+       let match;
+       while ((match = tagRegex.exec(text)) !== null) {
+          for(let i = lastIndex; i < match.index; i++) {
+             sourceText += text[i];
+             mapping.push(i);
+          }
+          lastIndex = tagRegex.lastIndex;
+       }
+       for(let i = lastIndex; i < text.length; i++) {
+          sourceText += text[i];
+          mapping.push(i);
+       }
+       mapping.push(text.length);
+    }
+    
+    const lowerSource = sourceText.toLowerCase();
+    const lowerSearch = searchText.toLowerCase();
+    const newMatches: {start: number, end: number}[] = [];
+    let startIndex = 0;
+    while (true) {
+      const index = lowerSource.indexOf(lowerSearch, startIndex);
+      if (index === -1) break;
+      
+      const matchEnd = index + searchText.length;
+      let finalStart = ignoreTimeTags && mapping ? mapping[index] : index;
+      let finalEnd = ignoreTimeTags && mapping ? mapping[matchEnd] : matchEnd;
+
+      if (ignoreTimeTags && !selectWholeLine) {
+          while (finalStart > 0) {
+              const charBefore = text[finalStart - 1];
+              if (charBefore === '>' || charBefore === ']') {
+                  const openChar = charBefore === '>' ? '<' : '[';
+                  let tagStart = finalStart - 1;
+                  while (tagStart >= 0 && text[tagStart] !== openChar) {
+                      tagStart--;
+                  }
+                  if (tagStart >= 0) {
+                      const tagText = text.substring(tagStart, finalStart);
+                      if (/^[<\[]\d{2}:\d{2}(?:\.\d{2,3})?[>\]]$/.test(tagText)) {
+                          finalStart = tagStart;
+                          continue;
+                      }
+                  }
+              }
+              break;
+          }
+      }
+
+      if (selectWholeLine) {
+          while (finalStart > 0 && text[finalStart - 1] !== '\n') {
+              finalStart--;
+          }
+          while (finalEnd < text.length && text[finalEnd] !== '\n') {
+              finalEnd++;
+          }
+          if (finalEnd < text.length && text[finalEnd] === '\n') {
+              finalEnd++;
+          }
+      }
+
+      newMatches.push({ start: finalStart, end: finalEnd });
+      startIndex = index + searchText.length;
+    }
+
+    const mergedMatches: { start: number, end: number }[] = [];
+    for (const match of newMatches) {
+        if (mergedMatches.length === 0) {
+            mergedMatches.push(match);
+        } else {
+            const lastMatch = mergedMatches[mergedMatches.length - 1];
+            if (match.start <= lastMatch.end) {
+                lastMatch.end = Math.max(lastMatch.end, match.end);
+            } else {
+                mergedMatches.push(match);
+            }
+        }
+    }
+    return mergedMatches;
+  }, [text, searchText, ignoreTimeTags, selectWholeLine]);
+
+  useEffect(() => {
+    if (matches.length > 0) {
+      if (currentMatchIndex >= matches.length) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setCurrentMatchIndex(matches.length - 1);
+      }
+    } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setCurrentMatchIndex(0);
+    }
+  }, [matches.length, currentMatchIndex]);
+
+  const scrollToMatch = (index: number) => {
+    const container = containerRef.current;
+    if (!container) return;
+    const match = matches[index];
+    if (!match) return;
+
+    let currentLen = 0;
+    let startLineIndex = 0;
+    let startOffset = 0;
+    let endLineIndex = 0;
+    let endOffset = 0;
+
+    for (let i = 0; i < allLines.length; i++) {
+        const lineLen = allLines[i].length;
+        if (match.start <= currentLen + lineLen && startLineIndex === 0 && startOffset === 0) {
+           startLineIndex = i;
+           startOffset = match.start - currentLen;
+        }
+        if (match.end <= currentLen + lineLen) {
+           endLineIndex = i;
+           endOffset = match.end - currentLen;
+           break;
+        }
+        currentLen += lineLen + 1;
+    }
+    
+    // Safety check just in case it wasn't set, although it shouldn't happen
+    if (startLineIndex === 0 && match.start > 0 && startOffset === 0 && allLines.length > 0) {
+        startLineIndex = 0; 
+        startOffset = match.start;
+    }
+    if (endLineIndex === 0 && match.end > 0 && endOffset === 0 && allLines.length > 0) {
+        endLineIndex = Math.max(0, allLines.length - 1);
+        endOffset = allLines[endLineIndex].length;
+    }
+
+    try {
+        const startRow = container.children[startLineIndex];
+        let startTextNode = startRow?.children[1]?.firstChild;
+        if (!startTextNode) startTextNode = startRow?.children[1];
+        
+        const endRow = container.children[endLineIndex];
+        let endTextNode = endRow?.children[1]?.firstChild;
+        if (!endTextNode) endTextNode = endRow?.children[1];
+
+        if (startTextNode && endTextNode) {
+            const selection = window.getSelection();
+            const range = document.createRange();
+
+            const sOff = Math.min(startOffset, startTextNode.textContent?.length || 0);
+            const eOff = Math.min(endOffset, endTextNode.textContent?.length || 0);
+
+            if (startTextNode.nodeType === Node.TEXT_NODE) {
+                range.setStart(startTextNode, sOff);
+            } else {
+                range.setStart(startTextNode, 0);
+            }
+
+            if (endTextNode.nodeType === Node.TEXT_NODE) {
+                range.setEnd(endTextNode, eOff);
+            } else {
+                range.setEnd(endTextNode, 0);
+            }
+
+            selection?.removeAllRanges();
+            selection?.addRange(range);
+
+            (startRow as HTMLElement).scrollIntoView({ block: 'center', behavior: 'auto' });
+        }
+    } catch (err) {
+        console.error("Failed to select match", err);
+    }
+  };
+
+  const handleNextMatch = () => {
+    if (matches.length === 0) return;
+    const nextIndex = (currentMatchIndex + 1) % matches.length;
+    setCurrentMatchIndex(nextIndex);
+    scrollToMatch(nextIndex);
+  };
+
+  const handlePrevMatch = () => {
+    if (matches.length === 0) return;
+    const prevIndex = (currentMatchIndex - 1 + matches.length) % matches.length;
+    setCurrentMatchIndex(prevIndex);
+    scrollToMatch(prevIndex);
+  };
+
   
   let currentRawIndex = 0;
   const rawIdxToLineIdx = new Map<number, number>();
@@ -151,6 +349,18 @@ export function RawTextDisplay() {
            )}
         </div>
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => setIsSearchOpen(!isSearchOpen)}
+            className={`px-3 py-1.5 flex items-center text-[10px] font-bold uppercase tracking-widest rounded border transition-colors ${
+              isSearchOpen
+                ? "border-blue-500/50 text-blue-400 bg-blue-500/10"
+                : "border-[var(--app-border-light)] text-[var(--app-text-muted)] hover:text-white"
+            }`}
+            title="搜尋 (Ctrl+F)"
+          >
+            <Search className="w-3 h-3 mr-1" />
+            搜尋
+          </button>
           <div className="flex items-center gap-2">
              <span className="text-[10px] text-[var(--app-text-muted)] font-bold">間距閥值</span>
              <input type="number" value={dualLineGapSec} onChange={(e) => setDualLineGapSec(Number(e.target.value) || 0)} className="w-12 bg-[var(--app-bg-input)] border border-[var(--app-border-light)] rounded px-1 min-h-[1.5rem] py-0.5 text-xs text-center" step="0.5" />
@@ -173,7 +383,107 @@ export function RawTextDisplay() {
         </div>
       </div>
       
-      <div id="raw-editor-scroll-container" className="flex-1 overflow-auto bg-[var(--app-bg-base)] text-sm font-mono py-4 select-text leading-relaxed outline-none border-t border-[var(--app-border-base)] shadow-inner" style={{ whiteSpace: 'pre-wrap' }} ref={containerRef} data-context-menu="readonly">
+      {isSearchOpen && (
+        <div className="p-2 border-b border-[var(--app-border-base)] bg-[var(--app-bg-input)] flex flex-col gap-2 shrink-0">
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1 max-w-[300px]">
+              <Search className="w-4 h-4 absolute left-2 top-1/2 -translate-y-1/2 text-[var(--app-text-muted)]" />
+              <input
+                id="preview-search-input"
+                type="text"
+                placeholder="搜尋文字..."
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                className="w-full bg-[var(--app-bg-panel-alt)] border border-[var(--app-border-base)] rounded px-8 py-1 text-sm text-[var(--app-text-primary)] placeholder:text-[var(--app-text-muted)] focus:outline-none focus:border-[var(--app-border-light)]"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    if (e.shiftKey) handlePrevMatch();
+                    else handleNextMatch();
+                  }
+                  if (e.key === "Escape") {
+                    setIsSearchOpen(false);
+                  }
+                }}
+              />
+              {matches.length > 0 && (
+                <span className="absolute right-8 top-1/2 -translate-y-1/2 text-[10px] text-[var(--app-text-muted)]">
+                  {currentMatchIndex + 1} / {matches.length}
+                </span>
+              )}
+            </div>
+            
+            <button
+              onClick={handlePrevMatch}
+              disabled={matches.length === 0}
+              className="p-1.5 text-[var(--app-text-muted)] hover:text-white hover:bg-[var(--app-bg-panel-hover)] rounded disabled:opacity-50 disabled:hover:bg-transparent"
+              title="上一處 (Shift+Enter)"
+            >
+              <ChevronUp className="w-4 h-4" />
+            </button>
+            <button
+              onClick={handleNextMatch}
+              disabled={matches.length === 0}
+              className="p-1.5 text-[var(--app-text-muted)] hover:text-white hover:bg-[var(--app-bg-panel-hover)] rounded disabled:opacity-50 disabled:hover:bg-transparent"
+              title="下一處 (Enter)"
+            >
+              <ChevronDown className="w-4 h-4" />
+            </button>
+
+            <div className="w-px h-4 bg-[var(--app-border-light)] mx-1 opacity-50"></div>
+
+            <label className="flex items-center gap-1.5 text-[10px] text-[var(--app-text-muted)] hover:text-white cursor-pointer mr-2 select-none">
+              <input 
+                type="checkbox" 
+                checked={ignoreTimeTags} 
+                onChange={(e) => {
+                  setIgnoreTimeTags(e.target.checked);
+                }} 
+                className="w-3 h-3 rounded appearance-none border border-[var(--app-border-light)] checked:bg-blue-500 checked:border-blue-500 cursor-pointer" 
+              />
+              無視時間標籤 (ELRC)
+            </label>
+
+            <label className="flex items-center gap-1.5 text-[10px] text-[var(--app-text-muted)] hover:text-white cursor-pointer mr-2 select-none">
+              <input 
+                type="checkbox" 
+                checked={selectWholeLine} 
+                onChange={(e) => {
+                  setSelectWholeLine(e.target.checked);
+                }} 
+                className="w-3 h-3 rounded appearance-none border border-[var(--app-border-light)] checked:bg-blue-500 checked:border-blue-500 cursor-pointer" 
+              />
+              選取整行
+            </label>
+
+            <button
+              onClick={() => {
+                setIsSearchOpen(false);
+              }}
+              className="ml-auto p-1 text-[var(--app-text-muted)] hover:text-white transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div 
+        id="raw-editor-scroll-container" 
+        className="flex-1 overflow-auto bg-[var(--app-bg-base)] text-sm font-mono py-4 select-text leading-relaxed outline-none border-t border-[var(--app-border-base)] shadow-inner" 
+        style={{ whiteSpace: 'pre-wrap' }} 
+        ref={containerRef} 
+        data-context-menu="readonly"
+        tabIndex={-1}
+        onKeyDown={(e) => {
+          if ((e.ctrlKey || e.metaKey) && e.key === "f") {
+            e.preventDefault();
+            setIsSearchOpen(true);
+            setTimeout(() => {
+              document.getElementById("preview-search-input")?.focus();
+            }, 0);
+          }
+        }}
+      >
           {allLines.map((lineText, idx) => (
               <RawLine
                   key={idx}

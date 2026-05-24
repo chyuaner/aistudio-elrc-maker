@@ -71,9 +71,9 @@ export function parseRawLyrics(text: string): { lines: LyricLine[], metadata: Lr
   const result: LyricLine[] = [];
   const metadata: LrcMetadata = {};
   
-  const lineTimeRegex = /^\[(\d+:\d+\.\d+)\]/;
-  const metaRegex = /^\[([^:]+):(.*)\]$/;
-  const wordTimeRegex = /<(\d+:\d+\.\d+)>([^<]*)/g;
+  const lineTimeRegex = /^\[(\d+:\d+(?:\.\d+)?)\]/;
+  const metaRegex = /^\[([^:：\]]+)[:：](.*)\]\s*$/;
+  const wordTimeRegex = /<(\d+:\d+(?:\.\d+)?)>([^<]*)/g;
   
   for (const line of lines) {
     if (!line.trim()) continue;

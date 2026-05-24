@@ -677,8 +677,7 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
                              if (!confirmed) return;
                           }
                           const parsed = parseRawLyrics(metadata.lyric);
-                          setLrcMetadata(parsed.metadata);
-                          resetHistory(parsed.lines);
+                          resetHistory(parsed.lines, parsed.metadata);
                        }
                        setLoadDropdownOpen(false); 
                     }}

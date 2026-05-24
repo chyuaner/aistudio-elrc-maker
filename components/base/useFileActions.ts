@@ -74,8 +74,7 @@ export function useFileActions() {
              if (foundLyrics && autoLoadLyrics) {
                  setLyricFileName('Embedded Tag');
                  const parsed = parseRawLyrics(foundLyrics);
-                 setLrcMetadata(parsed.metadata);
-                 resetHistory(parsed.lines);
+                 resetHistory(parsed.lines, parsed.metadata);
                  showToast('已從 "Embedded Tag" 載入歌詞');
              }
              return;
@@ -127,8 +126,7 @@ export function useFileActions() {
            if (foundLyrics && autoLoadLyrics) {
                setLyricFileName('Embedded Tag');
                const parsed = parseRawLyrics(foundLyrics);
-               setLrcMetadata(parsed.metadata);
-               resetHistory(parsed.lines);
+               resetHistory(parsed.lines, parsed.metadata);
                showToast('已從 "Embedded Tag" 載入歌詞');
            }
         },
@@ -138,7 +136,7 @@ export function useFileActions() {
         }
       });
     }
-  }, [resetHistory, setFile, setLyricFileName, setMetadata, setAudioSpecs, setIsPlaying, playerRef, setDuration, setPlaybackRate, setLrcMetadata, autoLoadLyrics, showToast]);
+  }, [resetHistory, setFile, setLyricFileName, setMetadata, setAudioSpecs, setIsPlaying, playerRef, setDuration, setPlaybackRate, autoLoadLyrics, showToast]);
 
   const processLyricFile = useCallback(async (f: File) => {
     if (lines.length > 0) {
@@ -150,12 +148,11 @@ export function useFileActions() {
     reader.onload = (evt) => {
       const text = evt.target?.result as string;
       const parsed = parseRawLyrics(text);
-      setLrcMetadata(parsed.metadata);
-      resetHistory(parsed.lines);
+      resetHistory(parsed.lines, parsed.metadata);
       showToast(`已從 "${f.name}" 載入歌詞`);
     };
     reader.readAsText(f);
-  }, [lines.length, dialogs, resetHistory, setLyricFileName, setLrcMetadata, showToast]);
+  }, [lines.length, dialogs, resetHistory, setLyricFileName, showToast]);
 
   const handleExport = useCallback(async (format: 'standard' | 'enhanced' | 'simple' | 'srt', saveType: 'file' | 'embedded' = 'file') => {
     if (lines.length === 0) return;
@@ -337,12 +334,11 @@ export function useFileActions() {
            if (!confirmed) return;
        }
        const parsed = parseRawLyrics(metadata.lyric);
-       setLrcMetadata(parsed.metadata);
-       resetHistory(parsed.lines);
+       resetHistory(parsed.lines, parsed.metadata);
        setLyricFileName('Embedded Tag');
        showToast('已從 "Embedded Tag" 載入歌詞');
     }
-  }, [lines.length, dialogs, setLrcMetadata, resetHistory, setLyricFileName, showToast]);
+  }, [lines.length, dialogs, resetHistory, setLyricFileName, showToast]);
 
   return { processAudioFile, processLyricFile, handleExport, clearMedia, clearLyrics, loadEmbeddedLyrics };
 }

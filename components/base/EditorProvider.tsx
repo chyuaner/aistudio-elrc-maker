@@ -13,33 +13,46 @@ export type SyncMode = 'line' | 'word';
 export type ExportFormat = 'standard' | 'enhanced' | 'simple' | 'srt';
 
 export interface HistoryState {
-  past: { lines: LyricLine[]; action: string; cursor: { line: number, word: number } }[];
-  present: LyricLine[];
-  future: { lines: LyricLine[]; action: string; cursor: { line: number, word: number } }[];
+  past: { lines: LyricLine[]; lrcMetadata: LrcMetadata; action: string; cursor: { line: number, word: number } }[];
+  present: { lines: LyricLine[]; lrcMetadata: LrcMetadata };
+  future: { lines: LyricLine[]; lrcMetadata: LrcMetadata; action: string; cursor: { line: number, word: number } }[];
 }
 
 type Action = 
-  | { type: 'SET'; payload: LyricLine[] | ((prev: LyricLine[]) => LyricLine[]) }
-  | { type: 'RESET'; payload: LyricLine[] | ((prev: LyricLine[]) => LyricLine[]) }
-  | { type: 'COMMIT'; payload: LyricLine[] | ((prev: LyricLine[]) => LyricLine[]); actionName?: string; cursor?: { line: number, word: number } }
+  | { type: 'SET_LINES'; payload: LyricLine[] | ((prev: LyricLine[]) => LyricLine[]) }
+  | { type: 'SET_METADATA'; payload: LrcMetadata | ((prev: LrcMetadata) => LrcMetadata) }
+  | { type: 'RESET'; payloadLines?: LyricLine[]; payloadMetadata?: LrcMetadata }
+  | { type: 'COMMIT'; payloadLines?: LyricLine[] | ((prev: LyricLine[]) => LyricLine[]); payloadMetadata?: LrcMetadata | ((prev: LrcMetadata) => LrcMetadata); actionName?: string; cursor?: { line: number, word: number } }
   | { type: 'UNDO'; payload?: number }
   | { type: 'REDO'; payload?: number };
 
 function historyReducer(state: HistoryState, action: Action & { currentCursor: { line: number, word: number } }): HistoryState {
   switch (action.type) {
-    case 'SET': {
-      const newPresent = typeof action.payload === 'function' ? action.payload(state.present) : action.payload;
-      return { ...state, present: newPresent };
+    case 'SET_LINES': {
+      const newLines = typeof action.payload === 'function' ? action.payload(state.present.lines) : action.payload;
+      return { ...state, present: { ...state.present, lines: newLines } };
+    }
+    case 'SET_METADATA': {
+      const newMeta = typeof action.payload === 'function' ? action.payload(state.present.lrcMetadata) : action.payload;
+      return { ...state, present: { ...state.present, lrcMetadata: newMeta } };
     }
     case 'RESET': {
-      const newPresent = typeof action.payload === 'function' ? action.payload(state.present) : action.payload;
-      return { present: newPresent, past: [], future: [] };
+      const newLines = action.payloadLines || state.present.lines;
+      const newMeta = action.payloadMetadata || state.present.lrcMetadata;
+      return { present: { lines: newLines, lrcMetadata: newMeta }, past: [], future: [] };
     }
     case 'COMMIT': {
-      const newPresent = typeof action.payload === 'function' ? action.payload(state.present) : action.payload;
+      let newLines = state.present.lines;
+      if (action.payloadLines !== undefined) {
+         newLines = typeof action.payloadLines === 'function' ? action.payloadLines(state.present.lines) : action.payloadLines;
+      }
+      let newMeta = state.present.lrcMetadata;
+      if (action.payloadMetadata !== undefined) {
+         newMeta = typeof action.payloadMetadata === 'function' ? action.payloadMetadata(state.present.lrcMetadata) : action.payloadMetadata;
+      }
       return {
-        past: [...state.past, { lines: state.present, action: action.actionName || 'Update', cursor: action.currentCursor }],
-        present: newPresent,
+        past: [...state.past, { lines: state.present.lines, lrcMetadata: state.present.lrcMetadata, action: action.actionName || 'Update', cursor: action.currentCursor }],
+        present: { lines: newLines, lrcMetadata: newMeta },
         future: [],
       };
     }
@@ -53,11 +66,11 @@ function historyReducer(state: HistoryState, action: Action & { currentCursor: {
       const undoneStates = state.past.slice(state.past.length - actualSteps + 1);
       const futureItems = [
         ...undoneStates,
-        { lines: state.present, action: newPresentObj.action, cursor: action.currentCursor },
+        { lines: state.present.lines, lrcMetadata: state.present.lrcMetadata, action: newPresentObj.action, cursor: action.currentCursor },
         ...state.future
       ];
       
-      return { past: newPast, present: newPresentObj.lines, future: futureItems };
+      return { past: newPast, present: { lines: newPresentObj.lines, lrcMetadata: newPresentObj.lrcMetadata }, future: futureItems };
     }
     case 'REDO': {
       const steps = action.payload || 1;
@@ -68,12 +81,12 @@ function historyReducer(state: HistoryState, action: Action & { currentCursor: {
       const redoneStates = state.future.slice(0, actualSteps - 1);
       const pastItems = [
         ...state.past,
-        { lines: state.present, action: state.future[0]?.action || 'Update', cursor: action.currentCursor },
+        { lines: state.present.lines, lrcMetadata: state.present.lrcMetadata, action: state.future[0]?.action || 'Update', cursor: action.currentCursor },
         ...redoneStates
       ];
       
       const newFuture = state.future.slice(actualSteps);
-      return { past: pastItems, present: newPresentObj.lines, future: newFuture };
+      return { past: pastItems, present: { lines: newPresentObj.lines, lrcMetadata: newPresentObj.lrcMetadata }, future: newFuture };
     }
     default:
       return state;
@@ -105,6 +118,7 @@ interface EditorContextType {
   setMetadata: (meta: FileMetadata | null) => void;
   lrcMetadata: LrcMetadata;
   setLrcMetadata: (meta: LrcMetadata) => void;
+  commitLrcMetadata: (meta: LrcMetadata, actionName?: string) => void;
 
   trackAssignments: number[];
   paragraphStarts: boolean[];
@@ -114,7 +128,7 @@ interface EditorContextType {
   
   lines: LyricLine[];
   setLines: (payload: LyricLine[] | ((prev: LyricLine[]) => LyricLine[])) => void;
-  resetHistory: (payload: LyricLine[] | ((prev: LyricLine[]) => LyricLine[])) => void;
+  resetHistory: (payloadLines: LyricLine[] | ((prev: LyricLine[]) => LyricLine[]), payloadMetadata?: LrcMetadata) => void;
   commitLines: (payload: LyricLine[] | ((prev: LyricLine[]) => LyricLine[]), actionName?: string) => void;
   undo: (steps?: number) => void;
   redo: (steps?: number) => void;
@@ -183,7 +197,6 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
   const [dualLineGapSec, setDualLineGapSec] = useState<number>(6);
   const [autoScrollEnabled, setAutoScrollEnabled] = useState<boolean>(false);
   const [metadata, setMetadata] = useState<FileMetadata | null>(null);
-  const [lrcMetadata, setLrcMetadata] = useState<LrcMetadata>({});
   const [rawMode, setRawMode] = useState<EditorMode>('sync');
   const [syncMode, setSyncMode] = useState<SyncMode>('line');
 
@@ -247,13 +260,13 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
 
   const [historyState, dispatchLinesRaw] = useReducer(historyReducer, {
     past: [],
-    present: [],
+    present: { lines: [], lrcMetadata: {} },
     future: []
   });
 
   const setMode = React.useCallback((newMode: EditorMode) => {
     if (newMode === 'sync' || newMode === 'dual-sync') {
-      const currentLines = historyState.present;
+      const currentLines = historyState.present.lines;
       const hasWordTimestamps = currentLines.some(l => l.words && l.words.some(w => w.start !== null));
       if (hasWordTimestamps) {
         setSyncMode('word');
@@ -261,7 +274,7 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
       }
     }
     setRawMode(newMode);
-  }, [historyState.present]);
+  }, [historyState.present.lines]);
 
   const dispatchLines = (action: Action) => {
     dispatchLinesRaw({ ...action, currentCursor: { line: activeLineIndex, word: activeWordIndex } } as any);
@@ -297,7 +310,8 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
     }
   }, [file]);
 
-  const lines = historyState.present;
+  const lines = historyState.present.lines;
+  const lrcMetadata = historyState.present.lrcMetadata;
 
   useEffect(() => {
     if (lines.length > 0 && activeLineIndex >= lines.length) {
@@ -378,11 +392,14 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
   }, [lines, dualLineGapSec]);
 
   const setLines = (payload: LyricLine[] | ((prev: LyricLine[]) => LyricLine[])) => {
-    dispatchLines({ type: 'SET', payload });
+    dispatchLines({ type: 'SET_LINES', payload });
   };
-  const resetHistory = React.useCallback((payload: LyricLine[] | ((prev: LyricLine[]) => LyricLine[])) => {
-    const newLines = typeof payload === 'function' ? payload(historyState.present) : payload;
-    dispatchLines({ type: 'RESET', payload: newLines });
+  const setLrcMetadata = (payload: LrcMetadata | ((prev: LrcMetadata) => LrcMetadata)) => {
+    dispatchLines({ type: 'SET_METADATA', payload });
+  };
+  const resetHistory = React.useCallback((payloadLines: LyricLine[] | ((prev: LyricLine[]) => LyricLine[]), payloadMetadata?: LrcMetadata) => {
+    const newLines = typeof payloadLines === 'function' ? payloadLines(historyState.present.lines) : payloadLines;
+    dispatchLines({ type: 'RESET', payloadLines: newLines, payloadMetadata: payloadMetadata || {} });
     setActiveLineIndex(0);
     setActiveWordIndex(0);
     
@@ -396,9 +413,12 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
     const hasAnyTimestamps = newLines.some(l => l.start !== null || (l.words && l.words.some(w => w.start !== null)));
     setAutoScrollEnabled(hasAnyTimestamps);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [historyState.present]);
+  }, [historyState.present.lines]);
   const commitLines = (payload: LyricLine[] | ((prev: LyricLine[]) => LyricLine[]), actionName?: string) => {
-    dispatchLines({ type: 'COMMIT', payload, actionName });
+    dispatchLines({ type: 'COMMIT', payloadLines: payload, actionName });
+  };
+  const commitLrcMetadata = (payload: LrcMetadata | ((prev: LrcMetadata) => LrcMetadata), actionName?: string) => {
+    dispatchLines({ type: 'COMMIT', payloadMetadata: payload, actionName: actionName || 'Update Metadata' });
   };
   const undo = (steps = 1) => dispatchLines({ type: 'UNDO', payload: steps });
   const redo = (steps = 1) => dispatchLines({ type: 'REDO', payload: steps });
@@ -440,7 +460,7 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
   return (
     <EditorContext.Provider value={{
       file, setFile, fileUrl, audioFileName, lyricFileName, setLyricFileName, metadata, setMetadata,
-      lrcMetadata, setLrcMetadata,
+      lrcMetadata, setLrcMetadata, commitLrcMetadata,
       lines, setLines, resetHistory, commitLines, undo, redo, shiftTime, shiftTimeFromIndex, trackAssignments: trackAssignments.tracks, paragraphStarts: trackAssignments.pStarts, autoScrollEnabled, setAutoScrollEnabled,
       canUndo: historyState.past.length > 0,
       canRedo: historyState.future.length > 0,

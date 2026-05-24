@@ -4,7 +4,7 @@ import { useEditor } from '@/components/base/EditorProvider';
 import { Download, Plus, Trash2 } from 'lucide-react';
 import { LrcMetadata } from '@/lib/lyric-utils';
 
-const InputRow = ({ label, mKey, placeholder, value, onChange, isDialog }: { label: string, mKey: keyof LrcMetadata, placeholder?: string, value: string, onChange: (key: string, val: string) => void, isDialog?: boolean }) => (
+const InputRow = ({ label, mKey, placeholder, value, onChange, onBlur, isDialog }: { label: string, mKey: keyof LrcMetadata, placeholder?: string, value: string, onChange: (key: string, val: string) => void, onBlur?: () => void, isDialog?: boolean }) => (
     <div className={`flex flex-col ${isDialog ? 'sm:flex-row sm:items-center py-2 gap-2 border-b border-[var(--app-border-light)] sm:border-transparent' : 'py-1 gap-1'}`}>
         <label className={`text-[10px] font-semibold text-[var(--app-text-secondary)] shrink-0 uppercase tracking-wider ${isDialog ? 'sm:text-xs sm:w-20' : 'pl-0.5'}`}>{label}</label>
         <div className="flex-1">
@@ -12,6 +12,7 @@ const InputRow = ({ label, mKey, placeholder, value, onChange, isDialog }: { lab
                 type="text" 
                 value={value} 
                 onChange={e => onChange(mKey as string, e.target.value)} 
+                onBlur={onBlur}
                 className={`w-full bg-[var(--app-bg-input)] text-xs border border-[var(--app-border-light)] rounded focus:outline-none focus:border-[var(--app-accent)] transition-colors placeholder:opacity-40 ${isDialog ? 'sm:text-sm px-2 sm:px-3 py-1.5' : 'px-2 py-1.5'}`}
                 placeholder={placeholder}
             />
@@ -20,10 +21,14 @@ const InputRow = ({ label, mKey, placeholder, value, onChange, isDialog }: { lab
 );
 
 export function LrcMetadataEditor({ onClose }: { onClose?: () => void }) {
-  const { lrcMetadata, setLrcMetadata, metadata } = useEditor();
+  const { lrcMetadata, setLrcMetadata, commitLrcMetadata, metadata } = useEditor();
   const [formData, setFormData] = useState<LrcMetadata>({});
   const [customKeys, setCustomKeys] = useState<{key: string, value: string}[]>([]);
   const isDialog = !!onClose;
+
+  const commitChanges = React.useCallback((finalData: LrcMetadata) => {
+      commitLrcMetadata(finalData, 'Edit LRC Metadata');
+  }, [commitLrcMetadata]);
 
   const importFromAudio = () => {
      if (metadata) {
@@ -34,7 +39,7 @@ export function LrcMetadataEditor({ onClose }: { onClose?: () => void }) {
                  ar: metadata.artist || prev.ar,
                  al: metadata.album || prev.al
              };
-             applyChanges(newData, customKeys);
+             applyChanges(newData, customKeys, true);
              return newData;
          });
      }
@@ -54,7 +59,7 @@ export function LrcMetadataEditor({ onClose }: { onClose?: () => void }) {
      setCustomKeys(currentCustom);
   }, [lrcMetadata]);
 
-  const applyChanges = (currentFormData: LrcMetadata, currentCustomKeys: typeof customKeys) => {
+  const applyChanges = (currentFormData: LrcMetadata, currentCustomKeys: typeof customKeys, shouldCommit = false) => {
     const finalData: LrcMetadata = {};
     const predefinedKeys = ['ti', 'ar', 'al', 'au', 'by', 'offset', 're', 've'];
     predefinedKeys.forEach(k => {
@@ -64,29 +69,43 @@ export function LrcMetadataEditor({ onClose }: { onClose?: () => void }) {
         if (key && value) finalData[key] = value;
     });
     setLrcMetadata(finalData);
+    if (shouldCommit) {
+        commitChanges(finalData);
+    }
+  };
+
+  const handleBlur = () => {
+      applyChanges(formData, customKeys, true);
   };
 
   const handleChange = (key: string, value: string) => {
     const newData = { ...formData, [key]: value };
     setFormData(newData);
-    applyChanges(newData, customKeys);
+    applyChanges(newData, customKeys, false);
   };
   
   const handleCustomChange = (index: number, newKey: string, newValue: string) => {
       const next = [...customKeys];
       next[index] = { key: newKey, value: newValue };
       setCustomKeys(next);
-      applyChanges(formData, next);
+      applyChanges(formData, next, false);
   };
   
   const removeCustom = (index: number) => {
       const next = customKeys.filter((_, i) => i !== index);
       setCustomKeys(next);
-      applyChanges(formData, next);
+      applyChanges(formData, next, true);
   };
   
   const addCustom = () => {
-      setCustomKeys(prev => [...prev, { key: '', value: '' }]);
+      const next = [...customKeys, { key: '', value: '' }];
+      setCustomKeys(next);
+      applyChanges(formData, next, true);
+  };
+
+  const handleClose = () => {
+      handleBlur(); // make sure anything pending was committed
+      if (onClose) onClose();
   };
 
   return (
@@ -104,14 +123,14 @@ export function LrcMetadataEditor({ onClose }: { onClose?: () => void }) {
             
             <div className={`p-3 ${isDialog ? 'space-y-1' : 'space-y-2'}`}>
                 <div className={`border-b border-[var(--app-border-base)] pb-3 ${isDialog ? 'space-y-1' : 'space-y-2'}`}>
-                    <InputRow isDialog={isDialog} label="標題 [ti]" mKey="ti" placeholder="歌名" value={(formData.ti as string) || ''} onChange={handleChange} />
-                    <InputRow isDialog={isDialog} label="歌手 [ar]" mKey="ar" placeholder="演出者" value={(formData.ar as string) || ''} onChange={handleChange} />
-                    <InputRow isDialog={isDialog} label="專輯 [al]" mKey="al" placeholder="唱片集" value={(formData.al as string) || ''} onChange={handleChange} />
-                    <InputRow isDialog={isDialog} label="作者 [au]" mKey="au" placeholder="作詞/作曲" value={(formData.au as string) || ''} onChange={handleChange} />
-                    <InputRow isDialog={isDialog} label="建立者 [by]" mKey="by" placeholder="LRC創作者" value={(formData.by as string) || ''} onChange={handleChange} />
-                    <InputRow isDialog={isDialog} label="位移 [offset]" mKey="offset" placeholder="+/- 毫秒 (+向後, -向前)" value={(formData.offset as string) || ''} onChange={handleChange} />
-                    <InputRow isDialog={isDialog} label="編輯器 [re]" mKey="re" placeholder="LRC Maker Enhanced" value={(formData.re as string) || ''} onChange={handleChange} />
-                    <InputRow isDialog={isDialog} label="版本 [ve]" mKey="ve" placeholder="1.0" value={(formData.ve as string) || ''} onChange={handleChange} />
+                    <InputRow isDialog={isDialog} label="標題 [ti]" mKey="ti" placeholder="歌名" value={(formData.ti as string) || ''} onChange={handleChange} onBlur={handleBlur} />
+                    <InputRow isDialog={isDialog} label="歌手 [ar]" mKey="ar" placeholder="演出者" value={(formData.ar as string) || ''} onChange={handleChange} onBlur={handleBlur} />
+                    <InputRow isDialog={isDialog} label="專輯 [al]" mKey="al" placeholder="唱片集" value={(formData.al as string) || ''} onChange={handleChange} onBlur={handleBlur} />
+                    <InputRow isDialog={isDialog} label="作者 [au]" mKey="au" placeholder="作詞/作曲" value={(formData.au as string) || ''} onChange={handleChange} onBlur={handleBlur} />
+                    <InputRow isDialog={isDialog} label="建立者 [by]" mKey="by" placeholder="LRC創作者" value={(formData.by as string) || ''} onChange={handleChange} onBlur={handleBlur} />
+                    <InputRow isDialog={isDialog} label="位移 [offset]" mKey="offset" placeholder="+/- 毫秒 (+向後, -向前)" value={(formData.offset as string) || ''} onChange={handleChange} onBlur={handleBlur} />
+                    <InputRow isDialog={isDialog} label="編輯器 [re]" mKey="re" placeholder="LRC Maker Enhanced" value={(formData.re as string) || ''} onChange={handleChange} onBlur={handleBlur} />
+                    <InputRow isDialog={isDialog} label="版本 [ve]" mKey="ve" placeholder="1.0" value={(formData.ve as string) || ''} onChange={handleChange} onBlur={handleBlur} />
                 </div>
 
                 <div className="space-y-2">
@@ -139,6 +158,7 @@ export function LrcMetadataEditor({ onClose }: { onClose?: () => void }) {
                                             type="text" 
                                             value={item.key} 
                                             onChange={e => handleCustomChange(i, e.target.value.trim(), item.value)} 
+                                            onBlur={handleBlur}
                                             className={`bg-[var(--app-bg-input)] text-xs border border-[var(--app-border-light)] rounded px-1.5 py-1 focus:outline-none focus:border-[var(--app-accent)] ${isDialog ? 'w-12 sm:w-16' : 'w-full flex-1'}`}
                                             placeholder="key"
                                         />
@@ -149,6 +169,7 @@ export function LrcMetadataEditor({ onClose }: { onClose?: () => void }) {
                                             type="text" 
                                             value={item.value} 
                                             onChange={e => handleCustomChange(i, item.key, e.target.value)} 
+                                            onBlur={handleBlur}
                                             className={`min-w-[80px] bg-[var(--app-bg-input)] text-xs border border-[var(--app-border-light)] rounded px-1.5 py-1 focus:outline-none focus:border-[var(--app-accent)] ${isDialog ? 'flex-1' : 'w-full flex-1'}`}
                                             placeholder="value"
                                         />
@@ -170,7 +191,7 @@ export function LrcMetadataEditor({ onClose }: { onClose?: () => void }) {
         {onClose && (
             <div className="pt-4 border-t border-[var(--app-border-base)] shrink-0 flex justify-end">
                   <button 
-                    onClick={onClose}
+                    onClick={handleClose}
                     className="px-6 py-2 rounded text-sm font-medium bg-[var(--app-accent)] text-black hover:bg-[var(--app-accent-hover)] transition-colors shadow-sm"
                   >
                     完成

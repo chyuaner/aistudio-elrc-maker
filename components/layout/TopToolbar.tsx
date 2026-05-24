@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 'use client';
 
 import React, { useRef, useState, useEffect } from 'react';
@@ -586,7 +587,7 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
   const interactiveShellClass = isElectron ? 'app-region-no-drag' : '';
 
   const renderButtonsRow = (className: string) => (
-      <div className={`relative z-[200] flex-row flex-wrap items-center justify-center lg:justify-between w-full px-2 py-2 gap-y-2 gap-x-4 ${className}`}>
+      <div className={`relative z-[30] flex-row flex-wrap items-center justify-center lg:justify-between w-full px-2 py-2 gap-y-2 gap-x-4 ${className}`}>
         {/* Left Group */}
         <div className={`flex items-center gap-2 flex-wrap justify-center lg:justify-start ${interactiveShellClass}`}>
           {renderTitlebarLeftSpacer('h-8')}
@@ -940,11 +941,11 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
       }}
     >
       {/* Desktop Title (Absolute centered) */}
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center whitespace-nowrap overflow-hidden z-20 hidden lg:flex gap-4 px-2 py-1">
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center whitespace-nowrap overflow-hidden z-[40] hidden lg:flex gap-4 px-2 py-1 pointer-events-none">
         <button 
           onClick={() => setAboutDialogOpen(true)}
           title="關於 Enhanced LRC Maker"
-          className="app-region-no-drag p-1 rounded transition-colors relative group shrink-0"
+          className="app-region-no-drag pointer-events-auto p-1 rounded transition-colors relative group shrink-0"
         >
           <img src="/icon-light.svg" alt="App Icon" className="w-5 h-5 theme-icon-light opacity-80 group-hover:opacity-100 transition-opacity" />
           <img src="/icon-dark.svg" alt="App Icon" className="w-5 h-5 theme-icon-dark opacity-80 group-hover:opacity-100 transition-opacity" />
@@ -956,9 +957,9 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
             </h1>
           )}
           <div className={`${finalHideTitle ? 'text-sm' : 'text-[10px] mt-0.5'} text-[var(--app-text-muted)] font-mono flex items-center justify-center gap-2 max-w-full transition-all overflow-hidden whitespace-nowrap`}>
-            {audioFileName ? <span>{i18n.audio}: <span className="text-[var(--app-text-secondary)]">{audioFileName}</span></span> : <span className={noAudioClass}>{i18n.noAudio}</span>}
+            {audioFileName ? <span>{i18n.audio}: <span className="text-[var(--app-text-secondary)] app-region-no-drag pointer-events-auto" title={audioFileName}>{audioFileName}</span></span> : <span className={noAudioClass}>{i18n.noAudio}</span>}
             <span className="opacity-50 shrink-0">|</span>
-            {lyricFileName ? <span>{i18n.lyrics}: <span className={lyricNameClass}>{lyricFileName === 'Embedded Tag' ? i18n.embeddedTag : lyricFileName}</span></span> : metadata?.lyric ? <span>{i18n.lyrics}: <span className="text-[var(--app-text-secondary)]">{i18n.embeddedTag}</span></span> : <span>{i18n.noLyrics}</span>}
+            {lyricFileName ? <span>{i18n.lyrics}: <span className={`${lyricNameClass} app-region-no-drag pointer-events-auto`} title={lyricFileName === 'Embedded Tag' ? i18n.embeddedTag : lyricFileName}>{lyricFileName === 'Embedded Tag' ? i18n.embeddedTag : lyricFileName}</span></span> : metadata?.lyric ? <span>{i18n.lyrics}: <span className="text-[var(--app-text-secondary)] app-region-no-drag pointer-events-auto" title={i18n.embeddedTag}>{i18n.embeddedTag}</span></span> : <span>{i18n.noLyrics}</span>}
           </div>
         </div>
       </div>
@@ -984,9 +985,9 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
                     </h1>
                  )}
                  <div className={`${finalHideTitle ? 'text-sm' : 'text-[10px] mt-0.5'} text-[var(--app-text-muted)] font-mono flex items-center justify-start gap-2 max-w-full transition-all overflow-hidden whitespace-nowrap`}>
-                    {audioFileName ? <span className="text-[var(--app-text-secondary)]">{audioFileName}</span> : <span className={noAudioClass}>{i18n.noAudio}</span>}
+                    {audioFileName ? <span className="text-[var(--app-text-secondary)] app-region-no-drag pointer-events-auto" title={audioFileName}>{audioFileName}</span> : <span className={noAudioClass}>{i18n.noAudio}</span>}
                     <span className="opacity-50 shrink-0">|</span>
-                    {lyricFileName ? <span className={lyricNameClass}>{lyricFileName === 'Embedded Tag' ? i18n.embeddedTag : lyricFileName}</span> : metadata?.lyric ? <span className="text-[var(--app-text-secondary)]">{i18n.embeddedTag}</span> : <span>{i18n.noLyrics}</span>}
+                    {lyricFileName ? <span className={`${lyricNameClass} app-region-no-drag pointer-events-auto`} title={lyricFileName === 'Embedded Tag' ? i18n.embeddedTag : lyricFileName}>{lyricFileName === 'Embedded Tag' ? i18n.embeddedTag : lyricFileName}</span> : metadata?.lyric ? <span className="text-[var(--app-text-secondary)] app-region-no-drag pointer-events-auto" title={i18n.embeddedTag}>{i18n.embeddedTag}</span> : <span>{i18n.noLyrics}</span>}
                  </div>
              </div>
          </div>
@@ -994,10 +995,10 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
       </div>
 
       {/* Desktop Buttons */}
-      {renderButtonsRow('hidden lg:flex flex-1 z-[200] relative')}
+      {renderButtonsRow('hidden lg:flex flex-1 z-[30] relative')}
     </header>
     {/* Mobile Buttons — wrapped so --top-toolbar-display: none also hides this row on Linux Tauri */}
-    <div style={{ display: 'var(--top-toolbar-display, flex)' }} className={`transition-opacity duration-300 relative z-[100] ${unfocusedClass}`}>
+    <div style={{ display: 'var(--top-toolbar-display, flex)' }} className={`transition-opacity duration-300 relative z-[30] ${unfocusedClass}`}>
       {renderButtonsRow('flex lg:hidden bg-[var(--app-bg-panel-alt)] border-b border-[var(--app-border-base)] shrink-0')}
     </div>
     

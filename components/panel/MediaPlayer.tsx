@@ -695,12 +695,12 @@ export function MediaPlayer() {
           observer.observe(el);
           return () => observer.disconnect();
         }}
-        className={`flex flex-col w-full shrink-0 relative z-[60] ${isMobile && !isTall ? "sticky shadow-sm" : "lg:static lg:z-[60]"}`}
+        className={`flex flex-col w-full shrink-0 relative z-[20] ${isMobile && !isTall ? "sticky shadow-sm" : "lg:static lg:z-[20]"}`}
         style={{ top: isMobile && !isTall ? 0 : undefined }}
       >
-        <div className="bg-[var(--app-bg-panel)] p-3 border-t border-[var(--app-border-base)] @container flex flex-wrap @[600px]:flex-nowrap w-full shrink-0 relative z-[100]">
+        <div className="bg-[var(--app-bg-panel)] p-3 border-t border-[var(--app-border-base)] @container flex flex-wrap @[600px]:flex-nowrap w-full shrink-0 relative z-[20]">
           {/* Playback controls row */}
-          <div className="flex items-center gap-1 py-1.5 px-3 flex-shrink-0 w-full @[600px]:w-auto border-b @[600px]:border-b-0 border-[var(--app-border-base)] relative z-[100]">
+          <div className="flex items-center gap-1 py-1.5 px-3 flex-shrink-0 w-full @[600px]:w-auto border-b @[600px]:border-b-0 border-[var(--app-border-base)] relative z-[20]">
             <div className="flex items-center gap-1.5">
               <Tooltip
                 title={
@@ -881,7 +881,7 @@ export function MediaPlayer() {
               {formatTime(syncCurrTime)}
             </div>
 
-            <div className="flex items-center gap-0.5 relative shrink-0 settings-dropdown-container z-[100]">
+            <div className="flex items-center gap-0.5 relative shrink-0 settings-dropdown-container z-[20]">
               <Tooltip
                 title={
                   <div className="flex items-center gap-2">

@@ -587,7 +587,7 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
   const interactiveShellClass = isElectron ? 'app-region-no-drag' : '';
 
   const renderButtonsRow = (className: string) => (
-      <div className={`relative z-[30] flex-row flex-wrap items-center justify-center lg:justify-between w-full px-2 py-2 gap-y-2 gap-x-4 ${className}`}>
+      <div className={`relative z-[200] flex-row flex-wrap items-center justify-center lg:justify-between w-full px-2 py-2 gap-y-2 gap-x-4 ${className}`}>
         {/* Left Group */}
         <div className={`flex items-center gap-2 flex-wrap justify-center lg:justify-start ${interactiveShellClass}`}>
           {renderTitlebarLeftSpacer('h-8')}
@@ -941,11 +941,11 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
       }}
     >
       {/* Desktop Title (Absolute centered) */}
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center whitespace-nowrap overflow-hidden z-[40] hidden lg:flex gap-4 px-2 py-1 pointer-events-none">
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center whitespace-nowrap overflow-hidden z-20 hidden lg:flex gap-4 px-2 py-1">
         <button 
           onClick={() => setAboutDialogOpen(true)}
           title="關於 Enhanced LRC Maker"
-          className="app-region-no-drag pointer-events-auto p-1 rounded transition-colors relative group shrink-0"
+          className="app-region-no-drag p-1 rounded transition-colors relative group shrink-0"
         >
           <img src="/icon-light.svg" alt="App Icon" className="w-5 h-5 theme-icon-light opacity-80 group-hover:opacity-100 transition-opacity" />
           <img src="/icon-dark.svg" alt="App Icon" className="w-5 h-5 theme-icon-dark opacity-80 group-hover:opacity-100 transition-opacity" />
@@ -995,10 +995,10 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
       </div>
 
       {/* Desktop Buttons */}
-      {renderButtonsRow('hidden lg:flex flex-1 z-[30] relative')}
+      {renderButtonsRow('hidden lg:flex flex-1 z-[200] relative')}
     </header>
     {/* Mobile Buttons — wrapped so --top-toolbar-display: none also hides this row on Linux Tauri */}
-    <div style={{ display: 'var(--top-toolbar-display, flex)' }} className={`transition-opacity duration-300 relative z-[30] ${unfocusedClass}`}>
+    <div style={{ display: 'var(--top-toolbar-display, flex)' }} className={`transition-opacity duration-300 relative z-[100] ${unfocusedClass}`}>
       {renderButtonsRow('flex lg:hidden bg-[var(--app-bg-panel-alt)] border-b border-[var(--app-border-base)] shrink-0')}
     </div>
     

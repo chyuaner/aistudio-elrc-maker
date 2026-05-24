@@ -255,6 +255,7 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
     if (typeof window !== 'undefined') {
       const isElectron = !!(window as any).electronAPI?.isElectron;
       if (isElectron) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setAutoLoadMedia(true);
       }
     }

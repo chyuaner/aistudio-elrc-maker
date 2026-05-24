@@ -79,6 +79,19 @@ const SyncCell = memo(({
       />
     </td>
   );
+}, (prevProps, nextProps) => {
+  // Custom deep equality to prevent unnecessary React re-renders for every row
+  if (!prevProps.data && !nextProps.data) return true;
+  if (!prevProps.data || !nextProps.data) return false;
+  
+  return prevProps.data.line === nextProps.data.line &&
+         prevProps.data.index === nextProps.data.index &&
+         prevProps.isDual === nextProps.isDual &&
+         prevProps.isActive === nextProps.isActive &&
+         prevProps.isPassed === nextProps.isPassed &&
+         prevProps.activeWordIndex === nextProps.activeWordIndex &&
+         prevProps.syncMode === nextProps.syncMode &&
+         prevProps.paragraphStart === nextProps.paragraphStart;
 });
 SyncCell.displayName = 'SyncCell';
 

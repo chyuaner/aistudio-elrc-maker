@@ -36,15 +36,16 @@ export function KaraokePreview({ hideTouchUI = false }: { hideTouchUI?: boolean 
   let bottomIndex = -1;
   let previewLineIndex = activeLineIndex;
 
-    if (lines.length > 0) {
-        let firstStampedIndex = -1;
-        for (let i = 0; i < lines.length; i++) {
-           if (lines[i].start !== null) {
-              firstStampedIndex = i;
-              break;
-           }
-        }
+  const firstStampedIndex = React.useMemo(() => {
+    for (let i = 0; i < lines.length; i++) {
+       if (lines[i].start !== null) {
+          return i;
+       }
+    }
+    return -1;
+  }, [lines]);
 
+    if (lines.length > 0) {
         if (firstStampedIndex !== -1 && currentTime <= lines[firstStampedIndex].start!) {
             previewLineIndex = firstStampedIndex;
         } else if (activeLineIndex + 1 < lines.length) {

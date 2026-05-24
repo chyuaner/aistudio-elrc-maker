@@ -7,6 +7,36 @@ import { useI18n } from '@/hooks/useI18n';
 import { KaraokePreview } from '@/components/panel/KaraokePreview';
 import { useAutoScroll } from '@/components/base/useAutoScroll';
 
+const RawLine = React.memo(({ 
+  idx, 
+  lineText, 
+  mappedOriginalIdx, 
+  activeLineIndex, 
+  paragraphStarts, 
+  linesLength 
+}: any) => {
+  const isHighlight = mappedOriginalIdx === activeLineIndex && linesLength > 0;
+  const isParagraphStartColor = mappedOriginalIdx !== undefined && paragraphStarts[mappedOriginalIdx] && linesLength > 0 && !isHighlight;
+  
+  const rowClass = isHighlight 
+      ? 'bg-[var(--app-accent)]/20 text-[var(--app-accent)]' 
+      : isParagraphStartColor 
+         ? 'bg-[#293B33]/40 text-[var(--app-text-secondary)] shadow-[inset_2px_0_0_0_rgba(65,168,125,0.5)] hover:bg-[#293B33]/60' 
+         : 'text-[var(--app-text-secondary)] hover:bg-[var(--app-bg-hover)]';
+         
+  return (
+      <div className={`flex px-2 py-0.5 transition-colors ${rowClass}`}>
+          <div className="w-10 shrink-0 text-right pr-3 opacity-30 select-none text-xs leading-[1.4rem]">
+              {idx + 1}
+          </div>
+          <div className="flex-1 leading-[1.4rem]" style={{ wordBreak: 'break-all' }}>
+              {lineText || ' '}
+          </div>
+      </div>
+  );
+});
+RawLine.displayName = 'RawLine';
+
 export function RawTextDisplay() {
   const { lines, activeLineIndex, lrcMetadata, exportFormat, setExportFormat, setAutoScrollEnabled, dualLineGapSec, setDualLineGapSec, paragraphStarts, duration } = useEditor();
   const i18n = useI18n();
@@ -144,28 +174,17 @@ export function RawTextDisplay() {
       </div>
       
       <div id="raw-editor-scroll-container" className="flex-1 overflow-auto bg-[var(--app-bg-base)] text-sm font-mono py-4 select-text leading-relaxed outline-none border-t border-[var(--app-border-base)] shadow-inner" style={{ whiteSpace: 'pre-wrap' }} ref={containerRef} data-context-menu="readonly">
-          {allLines.map((lineText, idx) => {
-              const mappedOriginalIdx = rawIdxToLineIdx.get(idx);
-              const isHighlight = mappedOriginalIdx === activeLineIndex && lines.length > 0;
-              const isParagraphStartColor = mappedOriginalIdx !== undefined && paragraphStarts[mappedOriginalIdx] && lines.length > 0 && !isHighlight;
-              
-              const rowClass = isHighlight 
-                  ? 'bg-[var(--app-accent)]/20 text-[var(--app-accent)]' 
-                  : isParagraphStartColor 
-                     ? 'bg-[#293B33]/40 text-[var(--app-text-secondary)] shadow-[inset_2px_0_0_0_rgba(65,168,125,0.5)] hover:bg-[#293B33]/60' 
-                     : 'text-[var(--app-text-secondary)] hover:bg-[var(--app-bg-hover)]';
-                     
-              return (
-                  <div key={idx} className={`flex px-2 py-0.5 transition-colors ${rowClass}`}>
-                      <div className="w-10 shrink-0 text-right pr-3 opacity-30 select-none text-xs leading-[1.4rem]">
-                          {idx + 1}
-                      </div>
-                      <div className="flex-1 leading-[1.4rem]" style={{ wordBreak: 'break-all' }}>
-                          {lineText || ' '}
-                      </div>
-                  </div>
-              );
-          })}
+          {allLines.map((lineText, idx) => (
+              <RawLine
+                  key={idx}
+                  idx={idx}
+                  lineText={lineText}
+                  mappedOriginalIdx={rawIdxToLineIdx.get(idx)}
+                  activeLineIndex={activeLineIndex}
+                  paragraphStarts={paragraphStarts}
+                  linesLength={lines.length}
+              />
+          ))}
       </div>
     </div>
   );

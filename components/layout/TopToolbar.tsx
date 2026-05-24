@@ -967,7 +967,7 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
       {/* Mobile Title Row */}
       <div className="lg:hidden items-center justify-between w-full py-2 app-region-drag relative bg-[var(--app-bg-panel-alt)] z-10 flex">
          {renderTitlebarLeftSpacer('h-6', false)}
-         <div className="flex items-center justify-center whitespace-nowrap overflow-hidden px-2 z-0 flex-1 gap-2">
+         <div className="flex items-center justify-center overflow-hidden px-2 z-0 flex-1 gap-2 min-w-0">
              <button 
                onClick={() => setMetadataDialogOpen(true)}
                title="LRC屬性"
@@ -978,16 +978,16 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
                  <Edit2 className="w-[8px] h-[8px]" />
                </div>
              </button>
-             <div className="flex flex-col items-start justify-center">
+             <div className="flex flex-col items-start justify-center min-w-0">
                  {!finalHideTitle && (
                     <h1 className={`text-sm font-normal tracking-tight ${titleColor} transition-colors duration-300`}>
                       <span className="font-bold">E</span><span>nhanced</span> <span className="font-bold">LRC Maker</span>
                     </h1>
                  )}
-                 <div className={`${finalHideTitle ? 'text-sm' : 'text-[10px] mt-0.5'} text-[var(--app-text-muted)] font-mono flex items-center justify-start gap-2 max-w-full transition-all overflow-hidden whitespace-nowrap`}>
-                    {audioFileName ? <span className="text-[var(--app-text-secondary)] app-region-no-drag pointer-events-auto" title={audioFileName}>{audioFileName}</span> : <span className={noAudioClass}>{i18n.noAudio}</span>}
+                 <div className={`${finalHideTitle ? 'text-sm' : 'text-[10px] mt-0.5'} text-[var(--app-text-muted)] font-mono flex items-center justify-start gap-x-2 max-w-full transition-all flex-wrap`}>
+                    {audioFileName ? <span className="text-[var(--app-text-secondary)] app-region-no-drag pointer-events-auto break-all" title={audioFileName}>{audioFileName}</span> : <span className={noAudioClass}>{i18n.noAudio}</span>}
                     <span className="opacity-50 shrink-0">|</span>
-                    {lyricFileName ? <span className={`${lyricNameClass} app-region-no-drag pointer-events-auto`} title={lyricFileName === 'Embedded Tag' ? i18n.embeddedTag : lyricFileName}>{lyricFileName === 'Embedded Tag' ? i18n.embeddedTag : lyricFileName}</span> : metadata?.lyric ? <span className="text-[var(--app-text-secondary)] app-region-no-drag pointer-events-auto" title={i18n.embeddedTag}>{i18n.embeddedTag}</span> : <span>{i18n.noLyrics}</span>}
+                    {lyricFileName ? <span className={`${lyricNameClass} app-region-no-drag pointer-events-auto break-all`} title={lyricFileName === 'Embedded Tag' ? i18n.embeddedTag : lyricFileName}>{lyricFileName === 'Embedded Tag' ? i18n.embeddedTag : lyricFileName}</span> : metadata?.lyric ? <span className="text-[var(--app-text-secondary)] app-region-no-drag pointer-events-auto" title={i18n.embeddedTag}>{i18n.embeddedTag}</span> : <span>{i18n.noLyrics}</span>}
                  </div>
              </div>
          </div>

@@ -199,6 +199,9 @@ export function WebSystemIntegration() {
     if (isTauri) {
         (window as any).__TAURI__.core.invoke('set_gtk_theme', { theme: isCurrentlyDarkInit ? 'dark' : 'light' }).catch(() => {});
     }
+    if (isElectron) {
+        (window as any).electronAPI?.windowSetTheme?.(isCurrentlyDarkInit ? 'dark' : 'light');
+    }
 
     // Also listen to system theme changes dynamically if no forced theme!
     isSystemDarkQuery.addEventListener('change', (e) => {
@@ -209,6 +212,9 @@ export function WebSystemIntegration() {
              }, 0);
              if (isTauri) {
                  (window as any).__TAURI__.core.invoke('set_gtk_theme', { theme: e.matches ? 'dark' : 'light' }).catch(() => {});
+             }
+             if (isElectron) {
+                 (window as any).electronAPI?.windowSetTheme?.(e.matches ? 'dark' : 'light');
              }
         }
     });
@@ -235,6 +241,9 @@ export function WebSystemIntegration() {
             if (isTauri) {
                 (window as any).__TAURI__.core.invoke('set_gtk_theme', { theme: 'dark' }).catch(() => {});
             }
+            if (isElectron) {
+                (window as any).electronAPI?.windowSetTheme?.('dark');
+            }
         } else {
             root.classList.remove('dark');
             root.classList.add('light');
@@ -245,6 +254,9 @@ export function WebSystemIntegration() {
             }, 0);
             if (isTauri) {
                 (window as any).__TAURI__.core.invoke('set_gtk_theme', { theme: 'light' }).catch(() => {});
+            }
+            if (isElectron) {
+                (window as any).electronAPI?.windowSetTheme?.('light');
             }
         }
       };

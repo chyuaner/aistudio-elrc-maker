@@ -220,9 +220,9 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
     }
 
     if (titleParts.length > 0) {
-      document.title = `${titleParts.join(' ')} - LRC MAKER ENHANCED`;
+      document.title = `${titleParts.join(' ')} - Enhanced LRC Studio`;
     } else {
-      document.title = 'LRC MAKER ENHANCED';
+      document.title = 'Enhanced LRC Studio';
     }
   }, [audioFileName, lyricFileName]);
 

@@ -44,7 +44,7 @@ export function AboutDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () 
       >
         <div className="flex items-center justify-between p-4 border-b border-[var(--app-border-base)] shrink-0 bg-[var(--app-bg-panel-alt)] rounded-t-lg">
           <h2 className="text-lg font-bold text-[var(--app-text-primary)] flex items-center gap-2">
-            關於 Enhanced LRC Maker
+            關於 Enhanced LRC Studio
           </h2>
           <button 
             onClick={onClose}

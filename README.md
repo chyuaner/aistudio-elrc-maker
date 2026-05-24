@@ -1,6 +1,6 @@
-# LRC Maker Enhanced - Tauri Integration Guide
+# Enhanced LRC Studio - Tauri Integration Guide
 
-此指南提供了將「LRC Maker Enhanced」前端整合到 Tauri 應用程式時所需的重要參考資訊。我們已經針對 Tauri 桌面版環境做好了相關的準備與抽象化。
+此指南提供了將「Enhanced LRC Studio」前端整合到 Tauri 應用程式時所需的重要參考資訊。我們已經針對 Tauri 桌面版環境做好了相關的準備與抽象化。
 
 ## 1. 色彩變數 (CSS Variables)
 

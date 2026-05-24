@@ -1010,7 +1010,7 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center whitespace-nowrap overflow-hidden z-20 hidden lg:flex gap-4 px-2 py-1">
           <button
             onClick={() => setAboutDialogOpen(true)}
-            title="關於 Enhanced LRC Maker"
+            title="關於 Enhanced LRC Studio"
             className="app-region-no-drag p-1 rounded transition-colors relative group shrink-0"
           >
             <img src="/icon-light.svg" alt="App Icon" className="w-5 h-5 theme-icon-light opacity-80 group-hover:opacity-100 transition-opacity" />
@@ -1019,7 +1019,7 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
           <div className="flex flex-col items-center">
             {!finalHideTitle && (
               <h1 className={`text-sm font-normal tracking-tight ${titleColor} transition-colors duration-300`}>
-                <span className="font-bold">E</span><span>nhanced</span> <span className="font-bold">LRC Maker</span>
+                <span className="font-bold">E</span><span>nhanced</span> <span className="font-bold">LRC Studio</span>
               </h1>
             )}
             <div className={`${finalHideTitle ? 'text-sm' : 'text-[10px] mt-0.5'} text-[var(--app-text-muted)] font-mono flex items-center justify-center gap-2 max-w-full transition-all overflow-hidden whitespace-nowrap`}>

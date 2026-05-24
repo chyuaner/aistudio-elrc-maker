@@ -79,7 +79,7 @@ export function embedLyricsIntoFlac(buffer: ArrayBuffer, lyricsText: string, isE
             }
         }
     } else {
-        vendorStringBytes = encoder.encode('LRC Maker Enhanced');
+        vendorStringBytes = encoder.encode('Enhanced LRC Studio');
     }
 
     // Set new lyrics tag

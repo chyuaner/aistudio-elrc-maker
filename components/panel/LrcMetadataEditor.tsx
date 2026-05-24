@@ -129,7 +129,7 @@ export function LrcMetadataEditor({ onClose }: { onClose?: () => void }) {
                     <InputRow isDialog={isDialog} label="作者 [au]" mKey="au" placeholder="作詞/作曲" value={(formData.au as string) || ''} onChange={handleChange} onBlur={handleBlur} />
                     <InputRow isDialog={isDialog} label="建立者 [by]" mKey="by" placeholder="LRC創作者" value={(formData.by as string) || ''} onChange={handleChange} onBlur={handleBlur} />
                     <InputRow isDialog={isDialog} label="位移 [offset]" mKey="offset" placeholder="+/- 毫秒 (+向後, -向前)" value={(formData.offset as string) || ''} onChange={handleChange} onBlur={handleBlur} />
-                    <InputRow isDialog={isDialog} label="編輯器 [re]" mKey="re" placeholder="LRC Maker Enhanced" value={(formData.re as string) || ''} onChange={handleChange} onBlur={handleBlur} />
+                    <InputRow isDialog={isDialog} label="編輯器 [re]" mKey="re" placeholder="Enhanced LRC Studio" value={(formData.re as string) || ''} onChange={handleChange} onBlur={handleBlur} />
                     <InputRow isDialog={isDialog} label="版本 [ve]" mKey="ve" placeholder="1.0" value={(formData.ve as string) || ''} onChange={handleChange} onBlur={handleBlur} />
                 </div>
 

@@ -126,13 +126,13 @@ export function DialogProvider({ children }: { children: ReactNode }) {
                 onClick={() => handleConfirmClose(false)}
                 className="px-4 py-2 rounded text-sm text-[var(--app-text-secondary)] hover:bg-[var(--app-border-base)] transition-colors"
               >
-                Cancel
+                取消
               </button>
               <button 
                 onClick={() => handleConfirmClose(true)}
                 className="px-4 py-2 rounded text-sm bg-[var(--app-accent)] hover:bg-[var(--app-accent-hover)] text-black font-medium transition-colors"
               >
-                Confirm
+                確認
               </button>
             </div>
           </div>
@@ -168,13 +168,13 @@ export function DialogProvider({ children }: { children: ReactNode }) {
                 onClick={() => handlePromptClose(false)}
                 className="px-4 py-2 rounded text-sm text-[var(--app-text-secondary)] hover:bg-[var(--app-border-base)] transition-colors"
               >
-                Cancel
+                取消
               </button>
               <button 
                 onClick={() => handlePromptClose(true)}
                 className="px-4 py-2 rounded text-sm bg-[var(--app-accent)] hover:bg-[var(--app-accent-hover)] text-black font-medium transition-colors"
               >
-                Submit
+                送出
               </button>
             </div>
           </div>

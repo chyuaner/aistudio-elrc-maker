@@ -31,10 +31,6 @@ export function useFileActions() {
     setDuration(0);
     setPlaybackRate(1.0);
     setFile(f);
-    if (autoLoadLyrics && !skipAutoLoadLyrics) {
-      resetHistory([]);
-      setLyricFileName(null);
-    }
     
     const checkAndLoadSiblingLrc = async (audioPath: string) => {
         const electronAPI = (window as any).electronAPI;
@@ -43,6 +39,10 @@ export function useFileActions() {
             const parsed = await electronAPI.pathParse(audioPath);
             const lrcPath = await electronAPI.pathJoin(parsed.dir, parsed.name + '.lrc');
             if (await electronAPI.fsExists(lrcPath)) {
+                if (lines.length > 0) {
+                    const confirmed = await dialogs.confirm('載入新的歌詞檔案將會覆蓋目前的歌詞。確定要繼續嗎？');
+                    if (!confirmed) return false;
+                }
                 const currentLyricPath = getFilePath(lyricFile);
                 if (currentLyricPath === lrcPath) {
                     return true;
@@ -108,6 +108,10 @@ export function useFileActions() {
                 rawTags: Object.fromEntries(tags)
              });
              if (foundLyrics && autoLoadLyrics && !skipAutoLoadLyrics) {
+                 if (lines.length > 0) {
+                     const confirmed = await dialogs.confirm('載入新的歌詞檔案將會覆蓋目前的歌詞。確定要繼續嗎？');
+                     if (!confirmed) return;
+                 }
                  setLyricFileName('Embedded Tag');
                  const parsed = parseRawLyrics(foundLyrics);
                  resetHistory(parsed.lines, parsed.metadata);
@@ -162,6 +166,10 @@ export function useFileActions() {
            });
            
            if (foundLyrics && autoLoadLyrics && !skipAutoLoadLyrics) {
+               if (lines.length > 0) {
+                   const confirmed = await dialogs.confirm('載入新的歌詞檔案將會覆蓋目前的歌詞。確定要繼續嗎？');
+                   if (!confirmed) return;
+               }
                setLyricFileName('Embedded Tag');
                const parsed = parseRawLyrics(foundLyrics);
                resetHistory(parsed.lines, parsed.metadata);
@@ -179,7 +187,7 @@ export function useFileActions() {
         }
       });
     }
-  }, [resetHistory, setFile, setLyricFileName, setLyricFile, lyricFile, setMetadata, setAudioSpecs, setIsPlaying, playerRef, setDuration, setPlaybackRate, autoLoadLyrics, showToast]);
+  }, [resetHistory, setFile, setLyricFileName, setLyricFile, lyricFile, setMetadata, setAudioSpecs, setIsPlaying, playerRef, setDuration, setPlaybackRate, autoLoadLyrics, showToast, lines.length, dialogs]);
 
   const processLyricFile = useCallback(async (f: File) => {
     if (lines.length > 0) {

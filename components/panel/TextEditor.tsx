@@ -37,6 +37,7 @@ export function TextEditor() {
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
   const [ignoreTimeTags, setIgnoreTimeTags] = useState(true);
   const [selectWholeLine, setSelectWholeLine] = useState(false);
+  const textRef = useRef("");
 
   const matches = useMemo(() => {
     if (!searchText) return [];
@@ -182,6 +183,7 @@ export function TextEditor() {
 
     const newText = text.substring(0, match.start) + replaceText + text.substring(match.end);
     setText(newText);
+    textRef.current = newText;
     isDirty.current = true;
     saveChanges(newText);
     
@@ -197,6 +199,7 @@ export function TextEditor() {
       newText = newText.substring(0, match.start) + replaceText + newText.substring(match.end);
     }
     setText(newText);
+    textRef.current = newText;
     isDirty.current = true;
     saveChanges(newText);
   };
@@ -209,6 +212,7 @@ export function TextEditor() {
       if (text !== newText) {
         // eslint-disable-next-line react-hooks/set-state-in-effect
         setText(newText || "");
+        textRef.current = newText || "";
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -218,14 +222,32 @@ export function TextEditor() {
     const handler = (e: any) => {
       const lineIndex = e.detail?.lineIndex;
       if (lineIndex !== undefined && textareaRef.current) {
-        const metadataLinesCount = Object.values(lrcMetadata || {}).filter(
-          Boolean,
-        ).length;
-        const targetRow = metadataLinesCount + lineIndex;
+        const splitLines = text.split("\n");
+        let currentLineIndex = -1;
+        let targetRow = -1;
+
+        const lineTimeRegex = /^\[(\d+:\d+(?:\.\d+)?)\]/;
+        const metaRegex = /^\[([^:：\]]+)[:：](.*)\]\s*$/;
+
+        for (let i = 0; i < splitLines.length; i++) {
+          const lineText = splitLines[i];
+          if (!lineText.trim()) continue;
+
+          if (metaRegex.test(lineText) && !lineTimeRegex.test(lineText)) {
+            continue;
+          }
+
+          currentLineIndex++;
+          if (currentLineIndex === lineIndex) {
+            targetRow = i;
+            break;
+          }
+        }
+
+        if (targetRow === -1) return;
 
         let pos = 0;
-        const splitLines = text.split("\n");
-        for (let i = 0; i < targetRow && i < splitLines.length; i++) {
+        for (let i = 0; i < targetRow; i++) {
           pos += splitLines[i].length + 1;
         }
 
@@ -251,13 +273,14 @@ export function TextEditor() {
 
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setText(e.target.value);
+    textRef.current = e.target.value; // Sync ref immediately
     isDirty.current = true;
   };
 
   const saveChanges = (forceText?: string) => {
     if (!isDirty.current && forceText === undefined) return;
 
-    const textToParse = forceText !== undefined ? forceText : text;
+    const textToParse = forceText !== undefined ? forceText : textRef.current;
     const parsed = parseRawLyrics(textToParse);
     let resultLines = parsed.lines;
     setLrcMetadata(parsed.metadata);
@@ -278,11 +301,6 @@ export function TextEditor() {
   const handleTextBlur = () => {
     saveChanges();
   };
-
-  const textRef = useRef(text);
-  useEffect(() => {
-    textRef.current = text;
-  }, [text]);
 
   const saveChangesRef = useRef(saveChanges);
   // eslint-disable-next-line react-hooks/exhaustive-deps

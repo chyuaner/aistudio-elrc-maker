@@ -178,13 +178,22 @@ export function LrcMetadataEditor({ onClose }: { onClose?: () => void }) {
      lastAppliedRef.current = lrcMetadata;
   }, [lrcMetadata]);
 
-  // Apply auto-fill logic automatically if file metadata exists/changes
-  useEffect(() => {
-     if (autoFillEnabled && (metadata || duration > 0)) {
-         triggerFillFromAudio(false); // false means do NOT overwrite existing tags
-     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [metadata, duration, autoFillEnabled]); // when generic audio metadata or duration is ready, try to fill
+  const applyChanges = (currentFormData: LrcMetadata, currentCustomKeys: typeof customKeys, shouldCommit = false) => {
+    const finalData: LrcMetadata = {};
+    const predefinedKeys = ['ti', 'ar', 'al', 'au', 'by', 'offset', 're', 've', 'length'];
+    predefinedKeys.forEach(k => {
+        if (currentFormData[k]) finalData[k] = currentFormData[k];
+    });
+    currentCustomKeys.forEach(({ key, value }) => {
+        if (key && value) finalData[key] = value;
+    });
+
+    lastAppliedRef.current = finalData;
+    setLrcMetadata(finalData);
+    if (shouldCommit) {
+        commitChanges(finalData);
+    }
+  };
 
   const getAutoFilledData = (prev: LrcMetadata, overwrite: boolean): LrcMetadata => {
       const newData = { ...prev };
@@ -219,22 +228,13 @@ export function LrcMetadataEditor({ onClose }: { onClose?: () => void }) {
       }
   };
 
-  const applyChanges = (currentFormData: LrcMetadata, currentCustomKeys: typeof customKeys, shouldCommit = false) => {
-    const finalData: LrcMetadata = {};
-    const predefinedKeys = ['ti', 'ar', 'al', 'au', 'by', 'offset', 're', 've', 'length'];
-    predefinedKeys.forEach(k => {
-        if (currentFormData[k]) finalData[k] = currentFormData[k];
-    });
-    currentCustomKeys.forEach(({ key, value }) => {
-        if (key && value) finalData[key] = value;
-    });
-
-    lastAppliedRef.current = finalData;
-    setLrcMetadata(finalData);
-    if (shouldCommit) {
-        commitChanges(finalData);
-    }
-  };
+  // Apply auto-fill logic automatically if file metadata exists/changes
+  useEffect(() => {
+     if (autoFillEnabled && (metadata || duration > 0)) {
+         triggerFillFromAudio(false); // false means do NOT overwrite existing tags
+     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [metadata, duration, autoFillEnabled]); // when generic audio metadata or duration is ready, try to fill
 
   const handleBlur = () => {
       // Clean up empty custom keys visually on blur? Only if they are empty

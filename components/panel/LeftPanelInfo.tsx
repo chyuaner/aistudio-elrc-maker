@@ -54,7 +54,7 @@ export function LeftPanelInfo() {
         </button>
       </div>
       
-      <div className="p-6 flex-1 overflow-y-auto custom-scrollbar text-xs text-[var(--app-text-muted)] space-y-6 select-text flex flex-col">
+      <div className={`flex-1 overflow-y-auto custom-scrollbar text-xs text-[var(--app-text-muted)] space-y-6 select-text flex flex-col ${activeTab === 'lrcMetadata' ? '' : 'p-6'}`}>
         {activeTab === 'lrcMetadata' ? (
           <LrcMetadataEditor />
         ) : activeTab === 'instructions' ? (

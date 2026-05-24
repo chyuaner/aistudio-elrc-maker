@@ -18,7 +18,7 @@ export interface HistoryState {
   future: { lines: LyricLine[]; lrcMetadata: LrcMetadata; action: string; cursor: { line: number, word: number } }[];
 }
 
-type Action = 
+type Action =
   | { type: 'SET_LINES'; payload: LyricLine[] | ((prev: LyricLine[]) => LyricLine[]) }
   | { type: 'SET_METADATA'; payload: LrcMetadata | ((prev: LrcMetadata) => LrcMetadata) }
   | { type: 'RESET'; payloadLines?: LyricLine[]; payloadMetadata?: LrcMetadata }
@@ -44,11 +44,11 @@ function historyReducer(state: HistoryState, action: Action & { currentCursor: {
     case 'COMMIT': {
       let newLines = state.present.lines;
       if (action.payloadLines !== undefined) {
-         newLines = typeof action.payloadLines === 'function' ? action.payloadLines(state.present.lines) : action.payloadLines;
+        newLines = typeof action.payloadLines === 'function' ? action.payloadLines(state.present.lines) : action.payloadLines;
       }
       let newMeta = state.present.lrcMetadata;
       if (action.payloadMetadata !== undefined) {
-         newMeta = typeof action.payloadMetadata === 'function' ? action.payloadMetadata(state.present.lrcMetadata) : action.payloadMetadata;
+        newMeta = typeof action.payloadMetadata === 'function' ? action.payloadMetadata(state.present.lrcMetadata) : action.payloadMetadata;
       }
       return {
         past: [...state.past, { lines: state.present.lines, lrcMetadata: state.present.lrcMetadata, action: action.actionName || 'Update', cursor: action.currentCursor }],
@@ -62,14 +62,14 @@ function historyReducer(state: HistoryState, action: Action & { currentCursor: {
       const actualSteps = Math.min(steps, state.past.length);
       const newPast = state.past.slice(0, state.past.length - actualSteps);
       const newPresentObj = state.past[state.past.length - actualSteps];
-      
+
       const undoneStates = state.past.slice(state.past.length - actualSteps + 1);
       const futureItems = [
         ...undoneStates,
         { lines: state.present.lines, lrcMetadata: state.present.lrcMetadata, action: newPresentObj.action, cursor: action.currentCursor },
         ...state.future
       ];
-      
+
       return { past: newPast, present: { lines: newPresentObj.lines, lrcMetadata: newPresentObj.lrcMetadata }, future: futureItems };
     }
     case 'REDO': {
@@ -77,14 +77,14 @@ function historyReducer(state: HistoryState, action: Action & { currentCursor: {
       if (state.future.length === 0) return state;
       const actualSteps = Math.min(steps, state.future.length);
       const newPresentObj = state.future[actualSteps - 1];
-      
+
       const redoneStates = state.future.slice(0, actualSteps - 1);
       const pastItems = [
         ...state.past,
         { lines: state.present.lines, lrcMetadata: state.present.lrcMetadata, action: state.future[0]?.action || 'Update', cursor: action.currentCursor },
         ...redoneStates
       ];
-      
+
       const newFuture = state.future.slice(actualSteps);
       return { past: pastItems, present: { lines: newPresentObj.lines, lrcMetadata: newPresentObj.lrcMetadata }, future: newFuture };
     }
@@ -112,7 +112,9 @@ interface EditorContextType {
   fileUrl: string | null;
   audioFileName: string | null;
   lyricFileName: string | null;
+  lyricFile: File | null;
   setLyricFileName: (name: string | null) => void;
+  setLyricFile: (file: File | null) => void;
   setFile: (file: File | null) => void;
   metadata: FileMetadata | null;
   setMetadata: (meta: FileMetadata | null) => void;
@@ -125,7 +127,7 @@ interface EditorContextType {
   autoScrollEnabled: boolean;
   setAutoScrollEnabled: (enabled: boolean) => void;
 
-  
+
   lines: LyricLine[];
   setLines: (payload: LyricLine[] | ((prev: LyricLine[]) => LyricLine[])) => void;
   resetHistory: (payloadLines: LyricLine[] | ((prev: LyricLine[]) => LyricLine[]), payloadMetadata?: LrcMetadata) => void;
@@ -140,46 +142,48 @@ interface EditorContextType {
   futureCount: number;
   pastActions: { action: string }[];
   futureActions: { action: string }[];
-  
+
   mode: EditorMode;
   setMode: (mode: EditorMode) => void;
   exportFormat: ExportFormat;
   setExportFormat: (format: ExportFormat) => void;
   dualLineGapSec: number;
   setDualLineGapSec: (sec: number) => void;
-  
+
   syncMode: SyncMode;
   setSyncMode: (mode: SyncMode) => void;
-  
+
   activeLineIndex: number;
   setActiveLineIndex: (idx: number) => void;
   activeWordIndex: number;
   setActiveWordIndex: (idx: number) => void;
-  
+
   hotkeys: Hotkeys;
   setHotkeys: (hk: Hotkeys) => void;
-  
+
   duration: number;
   setDuration: (time: number) => void;
-  
+
   isPlaying: boolean;
   setIsPlaying: (playing: boolean) => void;
-  
+
   audioLatency: number;
   setAudioLatency: (latency: number) => void;
   playbackRate: number;
   setPlaybackRate: React.Dispatch<React.SetStateAction<number>>;
-  
+
   touchUIMode: boolean;
   setTouchUIMode: (touchUIMode: boolean) => void;
-  
+
   playerRef: React.RefObject<HTMLVideoElement | HTMLAudioElement | null>;
-  
+
   audioSpecs: { format?: string, bitrate?: string, sampleRate?: string, bitsPerSample?: string } | null;
   setAudioSpecs: (specs: { format?: string, bitrate?: string, sampleRate?: string, bitsPerSample?: string } | null) => void;
-  
+
   autoLoadLyrics: boolean;
   setAutoLoadLyrics: (val: boolean) => void;
+  autoLoadMedia: boolean;
+  setAutoLoadMedia: (val: boolean) => void;
   toastMessage: string | null;
   showToast: (msg: string) => void;
 
@@ -193,6 +197,7 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
   const [fileUrl, setFileUrl] = useState<string | null>(null);
   const [audioFileName, setAudioFileName] = useState<string | null>(null);
   const [lyricFileName, setLyricFileName] = useState<string | null>(null);
+  const [lyricFile, setLyricFile] = useState<File | null>(null);
   const [exportFormat, setExportFormat] = useState<ExportFormat>('standard');
   const [dualLineGapSec, setDualLineGapSec] = useState<number>(6);
   const [autoScrollEnabled, setAutoScrollEnabled] = useState<boolean>(false);
@@ -201,19 +206,19 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
   const [syncMode, setSyncMode] = useState<SyncMode>('line');
 
   const mode = rawMode;
-  
+
   useEffect(() => {
     let titleParts = [];
     if (audioFileName) {
       if (lyricFileName) {
-         titleParts.push(`${audioFileName} (${lyricFileName})`);
+        titleParts.push(`${audioFileName} (${lyricFileName})`);
       } else {
-         titleParts.push(audioFileName);
+        titleParts.push(audioFileName);
       }
     } else if (lyricFileName) {
       titleParts.push(lyricFileName);
     }
-    
+
     if (titleParts.length > 0) {
       document.title = `${titleParts.join(' ')} - LRC MAKER ENHANCED`;
     } else {
@@ -223,27 +228,37 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
 
   const [activeLineIndex, setActiveLineIndex] = useState(0);
   const [activeWordIndex, setActiveWordIndex] = useState(0);
-  
+
   const [hotkeys, setHotkeys] = useState<Hotkeys>({
     stampWord: ' ',
     nextLine: 'm',
   });
-  
+
   const [duration, setDuration] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [audioLatency, setAudioLatency] = useState(0);
   const [playbackRate, setPlaybackRate] = useState(1);
   const [touchUIMode, setTouchUIMode] = useState(false);
   const [audioSpecs, setAudioSpecs] = useState<{ format?: string, bitrate?: string, sampleRate?: string } | null>(null);
-  const [autoLoadLyrics, setAutoLoadLyrics] = useState(true);
+  const [autoLoadLyrics, setAutoLoadLyrics] = useState(true); // 自動載入歌詞 預設值
+  const [autoLoadMedia, setAutoLoadMedia] = useState(false); // 自動載入媒體 預設值
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const showToast = React.useCallback((msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3000);
   }, []);
-  
+
   const playerRef = useRef<HTMLVideoElement | HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const isElectron = !!(window as any).electronAPI?.isElectron;
+      if (isElectron) {
+        setAutoLoadMedia(true);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     const isTouch = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -315,9 +330,9 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (lines.length > 0 && activeLineIndex >= lines.length) {
-       // eslint-disable-next-line react-hooks/set-state-in-effect
-       setActiveLineIndex(0);
-       setActiveWordIndex(0);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setActiveLineIndex(0);
+      setActiveWordIndex(0);
     }
   }, [lines.length, activeLineIndex]);
 
@@ -336,7 +351,7 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
     const tracks: number[] = [];
     const pStarts: boolean[] = [];
     let currentTrack = 0;
-    
+
     let firstStampedFound = false;
     let explicitInterludePending = false;
 
@@ -361,29 +376,29 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
         continue;
       }
 
-      const prevLine = lines[i-1];
+      const prevLine = lines[i - 1];
       let prevEnd = prevLine.end;
       if (prevEnd === null && prevLine.words?.length > 0) {
-          const lastWordWithStart = [...prevLine.words].reverse().find(w => w.start !== null);
-          if (lastWordWithStart) prevEnd = lastWordWithStart.start; 
+        const lastWordWithStart = [...prevLine.words].reverse().find(w => w.start !== null);
+        if (lastWordWithStart) prevEnd = lastWordWithStart.start;
       }
 
       let gapSec = -1;
       if (prevEnd !== null && line.start !== null) {
-          gapSec = line.start - prevEnd;
+        gapSec = line.start - prevEnd;
       }
 
       if (gapSec >= dualLineGapSec || explicitInterludePending) {
-          currentTrack = 0;
-          pStarts.push(true);
-          explicitInterludePending = false;
+        currentTrack = 0;
+        pStarts.push(true);
+        explicitInterludePending = false;
       } else {
-          currentTrack = currentTrack === 0 ? 1 : 0;
-          pStarts.push(false);
+        currentTrack = currentTrack === 0 ? 1 : 0;
+        pStarts.push(false);
       }
-      
+
       if (isLineEmpty && line.start !== null) {
-          explicitInterludePending = true;
+        explicitInterludePending = true;
       }
 
       tracks.push(currentTrack);
@@ -402,14 +417,14 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
     dispatchLines({ type: 'RESET', payloadLines: newLines, payloadMetadata: payloadMetadata || {} });
     setActiveLineIndex(0);
     setActiveWordIndex(0);
-    
+
     // Smart detect word timestamps on load
     const hasWordTimestamps = newLines.some(l => l.words && l.words.some(w => w.start !== null));
     if (hasWordTimestamps) {
-       setSyncMode('word');
-       setExportFormat('enhanced');
+      setSyncMode('word');
+      setExportFormat('enhanced');
     }
-    
+
     const hasAnyTimestamps = newLines.some(l => l.start !== null || (l.words && l.words.some(w => w.start !== null)));
     setAutoScrollEnabled(hasAnyTimestamps);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -424,30 +439,30 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
   const redo = (steps = 1) => dispatchLines({ type: 'REDO', payload: steps });
 
   const shiftTime = (offsetSec: number) => {
-     commitLines(prev => prev.map(line => {
-       const start = line.start !== null ? Math.max(0, line.start + offsetSec) : null;
-       const end = line.end !== null ? Math.max(0, line.end + offsetSec) : null;
-       const words = line.words.map(w => ({
-         ...w,
-         start: w.start !== null ? Math.max(0, w.start + offsetSec) : null,
-         end: w.end !== null ? Math.max(0, w.end + offsetSec) : null,
-       }));
-       return { ...line, start, end, words };
-     }), `Shift Time ${offsetSec > 0 ? '+' : ''}${offsetSec}s`);
+    commitLines(prev => prev.map(line => {
+      const start = line.start !== null ? Math.max(0, line.start + offsetSec) : null;
+      const end = line.end !== null ? Math.max(0, line.end + offsetSec) : null;
+      const words = line.words.map(w => ({
+        ...w,
+        start: w.start !== null ? Math.max(0, w.start + offsetSec) : null,
+        end: w.end !== null ? Math.max(0, w.end + offsetSec) : null,
+      }));
+      return { ...line, start, end, words };
+    }), `Shift Time ${offsetSec > 0 ? '+' : ''}${offsetSec}s`);
   };
 
   const shiftTimeFromIndex = (index: number, offsetSec: number) => {
-     commitLines(prev => prev.map((line, i) => {
-       if (i < index) return line;
-       const start = line.start !== null ? Math.max(0, line.start + offsetSec) : null;
-       const end = line.end !== null ? Math.max(0, line.end + offsetSec) : null;
-       const words = line.words.map(w => ({
-         ...w,
-         start: w.start !== null ? Math.max(0, w.start + offsetSec) : null,
-         end: w.end !== null ? Math.max(0, w.end + offsetSec) : null,
-       }));
-       return { ...line, start, end, words };
-     }), `Shift ${offsetSec > 0 ? '+' : ''}${offsetSec}s From #${index + 1}`);
+    commitLines(prev => prev.map((line, i) => {
+      if (i < index) return line;
+      const start = line.start !== null ? Math.max(0, line.start + offsetSec) : null;
+      const end = line.end !== null ? Math.max(0, line.end + offsetSec) : null;
+      const words = line.words.map(w => ({
+        ...w,
+        start: w.start !== null ? Math.max(0, w.start + offsetSec) : null,
+        end: w.end !== null ? Math.max(0, w.end + offsetSec) : null,
+      }));
+      return { ...line, start, end, words };
+    }), `Shift ${offsetSec > 0 ? '+' : ''}${offsetSec}s From #${index + 1}`);
   };
 
   const handleFormatWords = () => {
@@ -459,7 +474,7 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <EditorContext.Provider value={{
-      file, setFile, fileUrl, audioFileName, lyricFileName, setLyricFileName, metadata, setMetadata,
+      file, setFile, fileUrl, audioFileName, lyricFileName, setLyricFileName, lyricFile, setLyricFile, metadata, setMetadata,
       lrcMetadata, setLrcMetadata, commitLrcMetadata,
       lines, setLines, resetHistory, commitLines, undo, redo, shiftTime, shiftTimeFromIndex, trackAssignments: trackAssignments.tracks, paragraphStarts: trackAssignments.pStarts, autoScrollEnabled, setAutoScrollEnabled,
       canUndo: historyState.past.length > 0,
@@ -480,6 +495,7 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
       audioSpecs, setAudioSpecs,
       playerRef,
       autoLoadLyrics, setAutoLoadLyrics,
+      autoLoadMedia, setAutoLoadMedia,
       toastMessage, showToast,
       handleFormatWords,
     }}>

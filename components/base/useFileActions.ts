@@ -7,13 +7,22 @@ import { useDialogs } from '@/components/dialog/DialogProvider';
 export function useFileActions() {
   const {
     lines, resetHistory, setFile, setMetadata, setAudioSpecs, setIsPlaying, playerRef,
-    setDuration, setPlaybackRate, setLyricFileName, setLrcMetadata, lrcMetadata,
+    setDuration, setPlaybackRate, setLyricFileName, setLyricFile, lyricFile, setLrcMetadata, lrcMetadata,
     duration, file, lyricFileName, audioFileName, commitLines,
-    autoLoadLyrics, showToast
+    autoLoadLyrics, autoLoadMedia, showToast
   } = useEditor();
   const dialogs = useDialogs();
 
-  const processAudioFile = useCallback(async (f: File) => {
+  const getFilePath = (f: any) => {
+      if (!f) return null;
+      const electronAPI = (window as any).electronAPI;
+      if (electronAPI?.getPathForFile) {
+          return electronAPI.getPathForFile(f) || f.path;
+      }
+      return f.path;
+  };
+
+  const processAudioFile = useCallback(async (f: File, skipAutoLoadLyrics: boolean = false) => {
     setIsPlaying(false);
     if (playerRef.current) {
         playerRef.current.pause();
@@ -22,10 +31,37 @@ export function useFileActions() {
     setDuration(0);
     setPlaybackRate(1.0);
     setFile(f);
-    if (autoLoadLyrics) {
+    if (autoLoadLyrics && !skipAutoLoadLyrics) {
       resetHistory([]);
       setLyricFileName(null);
     }
+    
+    const checkAndLoadSiblingLrc = async (audioPath: string) => {
+        const electronAPI = (window as any).electronAPI;
+        if (!electronAPI || skipAutoLoadLyrics) return false;
+        try {
+            const parsed = await electronAPI.pathParse(audioPath);
+            const lrcPath = await electronAPI.pathJoin(parsed.dir, parsed.name + '.lrc');
+            if (await electronAPI.fsExists(lrcPath)) {
+                const currentLyricPath = getFilePath(lyricFile);
+                if (currentLyricPath === lrcPath) {
+                    return true;
+                }
+                const text = await electronAPI.fsReadFileText(lrcPath);
+                const lrcFile = new File([text], parsed.name + '.lrc', { type: 'text/plain' });
+                Object.defineProperty(lrcFile, 'path', { value: lrcPath });
+                setLyricFile(lrcFile);
+                setLyricFileName(lrcFile.name);
+                const parsedLrc = parseRawLyrics(text);
+                resetHistory(parsedLrc.lines, parsedLrc.metadata);
+                showToast(`已從自動載入同名檔案 "${lrcFile.name}" 載入歌詞`);
+                return true;
+            }
+        } catch (e) {
+            console.error(e);
+        }
+        return false;
+    };
     
     import('music-metadata').then(async (mm) => {
       try {
@@ -71,11 +107,13 @@ export function useFileActions() {
                 pictures: covers.map(c => c.url),
                 rawTags: Object.fromEntries(tags)
              });
-             if (foundLyrics && autoLoadLyrics) {
+             if (foundLyrics && autoLoadLyrics && !skipAutoLoadLyrics) {
                  setLyricFileName('Embedded Tag');
                  const parsed = parseRawLyrics(foundLyrics);
                  resetHistory(parsed.lines, parsed.metadata);
                  showToast('已從 "Embedded Tag" 載入歌詞');
+             } else if (!foundLyrics && autoLoadLyrics && !skipAutoLoadLyrics && getFilePath(f)) {
+                 await checkAndLoadSiblingLrc(getFilePath(f));
              }
              return;
           }
@@ -123,36 +161,89 @@ export function useFileActions() {
              format: picture?.format, picture: picUrl, lyric: foundLyrics, rawTags: tag.tags
            });
            
-           if (foundLyrics && autoLoadLyrics) {
+           if (foundLyrics && autoLoadLyrics && !skipAutoLoadLyrics) {
                setLyricFileName('Embedded Tag');
                const parsed = parseRawLyrics(foundLyrics);
                resetHistory(parsed.lines, parsed.metadata);
                showToast('已從 "Embedded Tag" 載入歌詞');
+           } else if (!foundLyrics && autoLoadLyrics && !skipAutoLoadLyrics && getFilePath(f)) {
+               await checkAndLoadSiblingLrc(getFilePath(f));
            }
         },
-        onError: function(error: any) {
+        onError: async function(error: any) {
           console.log('No ID3 tags or error', error);
           setMetadata(null);
+          if (autoLoadLyrics && !skipAutoLoadLyrics && getFilePath(f)) {
+              await checkAndLoadSiblingLrc(getFilePath(f));
+          }
         }
       });
     }
-  }, [resetHistory, setFile, setLyricFileName, setMetadata, setAudioSpecs, setIsPlaying, playerRef, setDuration, setPlaybackRate, autoLoadLyrics, showToast]);
+  }, [resetHistory, setFile, setLyricFileName, setLyricFile, lyricFile, setMetadata, setAudioSpecs, setIsPlaying, playerRef, setDuration, setPlaybackRate, autoLoadLyrics, showToast]);
 
   const processLyricFile = useCallback(async (f: File) => {
     if (lines.length > 0) {
       const confirmed = await dialogs.confirm('載入新的歌詞檔案將會覆蓋目前的歌詞。確定要繼續嗎？');
       if (!confirmed) return;
     }
+    setLyricFile(f);
     setLyricFileName(f.name);
     const reader = new FileReader();
-    reader.onload = (evt) => {
+    reader.onload = async (evt) => {
       const text = evt.target?.result as string;
       const parsed = parseRawLyrics(text);
       resetHistory(parsed.lines, parsed.metadata);
-      showToast(`已從 "${f.name}" 載入歌詞`);
+      
+      let mediaLoaded = false;
+      let loadedMediaName = '';
+      const filePath = getFilePath(f);
+      if (autoLoadMedia && filePath) {
+          const electronAPI = (window as any).electronAPI;
+          if (electronAPI) {
+              try {
+                  const parsedPath = await electronAPI.pathParse(filePath);
+                  const exts = ['.flac', '.mp3', '.m4a', '.wav', '.mp4'];
+                  for (const ext of exts) {
+                      const mediaPath = await electronAPI.pathJoin(parsedPath.dir, parsedPath.name + ext);
+                      if (await electronAPI.fsExists(mediaPath)) {
+                          const currentMediaPath = getFilePath(file);
+                          if (currentMediaPath === mediaPath) {
+                              mediaLoaded = true;
+                              loadedMediaName = file?.name || (parsedPath.name + ext);
+                              break;
+                          }
+                          
+                          const buffer = await electronAPI.fsReadFileBinary(mediaPath);
+                          let mimeType = 'audio/mpeg';
+                          if (ext === '.flac') mimeType = 'audio/flac';
+                          else if (ext === '.m4a') mimeType = 'audio/mp4';
+                          else if (ext === '.wav') mimeType = 'audio/wav';
+                          else if (ext === '.mp4') mimeType = 'video/mp4';
+                          
+                          const blob = new Blob([buffer], { type: mimeType });
+                          const mediaFile = new File([blob], parsedPath.name + ext, { type: mimeType });
+                          Object.defineProperty(mediaFile, 'path', { value: mediaPath });
+                          
+                          await processAudioFile(mediaFile, true);
+                          mediaLoaded = true;
+                          loadedMediaName = mediaFile.name;
+                          break;
+                      }
+                  }
+              } catch (e) {
+                  console.error(e);
+              }
+          }
+      }
+      
+      if (mediaLoaded) {
+          showToast(`已自動載入媒體 "${loadedMediaName}"`);
+      } else {
+          showToast(`已從 "${f.name}" 載入歌詞`);
+      }
     };
     reader.readAsText(f);
-  }, [lines.length, dialogs, resetHistory, setLyricFileName, showToast]);
+  }, [lines.length, dialogs, resetHistory, setLyricFileName, setLyricFile, file, showToast, autoLoadMedia, processAudioFile]);
 
   const handleExport = useCallback(async (format: 'standard' | 'enhanced' | 'simple' | 'srt', saveType: 'file' | 'embedded' = 'file') => {
     if (lines.length === 0) return;
@@ -313,19 +404,21 @@ export function useFileActions() {
         setMetadata(null);
         resetHistory([]);
         setLyricFileName(null);
+        setLyricFile(null);
         setAudioSpecs(null);
       }
     }
-  }, [audioFileName, setFile, setMetadata, resetHistory, setLyricFileName, setAudioSpecs, dialogs]);
+  }, [audioFileName, setFile, setMetadata, resetHistory, setLyricFileName, setLyricFile, setAudioSpecs, dialogs]);
 
   const clearLyrics = useCallback(async () => {
     if (lines.length > 0) {
       if (await dialogs.confirm('確定要清除目前的歌詞嗎？')) {
         commitLines([], 'Clear Lyrics');
         setLyricFileName(null);
+        setLyricFile(null);
       }
     }
-  }, [lines.length, commitLines, setLyricFileName, dialogs]);
+  }, [lines.length, commitLines, setLyricFileName, setLyricFile, dialogs]);
 
   const loadEmbeddedLyrics = useCallback(async (metadata: any) => {
     if (metadata?.lyric) {
@@ -336,9 +429,65 @@ export function useFileActions() {
        const parsed = parseRawLyrics(metadata.lyric);
        resetHistory(parsed.lines, parsed.metadata);
        setLyricFileName('Embedded Tag');
+       setLyricFile(null);
        showToast('已從 "Embedded Tag" 載入歌詞');
     }
-  }, [lines.length, dialogs, resetHistory, setLyricFileName, showToast]);
+  }, [lines.length, dialogs, resetHistory, setLyricFileName, setLyricFile, showToast]);
 
-  return { processAudioFile, processLyricFile, handleExport, clearMedia, clearLyrics, loadEmbeddedLyrics };
+  const loadSiblingMediaForLyrics = useCallback(async () => {
+    const electronAPI = (window as any).electronAPI;
+    if (!electronAPI) return;
+    if (!lyricFile) {
+        dialogs.alert('請先載入歌詞檔案');
+        return;
+    }
+    const lyricPath = getFilePath(lyricFile);
+    if (lyricPath) {
+        try {
+            const parsedPath = await electronAPI.pathParse(lyricPath);
+            const exts = ['.flac', '.mp3', '.m4a', '.wav', '.mp4'];
+            let mediaLoaded = false;
+            let loadedMediaName = '';
+            for (const ext of exts) {
+                const mediaPath = await electronAPI.pathJoin(parsedPath.dir, parsedPath.name + ext);
+                if (await electronAPI.fsExists(mediaPath)) {
+                    const currentMediaPath = getFilePath(file);
+                    if (currentMediaPath === mediaPath) {
+                        mediaLoaded = true;
+                        loadedMediaName = file?.name || (parsedPath.name + ext);
+                        break;
+                    }
+                    
+                    const buffer = await electronAPI.fsReadFileBinary(mediaPath);
+                    let mimeType = 'audio/mpeg';
+                    if (ext === '.flac') mimeType = 'audio/flac';
+                    else if (ext === '.m4a') mimeType = 'audio/mp4';
+                    else if (ext === '.wav') mimeType = 'audio/wav';
+                    else if (ext === '.mp4') mimeType = 'video/mp4';
+                    
+                    const blob = new Blob([buffer], { type: mimeType });
+                    const mediaFile = new File([blob], parsedPath.name + ext, { type: mimeType });
+                    Object.defineProperty(mediaFile, 'path', { value: mediaPath });
+                    
+                    await processAudioFile(mediaFile, true);
+                    mediaLoaded = true;
+                    loadedMediaName = mediaFile.name;
+                    break;
+                }
+            }
+            if (mediaLoaded) {
+                showToast(`已自動載入媒體 "${loadedMediaName}"`);
+            } else {
+                dialogs.alert('找不到與歌詞檔同名的媒體檔案 (.flac, .mp3, .m4a, .wav, .mp4)');
+            }
+        } catch (e) {
+            console.error(e);
+            dialogs.alert('載入媒體檔案時發生錯誤');
+        }
+    } else {
+        dialogs.alert('無法取得目前歌詞檔的路徑');
+    }
+  }, [lyricFile, file, processAudioFile, dialogs, showToast]);
+
+  return { processAudioFile, processLyricFile, handleExport, clearMedia, clearLyrics, loadEmbeddedLyrics, loadSiblingMediaForLyrics };
 }

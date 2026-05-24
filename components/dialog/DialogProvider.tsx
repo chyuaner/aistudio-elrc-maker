@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 type DialogContextType = {
+  alert: (msg: string) => Promise<void>;
   confirm: (msg: string) => Promise<boolean>;
   prompt: (msg: string, defaultVal?: string) => Promise<string | null>;
 };
@@ -26,6 +27,7 @@ export function useDialogs() {
 }
 
 export function DialogProvider({ children }: { children: ReactNode }) {
+  const [alertState, setAlertState] = useState<{ msg: string; resolve: () => void } | null>(null);
   const [confirmState, setConfirmState] = useState<{ msg: string; resolve: (val: boolean) => void } | null>(null);
   const [promptState, setPromptState] = useState<{ msg: string; defaultVal: string; resolve: (val: string | null) => void } | null>(null);
   const [promptInput, setPromptInput] = useState('');
@@ -33,9 +35,15 @@ export function DialogProvider({ children }: { children: ReactNode }) {
   // Whenever a dialog opens or closes, sync the Linux GTK titlebar button sensitivity.
   // On non-Linux or non-Tauri platforms this is a no-op (invokeTauri handles that gracefully).
   useEffect(() => {
-    const dialogOpen = confirmState !== null || promptState !== null;
+    const dialogOpen = alertState !== null || confirmState !== null || promptState !== null;
     invokeTauri('set_titlebar_buttons_enabled', { enabled: !dialogOpen });
-  }, [confirmState, promptState]);
+  }, [alertState, confirmState, promptState]);
+
+  const alert = (msg: string) => {
+    return new Promise<void>((resolve) => {
+      setAlertState({ msg, resolve });
+    });
+  };
 
   const confirm = (msg: string) => {
     return new Promise<boolean>((resolve) => {
@@ -48,6 +56,13 @@ export function DialogProvider({ children }: { children: ReactNode }) {
       setPromptInput(defaultVal);
       setPromptState({ msg, defaultVal, resolve });
     });
+  };
+
+  const handleAlertClose = () => {
+    if (alertState) {
+      alertState.resolve();
+      setAlertState(null);
+    }
   };
 
   const handleConfirmClose = (val: boolean) => {
@@ -65,8 +80,33 @@ export function DialogProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <DialogContext.Provider value={{ confirm, prompt }}>
+    <DialogContext.Provider value={{ alert, confirm, prompt }}>
       {children}
+      
+      {/* Alert Modal */}
+      {alertState && (
+        <div 
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200 app-region-no-drag"
+          style={{
+            paddingLeft: 'env(safe-area-inset-left, 0px)',
+            paddingRight: 'env(safe-area-inset-right, 0px)',
+            paddingTop: 'env(safe-area-inset-top, 0px)',
+            paddingBottom: 'env(safe-area-inset-bottom, 0px)'
+          }}
+        >
+          <div className="bg-[var(--app-bg-panel)] border border-[var(--app-border-base)] p-6 rounded shadow-xl max-w-sm w-full mx-4 animate-in zoom-in-95 duration-200">
+            <p className="text-[var(--app-text-secondary)] mb-6 whitespace-pre-wrap">{alertState.msg}</p>
+            <div className="flex justify-end gap-3">
+              <button 
+                onClick={handleAlertClose}
+                className="px-4 py-2 rounded text-sm bg-[var(--app-accent)] hover:bg-[var(--app-accent-hover)] text-black font-medium transition-colors"
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       
       {/* Confirm Modal */}
       {confirmState && (

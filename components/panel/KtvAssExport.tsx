@@ -15,14 +15,20 @@ export function KtvAssExport() {
     color3: '#800080', // Purple
     chorusColor: '#008000', // Green
     fontFamily: '微软雅黑',
-    fontSize: 140, // Default for BottomLeft
+    fontSize: 150, // Default for BottomLeft
+    infoFontSize: 130, // Default for CenterInfo (song info)
+    infoTitleFontSize: 150, // Default for red Title
     songInfoTitle: lrcMetadata.ti || '',
     songInfoArtist: lrcMetadata.ar || '',
     songInfoAlbum: lrcMetadata.al || '',
     songInfoCustom: '',
     customStartInfoTime: false,
-    startInfoStartTime: 0,
-    startInfoEndTime: 6,
+    startInfoStartTime: 1,
+    startInfoEndTime: 7,
+    dualRowSpacing: 160,
+    nextTriggerIndex: 1,
+    row2FadeoutMode: 'immediate',
+    interludeBuffer: 1.0,
   });
 
   const assContent = useMemo(() => {
@@ -40,8 +46,14 @@ export function KtvAssExport() {
     link.download = `${baseName}.ass`;
     document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    
+    // Use requestAnimationFrame to ensure it's removed after browser has processed click
+    requestAnimationFrame(() => {
+        if (document.body.contains(link)) {
+            document.body.removeChild(link);
+        }
+        URL.revokeObjectURL(url);
+    });
   };
   
   const handleImportFromTags = () => {
@@ -150,6 +162,40 @@ export function KtvAssExport() {
                       </div>
                       <p className="text-[10px] text-[var(--app-text-muted)]">當兩句歌詞相隔超過此數值，將被視為新段落並重新進入排版。</p>
                    </div>
+
+                   {/* 密集測試區 */}
+                   <div className="flex flex-col gap-2 p-3 bg-[var(--app-bg-panel)] border border-[var(--app-border-light)] rounded">
+                      <label className="font-semibold text-[var(--app-text-primary)] text-xs">測試參數 (內部)</label>
+                      <div className="grid grid-cols-2 gap-2 text-[10px]">
+                        <div className="flex flex-col">
+                           <label className="text-[var(--app-text-muted)]">行間距 (px)</label>
+                           <input type="number" value={options.dualRowSpacing} onChange={e => setOptions({...options, dualRowSpacing: parseInt(e.target.value)})} className="bg-[var(--app-bg-input)] border border-[var(--app-border-input)] rounded px-1 py-0.5" />
+                        </div>
+                        <div className="flex flex-col">
+                           <label className="text-[var(--app-text-muted)]">資訊字體</label>
+                           <input type="number" value={options.infoFontSize} onChange={e => setOptions({...options, infoFontSize: parseInt(e.target.value)})} className="bg-[var(--app-bg-input)] border border-[var(--app-border-input)] rounded px-1 py-0.5" />
+                        </div>
+                        <div className="flex flex-col">
+                           <label className="text-[var(--app-text-muted)]">標題字體</label>
+                           <input type="number" value={options.infoTitleFontSize} onChange={e => setOptions({...options, infoTitleFontSize: parseInt(e.target.value) || 150})} className="bg-[var(--app-bg-input)] border border-[var(--app-border-input)] rounded px-1 py-0.5" />
+                        </div>
+                        <div className="flex flex-col">
+                           <label className="text-[var(--app-text-muted)]">間奏緩衝 (s)</label>
+                           <input type="number" step="0.1" value={options.interludeBuffer} onChange={e => setOptions({...options, interludeBuffer: parseFloat(e.target.value)})} className="bg-[var(--app-bg-input)] border border-[var(--app-border-input)] rounded px-1 py-0.5" />
+                        </div>
+                        <div className="flex flex-col">
+                           <label className="text-[var(--app-text-muted)]">觸發索引</label>
+                           <input type="number" value={options.nextTriggerIndex} onChange={e => setOptions({...options, nextTriggerIndex: parseInt(e.target.value)})} className="bg-[var(--app-bg-input)] border border-[var(--app-border-input)] rounded px-1 py-0.5" />
+                        </div>
+                        <div className="flex flex-col">
+                           <label className="text-[var(--app-text-muted)]">淡出模式</label>
+                           <select value={options.row2FadeoutMode} onChange={e => setOptions({...options, row2FadeoutMode: e.target.value as 'immediate' | 'delayed'})} className="bg-[var(--app-bg-input)] border border-[var(--app-border-input)] rounded px-1 py-0.5">
+                              <option value="immediate">Immediate</option>
+                              <option value="delayed">Delayed</option>
+                           </select>
+                        </div>
+                      </div>
+                   </div>
                 </div>
 
                 {/* Right Column */}
@@ -187,7 +233,14 @@ export function KtvAssExport() {
 
                       {options.customStartInfoTime && (
                          <div className="flex items-center gap-2 pl-[60px] animate-fade-in">
-                            <input type="number" step="0.1" value={options.startInfoStartTime} onChange={e => setOptions({...options, startInfoStartTime: parseFloat(e.target.value) || 0})} className="w-16 bg-[var(--app-bg-panel)] border border-[var(--app-border-input)] rounded px-2 py-1 text-xs text-[var(--app-text-primary)] focus:outline-none focus:border-[var(--app-accent)] text-center font-mono" />
+                            <input type="number" step="0.1" value={options.startInfoStartTime} onChange={e => {
+                               const newStart = parseFloat(e.target.value) || 0;
+                               setOptions({
+                                 ...options,
+                                 startInfoStartTime: newStart,
+                                 startInfoEndTime: Number((newStart + 6).toFixed(1))
+                               });
+                            }} className="w-16 bg-[var(--app-bg-panel)] border border-[var(--app-border-input)] rounded px-2 py-1 text-xs text-[var(--app-text-primary)] focus:outline-none focus:border-[var(--app-accent)] text-center font-mono" />
                             <span className="text-[var(--app-text-muted)]">~</span>
                             <input type="number" step="0.1" value={options.startInfoEndTime} onChange={e => setOptions({...options, startInfoEndTime: parseFloat(e.target.value) || 0})} className="w-16 bg-[var(--app-bg-panel)] border border-[var(--app-border-input)] rounded px-2 py-1 text-xs text-[var(--app-text-primary)] focus:outline-none focus:border-[var(--app-accent)] text-center font-mono" />
                             <span className="text-[10px] text-[var(--app-text-muted)]">秒</span>

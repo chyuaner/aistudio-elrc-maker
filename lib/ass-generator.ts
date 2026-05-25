@@ -11,18 +11,21 @@ export interface AssOptions {
   songInfoArtist: string;
   songInfoAlbum: string;
   songInfoCustom: string;
+  infoFontSize: number;
+  infoTitleFontSize: number;
   customStartInfoTime: boolean;
   startInfoStartTime: number;
   startInfoEndTime: number;
   interludeThreshold: number; // in seconds
   fadeInOutTime: number; // in seconds
+  dualRowSpacing: number; // in pixels
+  nextTriggerIndex: number;
+  row2FadeoutMode: 'immediate' | 'delayed';
+  interludeBuffer: number;
 }
 
 // 內部控制參數定
-const INTERNAL_NEXT_TRIGGER_INDEX = 1; // 唱到下一句的第 2 個字時 (index = 1) 切換
-// 'immediate': 該句自己唱完結尾立刻從畫面消失切換
-// 'delayed': 等待下一行（第一排）開始唱且唱到第 2 個字時才從畫面上消失並替換
-const INTERNAL_ROW2_FADEOUT_MODE: 'immediate' | 'delayed' = 'immediate';
+const DEFAULT_INFO_STAY_TIME = 6.0;
 
 function formatAssTime(timeInSeconds: number) {
   const h = Math.floor(timeInSeconds / 3600);
@@ -79,10 +82,10 @@ Style: Default,${options.fontFamily},20,&H00FFFFFF,&H000000FF,&H00000000,&H00000
 Style: TopLeft,${options.fontFamily},72,&H00FFFFFF,&H00FFFFFF,&H99000000,&H99000000,0,0,0,0,100,100,0,0,3,1.5,0,7,48,48,48,0
 Style: TopCenter,${options.fontFamily},72,&H00FFFFFF,&H00FFFFFF,&H99000000,&H99000000,0,0,0,0,100,100,0,0,3,1.5,0,8,48,48,48,0
 Style: TopRight,${options.fontFamily},72,&H00FFFFFF,&H00FFFFFF,&H99000000,&H99000000,0,0,0,0,100,100,0,0,3,1.5,0,9,48,48,48,0
-Style: BottomLeft,${options.fontFamily},${options.fontSize},${primaryAssColor},&H00FFFFFF,&H99000000,&H99000000,0,0,0,0,100,100,0,0,1,4,0,1,150,150,250,0
+Style: BottomLeft,${options.fontFamily},${options.fontSize},${primaryAssColor},&H00FFFFFF,&H99000000,&H99000000,0,0,0,0,100,100,0,0,1,4,0,1,150,150,${50 + options.dualRowSpacing},0
 Style: BottomCenter,${options.fontFamily},${options.fontSize},${primaryAssColor},&H00FFFFFF,&H99000000,&H99000000,0,0,0,0,100,100,0,0,1,4,0,2,48,48,48,0
 Style: BottomRight,${options.fontFamily},${options.fontSize},${primaryAssColor},&H00FFFFFF,&H99000000,&H99000000,0,0,0,0,100,100,0,0,1,4,0,3,150,150,50,0
-Style: CenterInfo,${options.fontFamily},${options.fontSize},${primaryAssColor},&H00FFFFFF,&H99000000,&H99000000,0,0,0,0,100,100,0,0,1,4,0,5,48,48,48,0
+Style: CenterInfo,${options.fontFamily},${options.infoFontSize || options.fontSize},${primaryAssColor},&H00FFFFFF,&H99000000,&H99000000,0,0,0,0,100,100,0,0,1,4,0,5,48,48,48,0
 `;
 
   let ass = `[Script Info]
@@ -121,54 +124,116 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
   
   // 歌曲前奏資訊計算
   let infoStart = 0;
-  let infoEnd = 6;
+  let infoEnd = DEFAULT_INFO_STAY_TIME;
   if (!options.customStartInfoTime) {
-    if (paragraphs.length > 0 && paragraphs[0][0].start! < 6) {
+    if (paragraphs.length > 0 && paragraphs[0][0].start! < DEFAULT_INFO_STAY_TIME) {
        const firstParaEnd = getLineEndTime(paragraphs[0][paragraphs[0].length - 1]);
        if (firstParaEnd > 60) {
            infoStart = 0;
-           infoEnd = 6;
+           infoEnd = DEFAULT_INFO_STAY_TIME;
        } else {
            infoStart = firstParaEnd;
-           infoEnd = firstParaEnd + 6;
+           infoEnd = firstParaEnd + DEFAULT_INFO_STAY_TIME;
        }
     } else {
        infoStart = 0;
-       infoEnd = Math.min(6, paragraphs.length > 0 ? paragraphs[0][0].start! : 6);
+       infoEnd = Math.min(DEFAULT_INFO_STAY_TIME, paragraphs.length > 0 ? paragraphs[0][0].start! : DEFAULT_INFO_STAY_TIME);
     }
   } else {
     infoStart = options.startInfoStartTime;
     infoEnd = options.startInfoEndTime;
   }
   
-  const fadeMs = Math.round(options.fadeInOutTime * 1000);
+  const fadeMs = Math.round(options.fadeInOutTime * 1000); // fade duration tag
 
-  // 組織歌曲標題與歌手資訊，並放入畫面正中央
-  let infoText = '';
-  if (options.songInfoTitle) {
-      // 標題字體不加白底外框，僅使用紅色顏色
-      infoText += `{\\c&H000000FF&\\b1}${options.songInfoTitle}{\\b0}`;
-      if (options.songInfoArtist || options.songInfoAlbum || options.songInfoCustom) {
-         // 標題與藍色資訊間隔 3 行 (相當於 4 個換行符號)
-         infoText += '\\N\\N\\N\\N';
+  // =========================================================================
+  // 【請注意！手動微調 KTV 開始資訊位置與防重疊避讓邏輯】
+  // =========================================================================
+  const titleSize = options.infoTitleFontSize || options.fontSize;
+  const detailFontSize = options.infoFontSize || (options.fontSize - 10);
+
+  // 1. 檢測「歌曲開始資訊」的顯示區間 [infoStart, infoEnd] 是否與音軌中的任何段落（歌詞）顯示區間重疊
+  let overlapsWithLyrics = false;
+  const dotDuration = 1.0;
+  paragraphs.forEach((p, idx) => {
+      const prevEnd = idx > 0 ? getLineEndTime(paragraphs[idx - 1][paragraphs[idx - 1].length - 1]) : 0;
+      const gap = p[0].start! - prevEnd;
+      
+      let dotCount = 0;
+      let maxAdvance = p[0].start!;
+      if (idx > 0) maxAdvance = gap;
+      if (maxAdvance > 1.0) {
+          dotCount = Math.min(4, Math.floor(maxAdvance - 1.0));
       }
+      
+      let actualAdvance = 0;
+      if (dotCount > 0) {
+          actualAdvance = dotCount * dotDuration + 1.0 + options.fadeInOutTime;
+      } else {
+          actualAdvance = Math.min(2.0, maxAdvance) + options.fadeInOutTime;
+      }
+      
+      const blockDisplayStart = Math.max(prevEnd, p[0].start! - actualAdvance);
+      const blockDisplayEnd = getLineEndTime(p[p.length - 1]) + 2.0 + options.fadeInOutTime; 
+      const truncatedBlockEnd = idx < paragraphs.length - 1 ? Math.min(blockDisplayEnd, paragraphs[idx + 1][0].start! - 0.1) : blockDisplayEnd;
+
+      // 判斷兩者時間區間是否有交集 [infoStart, infoEnd] 與 [blockDisplayStart, truncatedBlockEnd]
+      if (Math.max(infoStart, blockDisplayStart) < Math.min(infoEnd, truncatedBlockEnd)) {
+          overlapsWithLyrics = true;
+      }
+  });
+
+  // 2. 藍色歌曲資訊的排版：自底部往上排 (BottomCenter)
+  // 若發生時間重疊，將 detailBottomY 拉到雙行歌詞之上
+  let detailBottomY = 900; 
+  if (overlapsWithLyrics) {
+      // 雙行歌詞第一排(BottomLeft)的上緣：1080 - 50 - dualRowSpacing - fontSize
+      // 我們要把歌曲詳細資訊底邊放在這個上緣之上至少 60 像素
+      const lyricsTopY = 1080 - 50 - options.dualRowSpacing - options.fontSize;
+      detailBottomY = Math.round(lyricsTopY - 60);
   }
+
+  // 3. 紅色標題字的排版：
+  // 若未重疊，則放畫面中央偏上 (540 - 1.5 行)
+  // 若發生重疊，將其置於歌曲詳細資訊最上方行的上面，確保文字學上完全不重疊，且維持 40px 的安全間距 (標題是 an5 置中-置中，需減去半個字高與 40px 間距)
+  let titleY = 540 - Math.round(1.5 * titleSize);
+
+  // 建立歌曲資訊行陣列
   const artistAlbum = [];
   if (options.songInfoArtist) artistAlbum.push(`{\\c&H00FF0000&}原唱：${options.songInfoArtist}`);
   if (options.songInfoAlbum) artistAlbum.push(`{\\c&H00FF0000&}專輯：${options.songInfoAlbum}`);
-  if (options.songInfoCustom) artistAlbum.push(`{\\c&H00FF0000&}${options.songInfoCustom}`);
-  infoText += artistAlbum.join('\\N');
-
-  if (infoText) {
-      // 使用 CenterInfo 樣式（ Alignment 5 ）放中央
-      ass += `Dialogue: 10,${formatAssTime(infoStart)},${formatAssTime(infoEnd)},CenterInfo,,0,0,0,,{\\fad(${fadeMs},${fadeMs})\\pos(960,540)}${infoText}\n`;
+  if (options.songInfoCustom) {
+      artistAlbum.push(`{\\c&H00FF0000&}${options.songInfoCustom}`);
   }
 
-  // 倒數小白圓的控制參數
-  const dotDuration = 1.0;
+  // 當歌曲資訊低於三行字的時候，再多空一行，讓整體往上移一行以增加美觀
+  if (artistAlbum.length > 0 && artistAlbum.length < 3) {
+      artistAlbum.push(' ');
+  }
+
+  if (overlapsWithLyrics && artistAlbum.length > 0) {
+      // 計算歌曲詳細資訊的實際總高度 (包括新加的空行)
+      const detailHeight = artistAlbum.length * detailFontSize;
+      titleY = Math.round(detailBottomY - detailHeight - 40 - (titleSize / 2));
+  }
+
+  // 4. 產生紅色標題 Dialogue
+  if (options.songInfoTitle) {
+      const titleText = `{\\fad(${fadeMs},${fadeMs})\\an5\\pos(960,${titleY})\\fs${titleSize}\\c&H000000FF&\\b1}${options.songInfoTitle}{\\b0}`;
+      ass += `Dialogue: 10,${formatAssTime(infoStart)},${formatAssTime(infoEnd)},CenterInfo,,0,0,0,,${titleText}\n`;
+  }
+
+  // 5. 產生藍色歌曲資訊 Dialogue (底部往上排列，使用計算出的 detailBottomY)
+  if (artistAlbum.length > 0) {
+      const detailText = `{\\fad(${fadeMs},${fadeMs})\\an2\\pos(960,${detailBottomY})\\fs${detailFontSize}}${artistAlbum.join('\\N')}`;
+      ass += `Dialogue: 10,${formatAssTime(infoStart)},${formatAssTime(infoEnd)},CenterInfo,,0,0,0,,${detailText}\n`;
+  }
+  // =========================================================================
+
+  // 倒數小白圓的控制參數 (已在上方定義過 dotDuration)
   // 計算小白圓與文字的相對大小，並使其「稍大一點點」
-  const dotRadius = Math.round(options.fontSize * 0.3); 
-  const dotSpacing = Math.round(options.fontSize * 0.8);
+  const dotRadius = Math.round(options.fontSize * 0.25); 
+  const dotSpacing = Math.round(options.fontSize * 0.75);
   
   paragraphs.forEach((p, idx) => {
       const prevEnd = idx > 0 ? getLineEndTime(paragraphs[idx - 1][paragraphs[idx - 1].length - 1]) : 0;
@@ -213,8 +278,9 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
              yPos = 1080 - 48 - options.fontSize - dotRadius - 20;
           } else {
              // BottomLeft 座標
-             xPos = 150 + dotRadius;
-             yPos = 1080 - 250 - options.fontSize - dotRadius - 20;
+             xPos = 160 + dotRadius;
+             // 50 為 BottomLeft 的基礎 MarginV, 離第一排歌詞上緣 20px
+             yPos = 1080 - 50 - options.fontSize - dotRadius - 20 - options.dualRowSpacing;
           }
 
           for (let d = 0; d < dotCount; d++) {
@@ -259,7 +325,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             if (i % 2 === 0) {
                // 第一排 (偶數句) 換場：等下一句 (前排, 即 i-1) 唱到第2個字時切換
                const prevLine = p[i - 1];
-               const trigIdx = Math.min(INTERNAL_NEXT_TRIGGER_INDEX, prevLine.words.length - 1);
+               const trigIdx = Math.min(options.nextTriggerIndex, prevLine.words.length - 1);
                const trigWord = prevLine.words[trigIdx];
                displayStart = (trigWord && trigWord.start !== null) ? trigWord.start : getLineEndTime(prevLine);
             } else {
@@ -284,15 +350,15 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             if (i % 2 === 0) {
                // 第一排 (偶數句) 消失：等「下一句」唱到第2個字時被切掉
                const nextLine = p[i + 1];
-               const trigIdx = Math.min(INTERNAL_NEXT_TRIGGER_INDEX, nextLine.words.length - 1);
+               const trigIdx = Math.min(options.nextTriggerIndex, nextLine.words.length - 1);
                const trigWord = nextLine.words[trigIdx];
                const trigTime = (trigWord && trigWord.start !== null) ? trigWord.start : getLineEndTime(nextLine);
                displayEnd = trigTime;
             } else {
-               if (INTERNAL_ROW2_FADEOUT_MODE === 'delayed') {
+               if (options.row2FadeoutMode === 'delayed') {
                    // 第二排 (奇數句) 消失：等下一句 (第一排) 唱到第2個字時才消失
                    const nextLine = p[i + 1];
-                   const trigIdx = Math.min(INTERNAL_NEXT_TRIGGER_INDEX, nextLine.words.length - 1);
+                   const trigIdx = Math.min(options.nextTriggerIndex, nextLine.words.length - 1);
                    const trigWord = nextLine.words[trigIdx];
                    const trigTime = (trigWord && trigWord.start !== null) ? trigWord.start : getLineEndTime(nextLine);
                    displayEnd = trigTime;

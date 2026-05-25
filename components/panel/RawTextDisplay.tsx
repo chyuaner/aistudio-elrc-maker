@@ -230,11 +230,14 @@ export function RawTextDisplay({
     }
 
     try {
-        const startRow = container.children[startLineIndex];
+        const startRow = container.children[startLineIndex] as HTMLElement;
+        const endRow = container.children[endLineIndex] as HTMLElement;
+        
+        if (!startRow || !endRow) return;
+
         let startTextNode = startRow?.children[1]?.firstChild;
         if (!startTextNode) startTextNode = startRow?.children[1];
         
-        const endRow = container.children[endLineIndex];
         let endTextNode = endRow?.children[1]?.firstChild;
         if (!endTextNode) endTextNode = endRow?.children[1];
 

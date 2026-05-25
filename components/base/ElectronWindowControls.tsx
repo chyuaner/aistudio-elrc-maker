@@ -22,7 +22,6 @@ function getElectronAPI(): ElectronAPI | null {
 export function ElectronWindowControls({ className = '' }: { className?: string }) {
   const [ready, setReady] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
-  const [dialogOpen, setDialogOpen] = useState(false);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -42,18 +41,8 @@ export function ElectronWindowControls({ className = '' }: { className?: string 
     return () => unsub?.();
   }, [show, api]);
 
-  useEffect(() => {
-    if (!show) return;
-    const observer = new MutationObserver(() => {
-      setDialogOpen(!!document.querySelector('[role="dialog"]'));
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
-    return () => observer.disconnect();
-  }, [show]);
-
   if (!show) return null;
 
-  const disabled = dialogOpen;
   const btnClass =
     'flex items-center justify-center w-[24px] h-[24px] rounded-full border-none bg-[var(--app-winctrl-bg)] text-[var(--app-text-secondary)] hover:bg-[var(--app-winctrl-hover)] transition-colors disabled:opacity-40 disabled:pointer-events-none app-region-no-drag shrink-0';
   const closeClass = btnClass;
@@ -66,7 +55,6 @@ export function ElectronWindowControls({ className = '' }: { className?: string 
       <button
         type="button"
         className={btnClass}
-        disabled={disabled}
         aria-label="最小化"
         title="最小化"
         onClick={() => api.windowMinimize?.()}
@@ -76,7 +64,6 @@ export function ElectronWindowControls({ className = '' }: { className?: string 
       <button
         type="button"
         className={btnClass}
-        disabled={disabled}
         aria-label={isMaximized ? '還原' : '最大化'}
         title={isMaximized ? '還原' : '最大化'}
         onClick={() => api.windowToggleMaximize?.()}
@@ -90,7 +77,6 @@ export function ElectronWindowControls({ className = '' }: { className?: string 
       <button
         type="button"
         className={closeClass}
-        disabled={disabled}
         aria-label="關閉"
         title="關閉"
         onClick={() => api.windowClose?.()}

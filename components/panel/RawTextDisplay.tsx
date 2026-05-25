@@ -38,7 +38,19 @@ const RawLine = React.memo(({
 });
 RawLine.displayName = 'RawLine';
 
-export function RawTextDisplay() {
+export interface RawTextDisplayProps {
+  customText?: string;
+  customLeftControls?: React.ReactNode;
+  customRightControls?: React.ReactNode;
+  hideKaraokePreview?: boolean;
+}
+
+export function RawTextDisplay({
+  customText,
+  customLeftControls,
+  customRightControls,
+  hideKaraokePreview
+}: RawTextDisplayProps = {}) {
   const { lines, activeLineIndex, lrcMetadata, exportFormat, setExportFormat, setAutoScrollEnabled, dualLineGapSec, setDualLineGapSec, paragraphStarts, duration } = useEditor();
   const i18n = useI18n();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -55,11 +67,13 @@ export function RawTextDisplay() {
     setAutoScrollEnabled(true);
   }, [setAutoScrollEnabled]);
   
-  let text = '';
-  if (exportFormat === 'srt') {
-      text = exportSrt(lines, duration);
-  } else {
-      text = exportLrc(lines, lrcMetadata, exportFormat === 'enhanced', exportFormat === 'simple', simpleIncludeInstrumental, paragraphStarts);
+  let text = customText !== undefined ? customText : '';
+  if (customText === undefined) {
+      if (exportFormat === 'srt') {
+          text = exportSrt(lines, duration);
+      } else {
+          text = exportLrc(lines, lrcMetadata, exportFormat === 'enhanced', exportFormat === 'simple', simpleIncludeInstrumental, paragraphStarts);
+      }
   }
   const allLines = text.split('\n');
 
@@ -299,32 +313,34 @@ export function RawTextDisplay() {
   let currentRawIndex = 0;
   const rawIdxToLineIdx = new Map<number, number>();
   
-  if (exportFormat === 'srt') {
-      for (let i = 0; i < lines.length; i++) {
-          const l = lines[i];
-          if (l.start !== null && l.words.some(w => w.text.trim().length > 0)) {
-              rawIdxToLineIdx.set(currentRawIndex, i);
-              rawIdxToLineIdx.set(currentRawIndex + 1, i);
-              rawIdxToLineIdx.set(currentRawIndex + 2, i);
-              rawIdxToLineIdx.set(currentRawIndex + 3, i);
-              currentRawIndex += 4;
+  if (customText === undefined) {
+      if (exportFormat === 'srt') {
+          for (let i = 0; i < lines.length; i++) {
+              const l = lines[i];
+              if (l.start !== null && l.words.some(w => w.text.trim().length > 0)) {
+                  rawIdxToLineIdx.set(currentRawIndex, i);
+                  rawIdxToLineIdx.set(currentRawIndex + 1, i);
+                  rawIdxToLineIdx.set(currentRawIndex + 2, i);
+                  rawIdxToLineIdx.set(currentRawIndex + 3, i);
+                  currentRawIndex += 4;
+              }
           }
-      }
-  } else {
-      const metadataLinesCount = Object.values(lrcMetadata || {}).filter(Boolean).length;
-      
-      if (exportFormat !== 'simple') {
-          for (let i = 0; i < metadataLinesCount; i++) {
+      } else {
+          const metadataLinesCount = Object.values(lrcMetadata || {}).filter(Boolean).length;
+          
+          if (exportFormat !== 'simple') {
+              for (let i = 0; i < metadataLinesCount; i++) {
+                  currentRawIndex++;
+              }
+          }
+    
+          for (let i = 0; i < lines.length; i++) {
+              if (exportFormat === 'simple' && simpleIncludeInstrumental && i > 0 && paragraphStarts[i]) {
+                  currentRawIndex++; // Empty line
+              }
+              rawIdxToLineIdx.set(currentRawIndex, i);
               currentRawIndex++;
           }
-      }
-
-      for (let i = 0; i < lines.length; i++) {
-          if (exportFormat === 'simple' && simpleIncludeInstrumental && i > 0 && paragraphStarts[i]) {
-              currentRawIndex++; // Empty line
-          }
-          rawIdxToLineIdx.set(currentRawIndex, i);
-          currentRawIndex++;
       }
   }
 
@@ -348,48 +364,52 @@ export function RawTextDisplay() {
 
   return (
     <div className="contents lg:flex lg:flex-col lg:h-full lg:bg-[var(--app-bg-panel-alt)] lg:relative">
-      <KaraokePreview hideTouchUI={true} />
+      {!hideKaraokePreview && <KaraokePreview hideTouchUI={true} />}
       
       <div className="p-3 bg-[var(--app-bg-panel)] border-b border-[var(--app-border-base)] flex flex-wrap gap-3 justify-between items-center shrink-0">
         <div className="flex items-center gap-2 flex-wrap">
-           <button
-             onClick={() => setExportFormat('enhanced')}
-             className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded border transition-colors disabled:opacity-50 ${exportFormat === 'enhanced' ? 'bg-[var(--app-border-base)] border-[var(--app-accent)] text-[var(--app-accent)] shadow-inner' : 'border-[var(--app-border-light)] text-[var(--app-text-muted)] hover:text-[var(--app-text-secondary)]'}`}
-           >
-             {i18n.exportEnhanced}
-           </button>
-           <button
-             onClick={() => setExportFormat('standard')}
-             className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded border transition-colors disabled:opacity-50 ${exportFormat === 'standard' ? 'bg-[var(--app-border-base)] border-[var(--app-accent)] text-[var(--app-accent)] shadow-inner' : 'border-[var(--app-border-light)] text-[var(--app-text-muted)] hover:text-[var(--app-text-secondary)]'}`}
-           >
-             {i18n.exportStandard}
-           </button>
-           <button
-             onClick={() => setExportFormat('simple')}
-             className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded border transition-colors disabled:opacity-50 ${exportFormat === 'simple' ? 'bg-[var(--app-border-base)] border-[var(--app-accent)] text-[var(--app-accent)] shadow-inner' : 'border-[var(--app-border-light)] text-[var(--app-text-muted)] hover:text-[var(--app-text-secondary)]'}`}
-           >
-             {i18n.exportSimple || '簡易歌詞 (無時間戳)'}
-           </button>
-           <button
-             onClick={() => setExportFormat('srt')}
-             className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded border transition-colors disabled:opacity-50 ${exportFormat === 'srt' ? 'bg-[var(--app-border-base)] border-[var(--app-accent)] text-[var(--app-accent)] shadow-inner' : 'border-[var(--app-border-light)] text-[var(--app-text-muted)] hover:text-[var(--app-text-secondary)]'}`}
-           >
-             .SRT
-           </button>
-           
-           {exportFormat === 'simple' && (
-             <label className="flex items-center gap-1.5 ml-2 cursor-pointer text-xs text-[var(--app-text-muted)] hover:text-[var(--app-text-primary)] transition-colors select-none">
-               <input 
-                 type="checkbox" 
-                 checked={simpleIncludeInstrumental} 
-                 onChange={(e) => setSimpleIncludeInstrumental(e.target.checked)} 
-                 className="rounded border-[var(--app-border-base)] bg-transparent accent-[var(--app-accent)] m-0 w-3.5 h-3.5"
-               />
-               輸出包含留空的間奏行
-             </label>
+           {customLeftControls ? customLeftControls : (
+             <>
+               <button
+                 onClick={() => setExportFormat('enhanced')}
+                 className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded border transition-colors disabled:opacity-50 ${exportFormat === 'enhanced' ? 'bg-[var(--app-border-base)] border-[var(--app-accent)] text-[var(--app-accent)] shadow-inner' : 'border-[var(--app-border-light)] text-[var(--app-text-muted)] hover:text-[var(--app-text-secondary)]'}`}
+               >
+                 {i18n.exportEnhanced}
+               </button>
+               <button
+                 onClick={() => setExportFormat('standard')}
+                 className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded border transition-colors disabled:opacity-50 ${exportFormat === 'standard' ? 'bg-[var(--app-border-base)] border-[var(--app-accent)] text-[var(--app-accent)] shadow-inner' : 'border-[var(--app-border-light)] text-[var(--app-text-muted)] hover:text-[var(--app-text-secondary)]'}`}
+               >
+                 {i18n.exportStandard}
+               </button>
+               <button
+                 onClick={() => setExportFormat('simple')}
+                 className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded border transition-colors disabled:opacity-50 ${exportFormat === 'simple' ? 'bg-[var(--app-border-base)] border-[var(--app-accent)] text-[var(--app-accent)] shadow-inner' : 'border-[var(--app-border-light)] text-[var(--app-text-muted)] hover:text-[var(--app-text-secondary)]'}`}
+               >
+                 {i18n.exportSimple || '簡易歌詞 (無時間戳)'}
+               </button>
+               <button
+                 onClick={() => setExportFormat('srt')}
+                 className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded border transition-colors disabled:opacity-50 ${exportFormat === 'srt' ? 'bg-[var(--app-border-base)] border-[var(--app-accent)] text-[var(--app-accent)] shadow-inner' : 'border-[var(--app-border-light)] text-[var(--app-text-muted)] hover:text-[var(--app-text-secondary)]'}`}
+               >
+                 .SRT
+               </button>
+               
+               {exportFormat === 'simple' && (
+                 <label className="flex items-center gap-1.5 ml-2 cursor-pointer text-xs text-[var(--app-text-muted)] hover:text-[var(--app-text-primary)] transition-colors select-none">
+                   <input 
+                     type="checkbox" 
+                     checked={simpleIncludeInstrumental} 
+                     onChange={(e) => setSimpleIncludeInstrumental(e.target.checked)} 
+                     className="rounded border-[var(--app-border-base)] bg-transparent accent-[var(--app-accent)] m-0 w-3.5 h-3.5"
+                   />
+                   輸出包含留空的間奏行
+                 </label>
+               )}
+             </>
            )}
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <button
             onClick={() => setIsSearchOpen(!isSearchOpen)}
             className={`px-3 py-1.5 flex items-center text-[10px] font-bold uppercase tracking-widest rounded border transition-colors ${
@@ -402,11 +422,15 @@ export function RawTextDisplay() {
             <Search className="w-3 h-3 mr-1" />
             搜尋
           </button>
-          <div className="flex items-center gap-2">
-             <span className="text-[10px] text-[var(--app-text-muted)] font-bold">間距閥值</span>
-             <input type="number" value={dualLineGapSec} onChange={(e) => setDualLineGapSec(Number(e.target.value) || 0)} className="w-12 bg-[var(--app-bg-input)] border border-[var(--app-border-light)] rounded px-1 min-h-[1.5rem] py-0.5 text-xs text-center" step="0.5" />
-             <span className="text-[10px] text-[var(--app-text-muted)]">秒</span>
-          </div>
+          
+          {customRightControls ? customRightControls : (
+            <div className="flex items-center gap-2">
+               <span className="text-[10px] text-[var(--app-text-muted)] font-bold">間距閥值</span>
+               <input type="number" value={dualLineGapSec} onChange={(e) => setDualLineGapSec(Number(e.target.value) || 0)} className="w-12 bg-[var(--app-bg-input)] border border-[var(--app-border-light)] rounded px-1 min-h-[1.5rem] py-0.5 text-xs text-center" step="0.5" />
+               <span className="text-[10px] text-[var(--app-text-muted)]">秒</span>
+            </div>
+          )}
+          
           <div className="flex gap-2">
             <button 
                onClick={handleSelectAll}

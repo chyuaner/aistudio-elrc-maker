@@ -10,6 +10,7 @@ export interface AssOptions {
   songInfoTitle: string;
   songInfoArtist: string;
   songInfoAlbum: string;
+  songInfoCustom: string;
   customStartInfoTime: boolean;
   startInfoStartTime: number;
   startInfoEndTime: number;
@@ -147,7 +148,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
   if (options.songInfoTitle) {
       // 標題字體不加白底外框，僅使用紅色顏色
       infoText += `{\\c&H000000FF&\\b1}${options.songInfoTitle}{\\b0}`;
-      if (options.songInfoArtist || options.songInfoAlbum) {
+      if (options.songInfoArtist || options.songInfoAlbum || options.songInfoCustom) {
          // 標題與藍色資訊間隔 3 行 (相當於 4 個換行符號)
          infoText += '\\N\\N\\N\\N';
       }
@@ -155,6 +156,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
   const artistAlbum = [];
   if (options.songInfoArtist) artistAlbum.push(`{\\c&H00FF0000&}原唱：${options.songInfoArtist}`);
   if (options.songInfoAlbum) artistAlbum.push(`{\\c&H00FF0000&}專輯：${options.songInfoAlbum}`);
+  if (options.songInfoCustom) artistAlbum.push(`{\\c&H00FF0000&}${options.songInfoCustom}`);
   infoText += artistAlbum.join('\\N');
 
   if (infoText) {

@@ -85,7 +85,7 @@ Style: TopRight,${options.fontFamily},72,&H00FFFFFF,&H00FFFFFF,&H99000000,&H9900
 Style: BottomLeft,${options.fontFamily},${options.fontSize},${primaryAssColor},&H00FFFFFF,&H99000000,&H99000000,0,0,0,0,100,100,0,0,1,4,0,1,150,150,${50 + options.dualRowSpacing},0
 Style: BottomCenter,${options.fontFamily},${options.fontSize},${primaryAssColor},&H00FFFFFF,&H99000000,&H99000000,0,0,0,0,100,100,0,0,1,4,0,2,48,48,48,0
 Style: BottomRight,${options.fontFamily},${options.fontSize},${primaryAssColor},&H00FFFFFF,&H99000000,&H99000000,0,0,0,0,100,100,0,0,1,4,0,3,150,150,50,0
-Style: CenterInfo,${options.fontFamily},${options.infoFontSize || options.fontSize},${primaryAssColor},&H00FFFFFF,&H99000000,&H99000000,0,0,0,0,100,100,0,0,1,4,0,5,48,48,48,0
+Style: CenterInfo,${options.fontFamily},${options.infoFontSize || (options.fontSize - 20)},${primaryAssColor},&H00FFFFFF,&H99000000,&H99000000,0,0,0,0,100,100,0,0,1,4,0,5,48,48,48,0
 `;
 
   let ass = `[Script Info]
@@ -150,7 +150,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
   // 【請注意！手動微調 KTV 開始資訊位置與防重疊避讓邏輯】
   // =========================================================================
   const titleSize = options.infoTitleFontSize || options.fontSize;
-  const detailFontSize = options.infoFontSize || (options.fontSize - 10);
+  const detailFontSize = options.infoFontSize || (options.fontSize - 20);
 
   // 1. 檢測「歌曲開始資訊」的顯示區間 [infoStart, infoEnd] 是否與音軌中的任何段落（歌詞）顯示區間重疊
   let overlapsWithLyrics = false;

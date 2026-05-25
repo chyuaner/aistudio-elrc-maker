@@ -113,7 +113,16 @@ export function KtvAssExport() {
                       <label className="font-semibold text-[var(--app-text-primary)] text-xs">字體設定</label>
                       <div className="flex items-center gap-2">
                          <input type="text" value={options.fontFamily} onChange={e => setOptions({...options, fontFamily: e.target.value})} className="flex-1 bg-[var(--app-bg-input)] border border-[var(--app-border-input)] rounded px-2 py-1.5 focus:outline-none focus:border-[var(--app-accent)]" />
-                         <input type="number" value={options.fontSize} onChange={e => setOptions({...options, fontSize: parseInt(e.target.value) || 120})} className="w-20 bg-[var(--app-bg-input)] border border-[var(--app-border-input)] rounded px-2 py-1.5 focus:outline-none focus:border-[var(--app-accent)] text-center font-mono" title="Font Size" />
+                         <input type="number" value={options.fontSize} onChange={e => {
+                             const newSize = parseInt(e.target.value) || 120;
+                             const diff = newSize - options.fontSize;
+                             setOptions({
+                               ...options,
+                               fontSize: newSize,
+                               infoFontSize: (options.infoFontSize || 130) + diff,
+                               infoTitleFontSize: (options.infoTitleFontSize || 150) + diff
+                             });
+                          }} className="w-20 bg-[var(--app-bg-input)] border border-[var(--app-border-input)] rounded px-2 py-1.5 focus:outline-none focus:border-[var(--app-accent)] text-center font-mono" title="Font Size" />
                       </div>
                       <p className="text-[10px] text-[var(--app-text-muted)]">字體外框皆固定從反（白字體配黑框，彩字體配白框）。</p>
                    </div>

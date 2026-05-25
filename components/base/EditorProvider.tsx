@@ -8,7 +8,7 @@ interface Hotkeys {
   nextLine: string;
 }
 
-export type EditorMode = 'text' | 'sync' | 'dual-sync' | 'raw';
+export type EditorMode = 'text' | 'sync' | 'dual-sync' | 'raw' | 'ktv-ass';
 export type SyncMode = 'line' | 'word';
 export type ExportFormat = 'standard' | 'enhanced' | 'simple' | 'srt';
 

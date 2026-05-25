@@ -18,7 +18,7 @@ import { extractFlacMetadata } from '@/lib/media-utils';
 import { useFileActions } from '@/components/base/useFileActions';
 
 export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
-  const { undo, redo, pastActions, futureActions, file, setFile, commitLines, resetHistory, lines, syncMode, setMetadata, metadata, audioFileName, lyricFileName, setLyricFileName, exportFormat, shiftTime, setAudioSpecs, setIsPlaying, playerRef, duration, setDuration, setPlaybackRate, lrcMetadata, setLrcMetadata, touchUIMode, setTouchUIMode, autoLoadLyrics, setAutoLoadLyrics, autoLoadMedia, setAutoLoadMedia } = useEditor();
+  const { undo, redo, pastActions, futureActions, file, setFile, commitLines, resetHistory, lines, syncMode, setMetadata, metadata, audioFileName, lyricFileName, setLyricFileName, exportFormat, shiftTime, setAudioSpecs, setIsPlaying, playerRef, duration, setDuration, setPlaybackRate, lrcMetadata, setLrcMetadata, touchUIMode, setTouchUIMode, autoLoadLyrics, setAutoLoadLyrics, autoLoadMedia, setAutoLoadMedia, setMode } = useEditor();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
@@ -300,7 +300,8 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
           { label: '.lrc 增強型LRC (ESLYRIC ﹣ 逐字同步)', action: 'exportEnhanced' },
           { label: '.lrc 標準LRC (逐行同步)', action: 'exportStandard' },
           { label: '.txt 簡易歌詞 (無時間戳)', action: 'exportSimple' },
-          { label: '.srt 影片字幕 (逐行同步)', action: 'exportSrt' }
+          { label: '.srt 影片字幕 (逐行同步)', action: 'exportSrt' },
+          { label: '.ass KTV字幕 (逐字同步)', action: 'exportAssKtv' }
         ];
         if (ext === '.flac' || ext === '.m4a' || ext === '.mp4') {
           options.push({ label: '---', action: 'separator' });
@@ -841,6 +842,7 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
                       exportStandard: () => handleExport('standard', 'file'),
                       exportSimple: () => handleExport('simple', 'file'),
                       exportSrt: () => handleExport('srt', 'file'),
+                      exportAssKtv: () => { setMode('ktv-ass'); },
                       exportEmbeddedEnhanced: () => handleExport('enhanced', 'embedded'),
                       exportEmbeddedStandard: () => handleExport('standard', 'embedded'),
                       exportEmbeddedSimple: () => handleExport('simple', 'embedded')

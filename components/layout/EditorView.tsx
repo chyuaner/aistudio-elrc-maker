@@ -5,6 +5,7 @@ import { useEditor } from '@/components/base/EditorProvider';
 import { TextEditor } from '@/components/panel/TextEditor';
 import { SyncEditor } from '@/components/panel/SyncEditor';
 import { RawTextDisplay } from '@/components/panel/RawTextDisplay';
+import { KtvAssExport } from '@/components/panel/KtvAssExport';
 import { useGlobalHotkeys } from '@/components/base/useGlobalHotkeys';
 import { useI18n } from '@/hooks/useI18n';
 
@@ -62,12 +63,19 @@ export function EditorView() {
         >
           {i18n.tabRaw}
         </button>
+        <button
+          onClick={() => setMode('ktv-ass')}
+          className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-widest border-b-2 hover:bg-[var(--app-bg-hover)] transition-colors focus:outline-none focus-[var(--app-accent)] focus-visible:ring-2 focus-visible:ring-inset ${mode === 'ktv-ass' ? 'border-[var(--app-accent)] text-[var(--app-accent)]' : 'border-transparent text-[var(--app-text-muted)] hover:text-[var(--app-text-secondary)]'}`}
+        >
+          KTV ASS輸出
+        </button>
       </div>
 
       <div className={(isMobileLayout && !isTall) ? "contents" : "flex-1 overflow-hidden flex flex-col"}>
         {mode === 'text' && <TextEditor />}
         {(mode === 'sync' || mode === 'dual-sync') && <SyncEditor />}
         {mode === 'raw' && <RawTextDisplay />}
+        {mode === 'ktv-ass' && <KtvAssExport />}
       </div>
     </div>
   );

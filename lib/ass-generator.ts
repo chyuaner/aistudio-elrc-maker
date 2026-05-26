@@ -185,7 +185,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 
   // 2. 藍色歌曲資訊的排版：自底部往上排 (BottomCenter)
   // 若發生時間重疊，將 detailBottomY 拉到雙行歌詞之上
-  let detailBottomY = 900; 
+  let detailBottomY = 1025; 
   if (overlapsWithLyrics) {
       // 雙行歌詞第一排(BottomLeft)的上緣：1080 - 50 - dualRowSpacing - fontSize
       // 我們要把歌曲詳細資訊底邊放在這個上緣之上至少 60 像素

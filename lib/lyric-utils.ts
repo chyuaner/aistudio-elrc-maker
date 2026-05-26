@@ -67,26 +67,35 @@ export interface LrcMetadata {
 }
 
 export function parseRawLyrics(text: string): { lines: LyricLine[], metadata: LrcMetadata } {
-  const lines = text.split(/\r?\n/);
-  const result: LyricLine[] = [];
   const metadata: LrcMetadata = {};
   
+  // First, parse and extract all metadata tags from the entire string (allowing multi-line values)
+  const cleanLyricsText = text.replace(/\[([^:：\]]+)[:：]([\s\S]*?)\]/g, (match, rawKey, value) => {
+    const trimmedKey = rawKey.trim();
+    // If the key is purely digits, it's a timestamp (e.g. [01:23.45]), so we keep it as is
+    if (/^\d+$/.test(trimmedKey)) {
+      return match;
+    }
+    
+    const predefined = ['ti', 'ar', 'al', 'au', 'by', 'offset', 're', 've'];
+    const lowerKey = trimmedKey.toLowerCase();
+    const finalKey = predefined.includes(lowerKey) ? lowerKey : trimmedKey;
+    
+    let val = value.trim();
+    val = val.replace(/\\n/g, '\n');
+    metadata[finalKey] = val;
+    
+    return ''; // Remove the metadata block from the text
+  });
+
+  const lines = cleanLyricsText.split(/\r?\n/);
+  const result: LyricLine[] = [];
+  
   const lineTimeRegex = /^\[(\d+:\d+(?:\.\d+)?)\]/;
-  const metaRegex = /^\[([^:：\]]+)[:：](.*)\]\s*$/;
   const wordTimeRegex = /<(\d+:\d+(?:\.\d+)?)>([^<]*)/g;
   
   for (const line of lines) {
     if (!line.trim()) continue;
-    
-    const metaMatch = metaRegex.exec(line);
-    if (metaMatch && !lineTimeRegex.test(line)) {
-      const rawKey = metaMatch[1];
-      const predefined = ['ti', 'ar', 'al', 'au', 'by', 'offset', 're', 've'];
-      const lowerKey = rawKey.toLowerCase();
-      const finalKey = predefined.includes(lowerKey) ? lowerKey : rawKey;
-      metadata[finalKey] = metaMatch[2];
-      continue;
-    }
     
     let start: number | null = null;
     let cleanText = line;
@@ -144,7 +153,8 @@ export function exportLrc(lines: LyricLine[], metadata?: LrcMetadata, isEnhanced
   if (!isSimple && metadata) {
     for (const [key, value] of Object.entries(metadata)) {
       if (value) {
-        lrc += `[${key}:${value}]\n`;
+        const encodedValue = value.replace(/\r?\n/g, '\\n');
+        lrc += `[${key}:${encodedValue}]\n`;
       }
     }
   }

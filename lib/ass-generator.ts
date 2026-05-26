@@ -126,15 +126,21 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
   // 過濾掉無效的歌詞行
   const validLines = lines.filter(l => l.start !== null && l.words.some(w => w.text.trim().length > 0));
   
-  // 依據「間奏閥值」(interludeThreshold) 將歌詞切分成段落
+  // 依據「間奏閥值」(interludeThreshold) 以及是否有「強制單行 (isSingleLine)」將歌詞切分成段落
   const paragraphs: LyricLine[][] = [];
   let currentPara: LyricLine[] = [];
   
   for (let i = 0; i < validLines.length; i++) {
     const line = validLines[i];
     const prevEnd = i > 0 ? getLineEndTime(validLines[i - 1]) : 0;
+    const prevIsSingle = i > 0 && !!validLines[i - 1].isSingleLine;
     
-    if (currentPara.length > 0 && line.start! - prevEnd >= options.interludeThreshold) {
+    const shouldCut = 
+      (currentPara.length > 0 && line.start! - prevEnd >= options.interludeThreshold) ||
+      (currentPara.length > 0 && !!line.isSingleLine) ||
+      prevIsSingle;
+      
+    if (shouldCut && currentPara.length > 0) {
       paragraphs.push(currentPara);
       currentPara = [];
     }
@@ -296,17 +302,20 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
   const dotRadius = Math.round(options.fontSize * 0.25); 
   const dotSpacing = Math.round(options.fontSize * 0.75);
   
-  paragraphs.forEach((p, idx) => {
+  // 第一階段 (Pass 1)：計算所有段落的 raw 資訊
+  const pInfos = paragraphs.map((p, idx) => {
       const prevEnd = idx > 0 ? getLineEndTime(paragraphs[idx - 1][paragraphs[idx - 1].length - 1]) : 0;
       const gap = p[0].start! - prevEnd;
       
-      let dotCount = 0;
-      // 保留最後 1 秒鐘為「沒有小白圓」的留白階段
-      const availDotsTime = gap - 1.0; 
+      const isRealInterlude = idx === 0 
+          ? (p[0].start! >= options.interludeThreshold)
+          : (gap >= options.interludeThreshold);
+
       let maxAdvance = p[0].start!; // 首段的話，可利用的時間是 0 到 start
       if (idx > 0) maxAdvance = gap;
 
-      if (maxAdvance > 1.0) {
+      let dotCount = 0;
+      if (isRealInterlude && maxAdvance > 1.0) {
           // 最多顯示 4 個倒數小圓
           dotCount = Math.min(4, Math.floor(maxAdvance - 1.0));
       }
@@ -319,11 +328,51 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
          actualAdvance = Math.min(2.0, maxAdvance) + options.fadeInOutTime;
       }
       
-      // 計算段落顯示總體時間
       const blockDisplayStart = Math.max(prevEnd, p[0].start! - actualAdvance);
-      // 間奏前多留 1 秒（原為 + 1.0 變成 + 2.0），讓句子不要太快消失
-      const blockDisplayEnd = getLineEndTime(p[p.length - 1]) + 2.0 + options.fadeInOutTime; 
-      const truncatedBlockEnd = idx < paragraphs.length - 1 ? Math.min(blockDisplayEnd, paragraphs[idx + 1][0].start! - 0.1) : blockDisplayEnd;
+      const blockDisplayEnd = getLineEndTime(p[p.length - 1]) + 2.0 + options.fadeInOutTime;
+
+      return {
+          p,
+          prevEnd,
+          gap,
+          isRealInterlude,
+          dotCount,
+          actualAdvance,
+          blockDisplayStart,
+          blockDisplayEnd,
+          isStartRealInterlude: isRealInterlude,
+          isEndRealInterlude: true, // 預設
+      };
+  });
+
+  // Pass 1.5: 修正 start / end 是否為真實間奏的邊界
+  for (let idx = 0; idx < pInfos.length; idx++) {
+      if (idx < pInfos.length - 1) {
+          pInfos[idx].isEndRealInterlude = pInfos[idx + 1].isRealInterlude;
+      } else {
+          pInfos[idx].isEndRealInterlude = true;
+      }
+  }
+
+  // Pass 2: 計算精確的 truncatedBlockEnd
+  const finalTruncatedBlockEnds = pInfos.map((info, idx) => {
+      if (idx < pInfos.length - 1) {
+          if (!info.isEndRealInterlude) {
+              // 如果後面不是真實間奏，此段落必須在下一段落的「顯示開始時間點」消失，達到無縫不重疊切換
+              return pInfos[idx + 1].blockDisplayStart;
+          } else {
+              // 否則，依照一般的 max 消失限制 (但多留時間不要重疊到下一個的 start)
+              return Math.min(info.blockDisplayEnd, pInfos[idx + 1].p[0].start! - 0.1);
+          }
+      } else {
+          return info.blockDisplayEnd;
+      }
+  });
+
+  paragraphs.forEach((p, idx) => {
+      const pInfo = pInfos[idx];
+      const { blockDisplayStart, dotCount, isStartRealInterlude, isEndRealInterlude } = pInfo;
+      const truncatedBlockEnd = finalTruncatedBlockEnds[idx];
 
       // 產生倒數小白圓的 Events
       if (dotCount > 0) {
@@ -430,8 +479,8 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
          const row = isReallyCentered ? 2 : ((i % 2 === 0) ? 1 : 2);
          const style = isReallyCentered ? 'BottomCenter' : (row === 1 ? 'BottomLeft' : 'BottomRight');
 
-         const fadeIn = (displayStart === blockDisplayStart) ? fadeMs : 0;
-         const fadeOut = (displayEnd === truncatedBlockEnd) ? fadeMs : 0;
+         const fadeIn = (displayStart === blockDisplayStart && isStartRealInterlude) ? fadeMs : 0;
+         const fadeOut = (displayEnd === truncatedBlockEnd && isEndRealInterlude) ? fadeMs : 0;
 
          let karaokeStr = '';
          let karaokeKoStr = '';

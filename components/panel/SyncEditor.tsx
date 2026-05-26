@@ -39,9 +39,11 @@ const SyncCell = memo(({
         }
       }}
       className={`p-0 align-top group cursor-pointer border-r border-[var(--app-border-base)] transition-colors relative ${isDual ? 'w-1/2' : 'w-full'}
-        ${isActive ? 'bg-[var(--app-border-base)] text-[var(--app-text-primary)] shadow-[inset_2px_0_0_0_var(--app-accent)]' : 
-          (paragraphStart ? 'bg-[#293B33]/40 hover:bg-[#293B33]/60 text-[var(--app-text-muted)] shadow-[inset_2px_0_0_0_rgba(65,168,125,0.5)]' : 'hover:bg-[var(--app-bg-panel-alt)] text-[var(--app-text-muted)]')}
-        ${(!isActive && isPassed && !paragraphStart) ? ' opacity-60' : ''}`}
+        ${isActive ? 
+          (line.isSingleLine ? 'bg-[var(--app-border-base)] text-[var(--app-text-primary)] shadow-[inset_3px_0_0_0_#a855f7]' : 'bg-[var(--app-border-base)] text-[var(--app-text-primary)] shadow-[inset_2px_0_0_0_var(--app-accent)]') : 
+          (line.isSingleLine ? 'bg-purple-500/10 dark:bg-purple-950/30 hover:bg-purple-500/20 dark:hover:bg-purple-950/50 text-[var(--app-text-muted)] shadow-[inset_2px_0_0_0_#a855f7]' :
+            (paragraphStart ? 'bg-[#293B33]/40 hover:bg-[#293B33]/60 text-[var(--app-text-muted)] shadow-[inset_2px_0_0_0_rgba(65,168,125,0.5)]' : 'hover:bg-[var(--app-bg-panel-alt)] text-[var(--app-text-muted)]'))}
+        ${(!isActive && isPassed && !paragraphStart && !line.isSingleLine) ? ' opacity-60' : ''}`}
     >
       <LyricCellContent
         line={line}
@@ -125,6 +127,34 @@ export function SyncEditor() {
   const { handleLineStamp, handleWordStamp, handleWordNextLine } = useSyncHotkeys();
   useAutoScroll();
   const i18n = useI18n();
+
+  const visualParagraphStarts = React.useMemo(() => {
+    const result = new Array(lines.length).fill(false);
+    for (let i = 0; i < lines.length; i++) {
+      if (paragraphStarts[i]) {
+        if (i === 0) {
+          result[i] = true;
+        } else {
+          const prevLine = lines[i - 1];
+          let prevEnd = prevLine.end;
+          if (prevEnd === null && prevLine.words?.length > 0) {
+            const lastWordWithStart = [...prevLine.words].reverse().find((w: any) => w.start !== null);
+            if (lastWordWithStart) prevEnd = lastWordWithStart.start;
+          }
+          let gapSec = -1;
+          const currentStart = lines[i].start;
+          if (prevEnd !== null && currentStart !== null) {
+            gapSec = currentStart - prevEnd;
+          }
+          const isPrevEmpty = prevLine.words?.every((w: any) => !w.text.trim());
+          if (gapSec >= dualLineGapSec || isPrevEmpty) {
+            result[i] = true;
+          }
+        }
+      }
+    }
+    return result;
+  }, [lines, paragraphStarts, dualLineGapSec]);
   
   const containerRef = useRef<HTMLDivElement>(null);
   
@@ -286,6 +316,15 @@ export function SyncEditor() {
       }, 'Split Line');
   }, [commitLines]);
 
+  const handleToggleSingleLine = useCallback((globalIndex: number) => {
+      commitLines(prev => {
+          return prev.map((line, i) => {
+              if (i !== globalIndex) return line;
+              return { ...line, isSingleLine: !line.isSingleLine };
+          });
+      }, 'Toggle Single Line');
+  }, [commitLines]);
+
   const handleDeleteWord = useCallback((globalIndex: number, wordIndex: number) => {
       commitLines(prev => {
           const newLines = [...prev];
@@ -362,7 +401,7 @@ export function SyncEditor() {
         isPassed={data ? data.index < activeLineIndex : false}
         activeWordIndex={data?.index === activeLineIndex ? activeWordIndex : 0}
         syncMode={syncMode}
-        paragraphStart={data ? paragraphStarts[data.index] : false}
+        paragraphStart={data ? visualParagraphStarts[data.index] : false}
         playerRef={playerRef}
         i18n={i18n}
         setActiveLineIndex={setActiveLineIndex}
@@ -658,6 +697,7 @@ export function SyncEditor() {
               <ContextMenuItem icon={<Edit2 className="w-3.5 h-3.5" />} label="編輯這行字RAW（含時間戳）" onClick={() => { handleEditRawText(ctxMenu.globalIndex); setCtxMenu(null); }} />
               <ContextMenuItem icon={<span className="w-3.5 h-3.5 flex items-center justify-center font-bold text-[10px]">繁</span>} label="這行字轉繁體" onClick={() => { handleLineConvertToTraditional(ctxMenu.globalIndex); setCtxMenu(null); }} />
               <ContextMenuItem icon={<span className="w-3.5 h-3.5 flex items-center justify-center font-bold text-[10px]">簡</span>} label="這行字轉簡體" onClick={() => { handleLineConvertToSimplified(ctxMenu.globalIndex); setCtxMenu(null); }} />
+              <ContextMenuItem icon={<span className="w-3.5 h-3.5 flex items-center justify-center font-semibold text-[10px] text-purple-500">3</span>} label={lines[ctxMenu.globalIndex]?.isSingleLine ? "✓ 算做第三句 (已啟用)" : "算做第三句（強制單行）"} onClick={() => { handleToggleSingleLine(ctxMenu.globalIndex); setCtxMenu(null); }} />
               <ContextMenuItem icon={<FileText className="w-3.5 h-3.5" />} label="到編輯原始文字" onClick={() => { 
                 const targetIndex = ctxMenu.globalIndex;
                 setCtxMenu(null);

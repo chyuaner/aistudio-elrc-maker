@@ -49,19 +49,31 @@ export function KaraokePreview({ hideTouchUI = false }: { hideTouchUI?: boolean 
     return -1;
   }, [lines]);
 
-    if (lines.length > 0) {
-        if (firstStampedIndex !== -1 && currentTime <= lines[firstStampedIndex].start!) {
-            previewLineIndex = firstStampedIndex;
-        } else if (activeLineIndex + 1 < lines.length) {
-           const nextLine = lines[activeLineIndex + 1];
-           if (paragraphStarts[activeLineIndex + 1] && nextLine.start !== null) {
-               const gap = nextLine.start - currentTime;
-               if (gap > 0 && gap <= dualLineGapSec) {
-                   previewLineIndex = activeLineIndex + 1;
-               }
-           }
-        }
+  const getLineEndTime = (lineIdx: number) => {
+    const line = lines[lineIdx];
+    if (!line) return 0;
+    if (line.end !== null) return line.end;
+    if (line.words && line.words.length > 0) {
+      const lastWord = line.words[line.words.length - 1];
+      return lastWord?.end ?? lastWord?.start ?? line.start ?? 0;
     }
+    return line.start ?? 0;
+  };
+
+  if (lines.length > 0) {
+      if (firstStampedIndex !== -1 && currentTime <= lines[firstStampedIndex].start!) {
+          previewLineIndex = firstStampedIndex;
+      } else if (activeLineIndex + 1 < lines.length) {
+         const nextLine = lines[activeLineIndex + 1];
+         const currentLineEndTime = getLineEndTime(activeLineIndex);
+         if (paragraphStarts[activeLineIndex + 1] && nextLine.start !== null && currentTime >= currentLineEndTime) {
+             const gap = nextLine.start - currentTime;
+             if (gap > 0 && gap <= dualLineGapSec) {
+                 previewLineIndex = activeLineIndex + 1;
+             }
+         }
+      }
+  }
 
   if (lines.length > 0) {
       let paraStart = previewLineIndex;
@@ -96,6 +108,11 @@ export function KaraokePreview({ hideTouchUI = false }: { hideTouchUI?: boolean 
               topIndex = previewLineIndex - 1;
           }
       }
+  }
+
+  if (lines.length > 0 && lines[previewLineIndex]?.isSingleLine) {
+      topIndex = -1;
+      bottomIndex = previewLineIndex;
   }
 
   const isTopOnly = topIndex !== -1 && bottomIndex === -1;
@@ -161,10 +178,20 @@ export function KaraokePreview({ hideTouchUI = false }: { hideTouchUI?: boolean 
   let dotsCount = 0;
 
   if (autoScrollEnabled && lines.length > 0 && lines[previewLineIndex]?.start !== null && paragraphStarts[previewLineIndex]) {
-      const start = lines[previewLineIndex].start!;
-      const timeLeft = start - currentTime;
-      if (timeLeft > 0) {
-          dotsCount = Math.max(0, Math.min(4, Math.ceil(timeLeft - 1)));
+      let prevEnd = 0;
+      if (previewLineIndex > 0) {
+          prevEnd = getLineEndTime(previewLineIndex - 1);
+      }
+      
+      const realGap = lines[previewLineIndex].start! - prevEnd;
+      const isRealInterlude = previewLineIndex === 0 ? (lines[previewLineIndex].start! >= dualLineGapSec) : (realGap >= dualLineGapSec);
+      
+      if (isRealInterlude && currentTime >= prevEnd) {
+          const start = lines[previewLineIndex].start!;
+          const timeLeft = start - currentTime;
+          if (timeLeft > 0) {
+              dotsCount = Math.max(0, Math.min(4, Math.ceil(timeLeft - 1)));
+          }
       }
   }
 

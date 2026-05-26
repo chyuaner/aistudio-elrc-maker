@@ -23,7 +23,7 @@ export function KtvAssExport() {
     color3: '#800080', // Purple
     chorusColor: '#008000', // Green
     fontFamily: '微软雅黑',
-    fontSize: 150, // Default for BottomLeft
+    fontSize: 135, // Default for BottomLeft
     infoFontSize: 110, // Default for CenterInfo (song info, fontSize - 40)
     infoTitleFontSize: 140, // Default for red Title (fontSize - 10)
     songInfoTitle: lrcMetadata.kti || lrcMetadata.ti || '',
@@ -34,8 +34,8 @@ export function KtvAssExport() {
     startInfoStartTime: parsedStart,
     startInfoEndTime: parsedEnd,
     dualRowSpacing: 160,
-    dualRowMarginL: 150,
-    dualRowMarginR: 150,
+    dualRowMarginL: 165,
+    dualRowMarginR: 165,
     dualRowMarginV: 50,
     nextTriggerIndex: 1,
     row2FadeoutMode: 'immediate',

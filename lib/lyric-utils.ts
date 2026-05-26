@@ -10,6 +10,7 @@ export interface LyricLine {
   end: number | null;
   words: LyricWord[];
   raw?: string;
+  isSingleLine?: boolean;
 }
 
 export function generateId() {
@@ -77,6 +78,11 @@ export function parseRawLyrics(text: string): { lines: LyricLine[], metadata: Lr
       return match;
     }
     
+    // Skip KTV tags from being treated as metadata
+    if (trimmedKey.toLowerCase() === 'ktv') {
+      return match;
+    }
+    
     const predefined = ['ti', 'ar', 'al', 'au', 'by', 'offset', 're', 've'];
     const lowerKey = trimmedKey.toLowerCase();
     const finalKey = predefined.includes(lowerKey) ? lowerKey : trimmedKey;
@@ -95,8 +101,16 @@ export function parseRawLyrics(text: string): { lines: LyricLine[], metadata: Lr
   const lineTimeRegex = /^\[(\d+:\d+(?:\.\d+)?)\]/;
   const wordTimeRegex = /<(\d+:\d+(?:\.\d+)?)>([^<]*)/g;
   
+  let pendingSingleLine = false;
+  
   for (const line of lines) {
     if (!line.trim()) continue;
+    
+    // Check if this line is [ktv:singleline]
+    if (/^\[ktv\s*:\s*singleline\]$/i.test(line.trim())) {
+      pendingSingleLine = true;
+      continue;
+    }
     
     let start: number | null = null;
     let cleanText = line;
@@ -133,7 +147,9 @@ export function parseRawLyrics(text: string): { lines: LyricLine[], metadata: Lr
         end: null,
         words: words.length > 0 ? words : splitWordsAegisub(cleanText.replace(/<\d+:\d+\.\d+>/g, '')),
         raw: cleanText.replace(/<\d+:\d+\.\d+>/g, ''),
+        isSingleLine: pendingSingleLine ? true : undefined,
       });
+      pendingSingleLine = false;
     } else {
       result.push({
         id: generateId(),
@@ -141,7 +157,9 @@ export function parseRawLyrics(text: string): { lines: LyricLine[], metadata: Lr
         end: null,
         words: splitWordsAegisub(cleanText),
         raw: cleanText,
+        isSingleLine: pendingSingleLine ? true : undefined,
       });
+      pendingSingleLine = false;
     }
   }
   
@@ -170,6 +188,10 @@ export function exportLrc(lines: LyricLine[], metadata?: LrcMetadata, isEnhanced
     if (isSimple) {
       lrc += `${line.words.map(w => w.text).join('')}\n`;
       continue;
+    }
+    
+    if (line.isSingleLine) {
+      lrc += `[ktv:singleline]\n`;
     }
     
     if (line.start === null) {

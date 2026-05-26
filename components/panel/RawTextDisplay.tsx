@@ -61,6 +61,34 @@ export function RawTextDisplay({
   const [ignoreTimeTags, setIgnoreTimeTags] = useState(true);
   const [selectWholeLine, setSelectWholeLine] = useState(false);
 
+  const visualParagraphStarts = useMemo(() => {
+    const result = new Array(lines.length).fill(false);
+    for (let i = 0; i < lines.length; i++) {
+      if (paragraphStarts[i]) {
+        if (i === 0) {
+          result[i] = true;
+        } else {
+          const prevLine = lines[i - 1];
+          let prevEnd = prevLine.end;
+          if (prevEnd === null && prevLine.words?.length > 0) {
+            const lastWordWithStart = [...prevLine.words].reverse().find(w => w.start !== null);
+            if (lastWordWithStart) prevEnd = lastWordWithStart.start;
+          }
+          let gapSec = -1;
+          const currentStart = lines[i].start;
+          if (prevEnd !== null && currentStart !== null) {
+            gapSec = currentStart - prevEnd;
+          }
+          const isPrevEmpty = prevLine.words?.every((w: any) => !w.text.trim());
+          if (gapSec >= dualLineGapSec || isPrevEmpty) {
+            result[i] = true;
+          }
+        }
+      }
+    }
+    return result;
+  }, [lines, paragraphStarts, dualLineGapSec]);
+
   useAutoScroll();
   
   useEffect(() => {
@@ -559,7 +587,7 @@ export function RawTextDisplay({
                   lineText={lineText}
                   mappedOriginalIdx={rawIdxToLineIdx.get(idx)}
                   activeLineIndex={activeLineIndex}
-                  paragraphStarts={paragraphStarts}
+                  paragraphStarts={visualParagraphStarts}
                   linesLength={lines.length}
               />
           ))}

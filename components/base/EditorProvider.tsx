@@ -389,7 +389,10 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
         gapSec = line.start - prevEnd;
       }
 
-      if (gapSec >= dualLineGapSec || explicitInterludePending) {
+      const prevIsSingle = !!prevLine.isSingleLine;
+      const forceNewPara = !!line.isSingleLine || prevIsSingle;
+
+      if (gapSec >= dualLineGapSec || explicitInterludePending || forceNewPara) {
         currentTrack = 0;
         pStarts.push(true);
         explicitInterludePending = false;

@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
 import { useEditor } from '@/components/base/EditorProvider';
-import { Download, Plus, Trash2, Wand2, Info, Check } from 'lucide-react';
+import { Download, Plus, Trash2, Wand2, Info, Check, ChevronDown, ChevronRight } from 'lucide-react';
 import { LrcMetadata, formatTime, LyricLine } from '@/lib/lyric-utils';
 import { Tooltip } from '@/components/common/Tooltip';
 
@@ -114,35 +114,40 @@ export function extractMetadataFromLines(lines: LyricLine[]): SmartExtraction[] 
 }
 // ----------------------------
 
-const InputRow = ({ label, mKey, placeholder, value, onChange, onBlur, tooltip }: { label: string, mKey: keyof LrcMetadata, placeholder?: string, value: string, onChange: (key: string, val: string) => void, onBlur?: () => void, tooltip?: string }) => (
-    <div className={`flex flex-row items-center py-2 gap-2 border-transparent`}>
-        <div className="flex items-center sm:w-20 w-16 shrink-0 gap-1 pl-1 sm:pl-0 text-right justify-end">
-            <label className={`text-[10px] font-semibold text-[var(--app-text-secondary)] uppercase tracking-wider sm:text-xs`}>
-                {label}
-            </label>
-            {tooltip && (
-                <Tooltip title={<span className="normal-case max-w-[200px] whitespace-normal block">{tooltip}</span>}>
-                    <Info className="w-3 h-3 text-[var(--app-text-muted)] cursor-help" />
-                </Tooltip>
-            )}
+const InputRow = ({ label, mKey, placeholder, value, onChange, onBlur, tooltip }: { label: string, mKey: keyof LrcMetadata, placeholder?: string, value: string, onChange: (key: string, val: string) => void, onBlur?: () => void, tooltip?: string }) => {
+    const hasBrackets = /[\[\]]/.test(value || '');
+    return (
+        <div className={`flex flex-row items-center py-2 gap-2 border-transparent`}>
+            <div className="flex items-center sm:w-20 w-16 shrink-0 gap-1 pl-1 sm:pl-0 text-right justify-end">
+                <label className={`text-[10px] font-semibold text-[var(--app-text-secondary)] uppercase tracking-wider sm:text-xs`}>
+                    {label}
+                </label>
+                {tooltip && (
+                    <Tooltip title={<span className="normal-case max-w-[200px] whitespace-normal block">{tooltip}</span>}>
+                        <Info className="w-3 h-3 text-[var(--app-text-muted)] cursor-help" />
+                    </Tooltip>
+                )}
+            </div>
+            <div className="flex-1">
+                <input 
+                    type="text" 
+                    value={value} 
+                    onChange={e => onChange(mKey as string, e.target.value)} 
+                    onBlur={onBlur}
+                    className={`w-full bg-[var(--app-bg-input)] text-xs border border-[var(--app-border-light)] rounded focus:outline-none focus:border-[var(--app-accent)] transition-colors placeholder:opacity-40 sm:text-sm px-2 sm:px-3 py-1.5 ${hasBrackets ? '!text-red-500 font-medium' : ''}`}
+                    placeholder={placeholder}
+                />
+            </div>
         </div>
-        <div className="flex-1">
-            <input 
-                type="text" 
-                value={value} 
-                onChange={e => onChange(mKey as string, e.target.value)} 
-                onBlur={onBlur}
-                className={`w-full bg-[var(--app-bg-input)] text-xs border border-[var(--app-border-light)] rounded focus:outline-none focus:border-[var(--app-accent)] transition-colors placeholder:opacity-40 sm:text-sm px-2 sm:px-3 py-1.5`}
-                placeholder={placeholder}
-            />
-        </div>
-    </div>
-);
+    );
+};
 
 export function LrcMetadataEditor({ onClose }: { onClose?: () => void }) {
   const { lrcMetadata, setLrcMetadata, commitLrcMetadata, metadata, duration, lines, commitLines } = useEditor();
   const [formData, setFormData] = useState<LrcMetadata>({});
   const [customKeys, setCustomKeys] = useState<{key: string, value: string}[]>([]);
+  const [systemKeys, setSystemKeys] = useState<{key: string, value: string}[]>([]);
+  const [systemKeysOpen, setSystemKeysOpen] = useState(false);
   const isDialog = !!onClose;
   const lastAppliedRef = useRef<LrcMetadata | null>(null);
   const [autoFillEnabled, setAutoFillEnabled] = useState(true);
@@ -152,11 +157,11 @@ export function LrcMetadataEditor({ onClose }: { onClose?: () => void }) {
 
   const ENABLE_FIXED_TAGS = true; // 預留參數控制固定標籤塞入
 
-  const latestDataRef = useRef<{ formData: LrcMetadata, customKeys: { key: string, value: string }[] }>({ formData, customKeys });
+  const latestDataRef = useRef<{ formData: LrcMetadata, customKeys: { key: string, value: string }[], systemKeys: { key: string, value: string }[] }>({ formData, customKeys, systemKeys });
 
   useEffect(() => {
-      latestDataRef.current = { formData, customKeys };
-  }, [formData, customKeys]);
+      latestDataRef.current = { formData, customKeys, systemKeys };
+  }, [formData, customKeys, systemKeys]);
 
   const commitChanges = React.useCallback((finalData: LrcMetadata) => {
       commitLrcMetadata(finalData, 'Edit LRC Metadata');
@@ -168,17 +173,32 @@ export function LrcMetadataEditor({ onClose }: { onClose?: () => void }) {
      
      setFormData({ ...lrcMetadata });
      const predefinedKeys = ['ti', 'ar', 'al', 'au', 'by', 'offset', 're', 've', 'length'];
+     const sysKeysList = ['kti', 'kar', 'kal', 'ko', 'tt', 'tte'];
+     
      const currentCustom: {key: string, value: string}[] = [];
+     const currentSystem: {key: string, value: string}[] = [];
+     
      for (const [key, value] of Object.entries(lrcMetadata)) {
          if (!predefinedKeys.includes(key) && value) {
-             currentCustom.push({ key, value });
+             const lowerKey = key.toLowerCase();
+             if (sysKeysList.includes(lowerKey)) {
+                 currentSystem.push({ key, value });
+             } else {
+                 currentCustom.push({ key, value });
+             }
          }
      }
      setCustomKeys(currentCustom);
+     setSystemKeys(currentSystem);
      lastAppliedRef.current = lrcMetadata;
   }, [lrcMetadata]);
 
-  const applyChanges = (currentFormData: LrcMetadata, currentCustomKeys: typeof customKeys, shouldCommit = false) => {
+  const applyChanges = (
+    currentFormData: LrcMetadata, 
+    currentCustomKeys: typeof customKeys, 
+    currentSystemKeys: typeof systemKeys = systemKeys,
+    shouldCommit = false
+  ) => {
     // Preserve existing tags from lrcMetadata to prevent any missing tags
     const finalData: LrcMetadata = { ...lrcMetadata };
     const predefinedKeys = ['ti', 'ar', 'al', 'au', 'by', 'offset', 're', 've', 'length'];
@@ -193,22 +213,30 @@ export function LrcMetadataEditor({ onClose }: { onClose?: () => void }) {
         if (currentFormData[k]) finalData[k] = currentFormData[k];
     });
 
-    // We also want to clear any old custom keys that are no longer in currentCustomKeys
-    // Let's identify which custom keys are active in currentCustomKeys edit list
+    // Clear all old keys that are not predefined
     const activeCustomKeys = new Set(currentCustomKeys.map(ck => ck.key).filter(Boolean));
+    const activeSystemKeys = new Set(currentSystemKeys.map(sk => sk.key).filter(Boolean));
     
-    // Predefined keys and special KTV tags should not be blindly deleted as simple custom keys:
-    const predefinedAndSpecial = [...predefinedKeys, 'kti', 'kar', 'kal', 'ko', 'TT', 'tt', 'TTE', 'tte'];
+    const allowedKeys = new Set([
+        ...predefinedKeys,
+        ...Array.from(activeCustomKeys),
+        ...Array.from(activeSystemKeys)
+    ]);
     
-    // Delete any custom keys that are not active anymore (meaning the user explicitly deleted them in LrcMetadataEditor)
+    // Delete any key in finalData that is not in the allowedKeys set
     for (const key of Object.keys(finalData)) {
-        if (!predefinedAndSpecial.includes(key) && !activeCustomKeys.has(key)) {
+        if (!allowedKeys.has(key)) {
             delete finalData[key];
         }
     }
     
     // Apply custom keys from currentCustomKeys
     currentCustomKeys.forEach(({ key, value }) => {
+        if (key && value) finalData[key] = value;
+    });
+
+    // Apply system keys from currentSystemKeys
+    currentSystemKeys.forEach(({ key, value }) => {
         if (key && value) finalData[key] = value;
     });
 
@@ -244,12 +272,12 @@ export function LrcMetadataEditor({ onClose }: { onClose?: () => void }) {
   };
 
   const triggerFillFromAudio = (overwrite: boolean) => {
-      const { formData: currentFormData, customKeys: currentCustomKeys } = latestDataRef.current;
+      const { formData: currentFormData, customKeys: currentCustomKeys, systemKeys: currentSystemKeys } = latestDataRef.current;
       const newData = getAutoFilledData(currentFormData, overwrite);
       
       if (JSON.stringify(currentFormData) !== JSON.stringify(newData)) {
           setFormData(newData);
-          applyChanges(newData, currentCustomKeys, true);
+          applyChanges(newData, currentCustomKeys, currentSystemKeys, true);
       }
   };
 
@@ -263,32 +291,50 @@ export function LrcMetadataEditor({ onClose }: { onClose?: () => void }) {
 
   const handleBlur = () => {
       // Clean up empty custom keys visually on blur? Only if they are empty
-      applyChanges(formData, customKeys, true);
+      applyChanges(formData, customKeys, systemKeys, true);
   };
 
   const handleChange = (key: string, value: string) => {
     const newData = { ...formData, [key]: value };
     setFormData(newData);
-    applyChanges(newData, customKeys, false);
+    applyChanges(newData, customKeys, systemKeys, false);
   };
   
   const handleCustomChange = (index: number, newKey: string, newValue: string) => {
       const next = [...customKeys];
       next[index] = { key: newKey, value: newValue };
       setCustomKeys(next);
-      applyChanges(formData, next, false);
+      applyChanges(formData, next, systemKeys, false);
   };
   
   const removeCustom = (index: number) => {
       const next = customKeys.filter((_, i) => i !== index);
       setCustomKeys(next);
-      applyChanges(formData, next, true);
+      applyChanges(formData, next, systemKeys, true);
   };
   
   const addCustom = () => {
       const next = [...customKeys, { key: '', value: '' }];
       setCustomKeys(next);
       // Wait for user to type before committing to avoid empty tags causing UI resets
+  };
+
+  const handleSystemChange = (index: number, newKey: string, newValue: string) => {
+      const next = [...systemKeys];
+      next[index] = { key: newKey, value: newValue };
+      setSystemKeys(next);
+      applyChanges(formData, customKeys, next, false);
+  };
+
+  const removeSystem = (index: number) => {
+      const next = systemKeys.filter((_, i) => i !== index);
+      setSystemKeys(next);
+      applyChanges(formData, customKeys, next, true);
+  };
+
+  const addSystem = () => {
+      const next = [...systemKeys, { key: '', value: '' }];
+      setSystemKeys(next);
   };
 
   const handleClose = () => {
@@ -311,17 +357,27 @@ export function LrcMetadataEditor({ onClose }: { onClose?: () => void }) {
       }
       
       const newCustomKeys = [...customKeys];
+      const newSystemKeys = [...systemKeys];
       const newFormData = { ...formData };
       const predefinedKeys = ['ti', 'ar', 'al', 'au', 'by', 'offset', 're', 've', 'length'];
+      const sysKeysList = ['kti', 'kar', 'kal', 'ko', 'tt', 'tte'];
 
       selected.forEach(ext => {
            ext.suggestions.forEach(sug => {
                if (predefinedKeys.includes(sug.key)) {
                     newFormData[sug.key] = sug.value;
                } else {
-                    // Avoid inserting duplicates
-                    if (!newCustomKeys.find(ck => ck.key === sug.key && ck.value === sug.value)) {
-                        newCustomKeys.push({ key: sug.key, value: sug.value });
+                    const lowerKey = sug.key.toLowerCase();
+                    if (sysKeysList.includes(lowerKey)) {
+                         // Avoid inserting duplicates
+                         if (!newSystemKeys.find(sk => sk.key.toLowerCase() === lowerKey)) {
+                             newSystemKeys.push({ key: sug.key, value: sug.value });
+                         }
+                    } else {
+                         // Avoid inserting duplicates
+                         if (!newCustomKeys.find(ck => ck.key === sug.key && ck.value === sug.value)) {
+                             newCustomKeys.push({ key: sug.key, value: sug.value });
+                         }
                     }
                }
            });
@@ -333,13 +389,14 @@ export function LrcMetadataEditor({ onClose }: { onClose?: () => void }) {
 
       setFormData(newFormData);
       setCustomKeys(newCustomKeys);
-      applyChanges(newFormData, newCustomKeys, true);
+      setSystemKeys(newSystemKeys);
+      applyChanges(newFormData, newCustomKeys, newSystemKeys, true);
       setSmartImportOpen(false);
   };
 
   return (
     <div className="flex flex-col h-full overflow-hidden relative">
-        <div className="overflow-y-auto flex-1 custom-scrollbar space-y-4 pb-4 select-text px-4 py-2">
+      <div className="overflow-y-auto flex-1 custom-scrollbar space-y-4 pb-4 select-text px-4 py-2">
             
             <div className="flex flex-col gap-3 pb-3 border-b border-[var(--app-border-base)]">
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
@@ -400,40 +457,118 @@ export function LrcMetadataEditor({ onClose }: { onClose?: () => void }) {
                     </div>
                 ) : (
                     <div className="space-y-2 bg-[var(--app-bg-base)] p-2 sm:p-3 rounded-lg border border-[var(--app-border-base)] overflow-hidden">
-                        {customKeys.map((item, i) => (
-                            <div key={i} className={`flex items-center gap-1 w-full`}>
-                                <div className={`flex items-center w-auto shrink-0`}>
-                                    <input 
-                                        type="text" 
-                                        value={item.key} 
-                                        onChange={e => handleCustomChange(i, e.target.value.trim(), item.value)} 
-                                        onBlur={handleBlur}
-                                        className={`bg-[var(--app-bg-input)] text-xs border border-[var(--app-border-light)] rounded px-1.5 py-1 focus:outline-none focus:border-[var(--app-accent)] w-14 sm:w-20`}
-                                        placeholder="key"
-                                    />
-                                    <div className="text-xs font-mono text-[var(--app-text-muted)] ml-0.5 sm:ml-1">:</div>
+                        {customKeys.map((item, i) => {
+                            const hasKeyBrackets = /[\[\]]/.test(item.key || '');
+                            const hasValueBrackets = /[\[\]]/.test(item.value || '');
+                            return (
+                                <div key={i} className={`flex items-center gap-1 w-full`}>
+                                    <div className={`flex items-center w-auto shrink-0`}>
+                                        <input 
+                                            type="text" 
+                                            value={item.key} 
+                                            onChange={e => handleCustomChange(i, e.target.value.trim(), item.value)} 
+                                            onBlur={handleBlur}
+                                            className={`bg-[var(--app-bg-input)] text-xs border border-[var(--app-border-light)] rounded px-1.5 py-1 focus:outline-none focus:border-[var(--app-accent)] w-14 sm:w-20 ${hasKeyBrackets ? '!text-red-500 font-medium' : ''}`}
+                                            placeholder="key"
+                                        />
+                                        <div className="text-xs font-mono text-[var(--app-text-muted)] ml-0.5 sm:ml-1">:</div>
+                                    </div>
+                                    <div className={`flex items-center flex-1 min-w-0`}>
+                                        <input 
+                                            type="text" 
+                                            value={item.value} 
+                                            onChange={e => handleCustomChange(i, item.key, e.target.value)} 
+                                            onBlur={handleBlur}
+                                            className={`w-full min-w-0 bg-[var(--app-bg-input)] text-xs border border-[var(--app-border-light)] rounded px-1.5 py-1 focus:outline-none focus:border-[var(--app-accent)] ${hasValueBrackets ? '!text-red-500 font-medium' : ''}`}
+                                            placeholder="value"
+                                        />
+                                    </div>
+                                    <button 
+                                        onClick={() => removeCustom(i)}
+                                        className={`p-1.5 text-[var(--app-text-muted)] hover:text-red-400 hover:bg-red-500/10 rounded transition-colors shrink-0`}
+                                    >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
                                 </div>
-                                <div className={`flex items-center flex-1 min-w-0`}>
-                                    <input 
-                                        type="text" 
-                                        value={item.value} 
-                                        onChange={e => handleCustomChange(i, item.key, e.target.value)} 
-                                        onBlur={handleBlur}
-                                        className={`w-full min-w-0 bg-[var(--app-bg-input)] text-xs border border-[var(--app-border-light)] rounded px-1.5 py-1 focus:outline-none focus:border-[var(--app-accent)]`}
-                                        placeholder="value"
-                                    />
-                                </div>
-                                <button 
-                                    onClick={() => removeCustom(i)}
-                                    className={`p-1.5 text-[var(--app-text-muted)] hover:text-red-400 hover:bg-red-500/10 rounded transition-colors shrink-0`}
-                                >
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 )}
             </div>    
+
+            <div className="space-y-3 pt-4 border-t border-[var(--app-border-base)]">
+                <div 
+                    onClick={() => setSystemKeysOpen(!systemKeysOpen)}
+                    className="flex items-center justify-between cursor-pointer group hover:text-white transition-colors"
+                >
+                    <div className="flex items-center gap-1.5 select-none text-[var(--app-text-secondary)]">
+                        {systemKeysOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                        <h3 className="text-xs font-semibold tracking-wider group-hover:text-white">本系統專用</h3>
+                        <span className="text-[10px] text-amber-500/80 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20 ml-2 font-normal">不建議手動修改</span>
+                    </div>
+                    <span className="text-[10px] text-[var(--app-text-muted)] group-hover:text-[var(--app-text-secondary)] hidden sm:inline">僅作為Bug排除使用</span>
+                </div>
+
+                {systemKeysOpen && (
+                    <div className="space-y-3 animate-in fade-in duration-200">
+                        <div className="flex items-center justify-between">
+                            <span className="text-[10px] text-[var(--app-text-muted)] italic">
+                                系統專用標籤 (如: kti, kar, kal, ko, tt, tte)。調整不當可能影響 KTV ASS 的導出
+                            </span>
+                            <button 
+                                onClick={addSystem}
+                                className="text-[10px] flex items-center gap-1 bg-[var(--app-bg-input)] hover:bg-[var(--app-bg-hover)] border border-[var(--app-border-light)] px-2 py-1 rounded transition-colors"
+                            >
+                                <Plus className="w-3 h-3" /> 新增專用標籤
+                            </button>
+                        </div>
+
+                        {systemKeys.length === 0 ? (
+                            <div className="text-[10px] text-[var(--app-text-muted)] text-center py-4 bg-[var(--app-bg-base)] rounded border border-[var(--app-border-light)] border-dashed">
+                                尚無系統專用標籤
+                            </div>
+                        ) : (
+                            <div className="space-y-2 bg-[var(--app-bg-base)] p-2 sm:p-3 rounded-lg border border-[var(--app-border-base)] overflow-hidden">
+                                {systemKeys.map((item, i) => {
+                                    const hasKeyBrackets = /[\[\]]/.test(item.key || '');
+                                    const hasValueBrackets = /[\[\]]/.test(item.value || '');
+                                    return (
+                                        <div key={i} className={`flex items-center gap-1 w-full`}>
+                                            <div className={`flex items-center w-auto shrink-0`}>
+                                                <input 
+                                                    type="text" 
+                                                    value={item.key} 
+                                                    onChange={e => handleSystemChange(i, e.target.value.trim(), item.value)} 
+                                                    onBlur={handleBlur}
+                                                    className={`bg-[var(--app-bg-input)] text-xs border border-[var(--app-border-light)] rounded px-1.5 py-1 focus:outline-none focus:border-[var(--app-accent)] w-14 sm:w-20 ${hasKeyBrackets ? '!text-red-500 font-medium' : ''}`}
+                                                    placeholder="key"
+                                                />
+                                                <div className="text-xs font-mono text-[var(--app-text-muted)] ml-0.5 sm:ml-1">:</div>
+                                            </div>
+                                            <div className={`flex items-center flex-1 min-w-0`}>
+                                                <input 
+                                                    type="text" 
+                                                    value={item.value} 
+                                                    onChange={e => handleSystemChange(i, item.key, e.target.value)} 
+                                                    onBlur={handleBlur}
+                                                    className={`w-full min-w-0 bg-[var(--app-bg-input)] text-xs border border-[var(--app-border-light)] rounded px-1.5 py-1 focus:outline-none focus:border-[var(--app-accent)] ${hasValueBrackets ? '!text-red-500 font-medium' : ''}`}
+                                                    placeholder="value"
+                                                />
+                                            </div>
+                                            <button 
+                                                onClick={() => removeSystem(i)}
+                                                className={`p-1.5 text-[var(--app-text-muted)] hover:text-red-400 hover:bg-red-500/10 rounded transition-colors shrink-0`}
+                                            >
+                                                <Trash2 className="w-3.5 h-3.5" />
+                                            </button>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
         </div>
         
         {onClose && (

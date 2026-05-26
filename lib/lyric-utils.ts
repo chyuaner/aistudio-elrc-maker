@@ -69,8 +69,8 @@ export interface LrcMetadata {
 export function parseRawLyrics(text: string): { lines: LyricLine[], metadata: LrcMetadata } {
   const metadata: LrcMetadata = {};
   
-  // First, parse and extract all metadata tags from the entire string (allowing multi-line values)
-  const cleanLyricsText = text.replace(/\[([^:：\]]+)[:：]([\s\S]*?)\]/g, (match, rawKey, value) => {
+  // First, parse and extract all data tags from the entire string (allowing multi-line values and escaped brackets)
+  const cleanLyricsText = text.replace(/\[([^:：\]]+)[:：]((?:\\.|[^\]])*)\]/g, (match, rawKey, value) => {
     const trimmedKey = rawKey.trim();
     // If the key is purely digits, it's a timestamp (e.g. [01:23.45]), so we keep it as is
     if (/^\d+$/.test(trimmedKey)) {
@@ -83,9 +83,10 @@ export function parseRawLyrics(text: string): { lines: LyricLine[], metadata: Lr
     
     let val = value.trim();
     val = val.replace(/\\n/g, '\n');
+    val = val.replace(/\\\[/g, '[').replace(/\\\]/g, ']');
     metadata[finalKey] = val;
     
-    return ''; // Remove the metadata block from the text
+    return ''; // Remove the data block from the text
   });
 
   const lines = cleanLyricsText.split(/\r?\n/);
@@ -152,10 +153,11 @@ export function exportLrc(lines: LyricLine[], metadata?: LrcMetadata, isEnhanced
   
   if (!isSimple && metadata) {
     for (const [key, value] of Object.entries(metadata)) {
-      if (value) {
-        const encodedValue = value.replace(/\r?\n/g, '\\n');
-        lrc += `[${key}:${encodedValue}]\n`;
-      }
+       if (value) {
+         let encodedValue = value.replace(/\r?\n/g, '\\n');
+         encodedValue = encodedValue.replace(/\[/g, '\\[').replace(/\]/g, '\\]');
+         lrc += `[${key}:${encodedValue}]\n`;
+       }
     }
   }
   

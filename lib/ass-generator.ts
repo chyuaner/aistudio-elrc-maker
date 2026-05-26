@@ -213,7 +213,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 
   // 當歌曲資訊低於三行字的時候，再多空一行，讓整體往上移一行以增加美觀
   if (artistAlbum.length > 0 && artistAlbum.length < 3) {
-      artistAlbum.push(' ');
+      artistAlbum.push('\\h');
   }
 
   if (overlapsWithLyrics && artistAlbum.length > 0) {

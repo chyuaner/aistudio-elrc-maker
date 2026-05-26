@@ -140,20 +140,20 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
   if (currentPara.length > 0) paragraphs.push(currentPara);
   
   // 歌曲前奏資訊計算
-  let infoStart = 0;
+  let infoStart = 1;
   let infoEnd = DEFAULT_INFO_STAY_TIME;
   if (!options.customStartInfoTime) {
     if (paragraphs.length > 0 && paragraphs[0][0].start! < DEFAULT_INFO_STAY_TIME) {
        const firstParaEnd = getLineEndTime(paragraphs[0][paragraphs[0].length - 1]);
        if (firstParaEnd > 60) {
-           infoStart = 0;
+           infoStart = 1;
            infoEnd = DEFAULT_INFO_STAY_TIME;
        } else {
            infoStart = firstParaEnd;
            infoEnd = firstParaEnd + DEFAULT_INFO_STAY_TIME;
        }
     } else {
-       infoStart = 0;
+       infoStart = 1;
        infoEnd = Math.min(DEFAULT_INFO_STAY_TIME, paragraphs.length > 0 ? paragraphs[0][0].start! : DEFAULT_INFO_STAY_TIME);
     }
   } else {

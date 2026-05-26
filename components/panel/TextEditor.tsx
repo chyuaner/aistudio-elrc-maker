@@ -326,8 +326,7 @@ export function TextEditor() {
     const textToParse = forceText !== undefined ? forceText : textRef.current;
     const parsed = parseRawLyrics(textToParse);
     let resultLines = parsed.lines;
-    setLrcMetadata(parsed.metadata);
-    commitLines(resultLines, "Edit Raw Lyrics");
+    commitLines(resultLines, "Edit Raw Lyrics", parsed.metadata);
 
     // Auto-detect if all timestamps are cleared, if so, reset the active index to 0
     const hasAnyTimestamps = resultLines.some(

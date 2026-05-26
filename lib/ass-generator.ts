@@ -85,7 +85,7 @@ Style: TopRight,${options.fontFamily},72,&H00FFFFFF,&H00FFFFFF,&H99000000,&H9900
 Style: BottomLeft,${options.fontFamily},${options.fontSize},${primaryAssColor},&H00FFFFFF,&H99000000,&H99000000,0,0,0,0,100,100,0,0,1,4,0,1,150,150,${50 + options.dualRowSpacing},0
 Style: BottomCenter,${options.fontFamily},${options.fontSize},${primaryAssColor},&H00FFFFFF,&H99000000,&H99000000,0,0,0,0,100,100,0,0,1,4,0,2,48,48,48,0
 Style: BottomRight,${options.fontFamily},${options.fontSize},${primaryAssColor},&H00FFFFFF,&H99000000,&H99000000,0,0,0,0,100,100,0,0,1,4,0,3,150,150,50,0
-Style: CenterInfo,${options.fontFamily},${options.infoFontSize || (options.fontSize - 20)},${primaryAssColor},&H00FFFFFF,&H99000000,&H99000000,0,0,0,0,100,100,0,0,1,4,0,5,48,48,48,0
+Style: CenterInfo,${options.fontFamily},${options.infoFontSize || (options.fontSize - 40)},${primaryAssColor},&H00FFFFFF,&H99000000,&H99000000,0,0,0,0,100,100,0,0,1,4,0,5,48,48,48,0
 `;
 
   let ass = `[Script Info]
@@ -149,8 +149,8 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
   // =========================================================================
   // 【請注意！手動微調 KTV 開始資訊位置與防重疊避讓邏輯】
   // =========================================================================
-  const titleSize = options.infoTitleFontSize || options.fontSize;
-  const detailFontSize = options.infoFontSize || (options.fontSize - 20);
+  const titleSize = options.infoTitleFontSize || (options.fontSize - 10);
+  const detailFontSize = options.infoFontSize || (options.fontSize - 40);
 
   // 1. 檢測「歌曲開始資訊」的顯示區間 [infoStart, infoEnd] 是否與音軌中的任何段落（歌詞）顯示區間重疊
   let overlapsWithLyrics = false;
@@ -203,7 +203,12 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
   if (options.songInfoArtist) artistAlbum.push(`{\\c&H00FF0000&}原唱：${options.songInfoArtist}`);
   if (options.songInfoAlbum) artistAlbum.push(`{\\c&H00FF0000&}專輯：${options.songInfoAlbum}`);
   if (options.songInfoCustom) {
-      artistAlbum.push(`{\\c&H00FF0000&}${options.songInfoCustom}`);
+      const customLines = options.songInfoCustom.split('\n');
+      customLines.forEach(line => {
+          if (line.trim()) {
+              artistAlbum.push(`{\\c&H00FF0000&}${line.trim()}`);
+          }
+      });
   }
 
   // 當歌曲資訊低於三行字的時候，再多空一行，讓整體往上移一行以增加美觀

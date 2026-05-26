@@ -24,12 +24,12 @@ export function KtvAssExport() {
     chorusColor: '#008000', // Green
     fontFamily: '微软雅黑',
     fontSize: 150, // Default for BottomLeft
-    infoFontSize: 130, // Default for CenterInfo (song info)
-    infoTitleFontSize: 150, // Default for red Title
-    songInfoTitle: lrcMetadata.ti || '',
-    songInfoArtist: lrcMetadata.ar || '',
-    songInfoAlbum: lrcMetadata.al || '',
-    songInfoCustom: '',
+    infoFontSize: 110, // Default for CenterInfo (song info, fontSize - 40)
+    infoTitleFontSize: 140, // Default for red Title (fontSize - 10)
+    songInfoTitle: lrcMetadata.kti || lrcMetadata.ti || '',
+    songInfoArtist: lrcMetadata.kar || lrcMetadata.ar || '',
+    songInfoAlbum: lrcMetadata.kal || lrcMetadata.al || '',
+    songInfoCustom: lrcMetadata.ko || '',
     customStartInfoTime: hasCustomTime,
     startInfoStartTime: parsedStart,
     startInfoEndTime: parsedEnd,
@@ -65,22 +65,32 @@ export function KtvAssExport() {
   };
   
   const handleImportFromTags = () => {
-     setOptions(o => ({
-       ...o,
-       songInfoTitle: metadata?.title || metadata?.rawTags?.TITLE || metadata?.rawTags?.title || '',
-       songInfoArtist: metadata?.artist || metadata?.rawTags?.ARTIST || metadata?.rawTags?.artist || '',
-       songInfoAlbum: metadata?.album || metadata?.rawTags?.ALBUM || metadata?.rawTags?.album || '',
-     }));
+     const title = metadata?.title || metadata?.rawTags?.TITLE || metadata?.rawTags?.title || '';
+     const artist = metadata?.artist || metadata?.rawTags?.ARTIST || metadata?.rawTags?.artist || '';
+     const album = metadata?.album || metadata?.rawTags?.ALBUM || metadata?.rawTags?.album || '';
+     const updated = {
+       ...options,
+       songInfoTitle: title,
+       songInfoArtist: artist,
+       songInfoAlbum: album
+     };
+     setOptions(updated);
+     syncToLrcMetadata(updated);
      showToast('已從音檔標籤匯入資訊');
   };
   
   const handleImportFromLrc = () => {
-     setOptions(o => ({
-       ...o,
-       songInfoTitle: lrcMetadata.ti || '',
-       songInfoArtist: lrcMetadata.ar || '',
-       songInfoAlbum: lrcMetadata.al || '',
-     }));
+     const title = lrcMetadata.ti || '';
+     const artist = lrcMetadata.ar || '';
+     const album = lrcMetadata.al || '';
+     const updated = {
+       ...options,
+       songInfoTitle: title,
+       songInfoArtist: artist,
+       songInfoAlbum: album
+     };
+     setOptions(updated);
+     syncToLrcMetadata(updated);
      showToast('已從 LRC 屬性匯入資訊');
   };
 
@@ -103,8 +113,34 @@ export function KtvAssExport() {
       delete updatedMeta.TTE;
       delete updatedMeta.tte;
     }
+
+    // 同步自訂歌曲資訊欄位 (kti, kar, kal, ko)
+    if (newOptions.songInfoTitle && newOptions.songInfoTitle !== (lrcMetadata.ti || '')) {
+      updatedMeta.kti = newOptions.songInfoTitle;
+    } else {
+      delete updatedMeta.kti;
+    }
+
+    if (newOptions.songInfoArtist && newOptions.songInfoArtist !== (lrcMetadata.ar || '')) {
+      updatedMeta.kar = newOptions.songInfoArtist;
+    } else {
+      delete updatedMeta.kar;
+    }
+
+    if (newOptions.songInfoAlbum && newOptions.songInfoAlbum !== (lrcMetadata.al || '')) {
+      updatedMeta.kal = newOptions.songInfoAlbum;
+    } else {
+      delete updatedMeta.kal;
+    }
+
+    if (newOptions.songInfoCustom) {
+      updatedMeta.ko = newOptions.songInfoCustom;
+    } else {
+      delete updatedMeta.ko;
+    }
+
     lastCommittedMetaRef.current = updatedMeta;
-    commitLrcMetadata(updatedMeta, 'Update Custom Info Time Props');
+    commitLrcMetadata(updatedMeta, 'Update Custom KTV Info and Times');
   };
 
   const [startInput, setStartInput] = useState('');
@@ -223,18 +259,24 @@ export function KtvAssExport() {
       const extStart = hasExtCustom ? (parseSeconds(extTT) || 1) : 1;
       const extEnd = extTTE ? (parseSeconds(extTTE) || (extStart + 6)) : (extStart + 6);
 
+      const loadedTitle = lrcMetadata.kti || lrcMetadata.ti || '';
+      const loadedArtist = lrcMetadata.kar || lrcMetadata.ar || '';
+      const loadedAlbum = lrcMetadata.kal || lrcMetadata.al || '';
+      const loadedCustom = lrcMetadata.ko || '';
+
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setOptions(o => ({
         ...o,
-        songInfoTitle: o.songInfoTitle || lrcMetadata.ti || '',
-        songInfoArtist: o.songInfoArtist || lrcMetadata.ar || '',
-        songInfoAlbum: o.songInfoAlbum || lrcMetadata.al || '',
+        songInfoTitle: loadedTitle,
+        songInfoArtist: loadedArtist,
+        songInfoAlbum: loadedAlbum,
+        songInfoCustom: loadedCustom,
         customStartInfoTime: extTT !== undefined ? hasExtCustom : o.customStartInfoTime,
         startInfoStartTime: extTT !== undefined ? extStart : o.startInfoStartTime,
         startInfoEndTime: extTT !== undefined ? extEnd : o.startInfoEndTime,
       }));
     }
-  }, [lines.length, lrcMetadata, lrcMetadata.ti, lrcMetadata.ar, lrcMetadata.al, lrcMetadata.TT, lrcMetadata.TTE, lrcMetadata.tt, lrcMetadata.tte]);
+  }, [lines.length, lrcMetadata, lrcMetadata.ti, lrcMetadata.ar, lrcMetadata.al, lrcMetadata.kti, lrcMetadata.kar, lrcMetadata.kal, lrcMetadata.ko, lrcMetadata.TT, lrcMetadata.TTE, lrcMetadata.tt, lrcMetadata.tte]);
 
   return (
     <div className="flex flex-col h-full bg-[var(--app-bg-main)] overflow-hidden">
@@ -257,8 +299,8 @@ export function KtvAssExport() {
                              setOptions({
                                ...options,
                                fontSize: newSize,
-                               infoFontSize: (options.infoFontSize || 130) + diff,
-                               infoTitleFontSize: (options.infoTitleFontSize || 150) + diff
+                               infoFontSize: newSize - 40,
+                               infoTitleFontSize: newSize - 10
                              });
                           }} className="w-20 bg-[var(--app-bg-input)] border border-[var(--app-border-input)] rounded px-2 py-1.5 focus:outline-none focus:border-[var(--app-accent)] text-center font-mono" title="Font Size" />
                       </div>
@@ -359,16 +401,32 @@ export function KtvAssExport() {
                       
                       <div className="grid grid-cols-[60px_1fr] items-center gap-2">
                           <span className="text-[var(--app-text-muted)] text-[10px] text-right">標題</span>
-                          <input type="text" value={options.songInfoTitle} onChange={e => setOptions({...options, songInfoTitle: e.target.value})} className="bg-[var(--app-bg-panel)] border border-[var(--app-border-input)] rounded px-2 py-1 focus:outline-none focus:border-[var(--app-accent)] text-xs text-[var(--app-text-primary)]" />
+                          <input type="text" value={options.songInfoTitle} onChange={e => {
+                             const updated = { ...options, songInfoTitle: e.target.value };
+                             setOptions(updated);
+                             syncToLrcMetadata(updated);
+                          }} className="bg-[var(--app-bg-panel)] border border-[var(--app-border-input)] rounded px-2 py-1 focus:outline-none focus:border-[var(--app-accent)] text-xs text-[var(--app-text-primary)]" />
                           
                           <span className="text-[var(--app-text-muted)] text-[10px] text-right">原唱</span>
-                          <input type="text" value={options.songInfoArtist} onChange={e => setOptions({...options, songInfoArtist: e.target.value})} className="bg-[var(--app-bg-panel)] border border-[var(--app-border-input)] rounded px-2 py-1 focus:outline-none focus:border-[var(--app-accent)] text-xs text-[var(--app-text-primary)]" />
+                          <input type="text" value={options.songInfoArtist} onChange={e => {
+                             const updated = { ...options, songInfoArtist: e.target.value };
+                             setOptions(updated);
+                             syncToLrcMetadata(updated);
+                          }} className="bg-[var(--app-bg-panel)] border border-[var(--app-border-input)] rounded px-2 py-1 focus:outline-none focus:border-[var(--app-accent)] text-xs text-[var(--app-text-primary)]" />
 
                           <span className="text-[var(--app-text-muted)] text-[10px] text-right">專輯</span>
-                          <input type="text" value={options.songInfoAlbum} onChange={e => setOptions({...options, songInfoAlbum: e.target.value})} className="bg-[var(--app-bg-panel)] border border-[var(--app-border-input)] rounded px-2 py-1 focus:outline-none focus:border-[var(--app-accent)] text-xs text-[var(--app-text-primary)]" />
+                          <input type="text" value={options.songInfoAlbum} onChange={e => {
+                             const updated = { ...options, songInfoAlbum: e.target.value };
+                             setOptions(updated);
+                             syncToLrcMetadata(updated);
+                          }} className="bg-[var(--app-bg-panel)] border border-[var(--app-border-input)] rounded px-2 py-1 focus:outline-none focus:border-[var(--app-accent)] text-xs text-[var(--app-text-primary)]" />
 
-                          <span className="text-[var(--app-text-muted)] text-[10px] text-right">自訂內容</span>
-                          <input type="text" value={options.songInfoCustom} onChange={e => setOptions({...options, songInfoCustom: e.target.value})} placeholder="例如：作詞：XXX / 作曲：OOO" className="bg-[var(--app-bg-panel)] border border-[var(--app-border-input)] rounded px-2 py-1 focus:outline-none focus:border-[var(--app-accent)] text-xs text-[var(--app-text-primary)] placeholder:text-[var(--app-text-muted)] mb-1" />
+                          <span className="text-[var(--app-text-muted)] text-[10px] text-right self-start mt-1">自訂內容</span>
+                          <textarea value={options.songInfoCustom} onChange={e => {
+                             const updated = { ...options, songInfoCustom: e.target.value };
+                             setOptions(updated);
+                             syncToLrcMetadata(updated);
+                          }} placeholder="例如：&#10;作詞：XXX&#10;作曲：OOO" rows={3} className="bg-[var(--app-bg-panel)] border border-[var(--app-border-input)] rounded px-2 py-1 focus:outline-none focus:border-[var(--app-accent)] text-xs text-[var(--app-text-primary)] placeholder:text-[var(--app-text-muted)] mb-1 resize-y" />
                       </div>
 
                       <div className="flex items-center gap-2 border-t border-[var(--app-border-light)] pt-2 mt-1">

@@ -131,7 +131,7 @@ interface EditorContextType {
   lines: LyricLine[];
   setLines: (payload: LyricLine[] | ((prev: LyricLine[]) => LyricLine[])) => void;
   resetHistory: (payloadLines: LyricLine[] | ((prev: LyricLine[]) => LyricLine[]), payloadMetadata?: LrcMetadata) => void;
-  commitLines: (payload: LyricLine[] | ((prev: LyricLine[]) => LyricLine[]), actionName?: string) => void;
+  commitLines: (payload: LyricLine[] | ((prev: LyricLine[]) => LyricLine[]), actionName?: string, payloadMetadata?: LrcMetadata) => void;
   undo: (steps?: number) => void;
   redo: (steps?: number) => void;
   shiftTime: (offsetSec: number) => void;
@@ -430,8 +430,8 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
     setAutoScrollEnabled(hasAnyTimestamps);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [historyState.present.lines]);
-  const commitLines = (payload: LyricLine[] | ((prev: LyricLine[]) => LyricLine[]), actionName?: string) => {
-    dispatchLines({ type: 'COMMIT', payloadLines: payload, actionName });
+  const commitLines = (payload: LyricLine[] | ((prev: LyricLine[]) => LyricLine[]), actionName?: string, payloadMetadata?: LrcMetadata) => {
+    dispatchLines({ type: 'COMMIT', payloadLines: payload, actionName, payloadMetadata });
   };
   const commitLrcMetadata = (payload: LrcMetadata | ((prev: LrcMetadata) => LrcMetadata), actionName?: string) => {
     dispatchLines({ type: 'COMMIT', payloadMetadata: payload, actionName: actionName || 'Update Metadata' });

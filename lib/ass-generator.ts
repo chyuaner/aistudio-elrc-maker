@@ -31,8 +31,8 @@ const DEFAULT_INFO_STAY_TIME = 6.0;
 // 【核心設計參數：雙層模擬外框粗細調整】
 // =========================================================================
 // 如果需要調整之後所有白色外框的粗細 (不管是唱詞還是歌曲開始資訊)，
-// 請直接修改此處的數值 (單位為像素，預設為 4)。數值越大外框越粗，反之越細。
-const SIMULATED_OUTLINE_WIDTH = 4;
+// 請直接修改此處的數值 (單位為像素，預設為 3)。數值越大外框越粗，反之越細。
+const SIMULATED_OUTLINE_WIDTH = 3;
 
 function formatAssTime(timeInSeconds: number) {
   const h = Math.floor(timeInSeconds / 3600);

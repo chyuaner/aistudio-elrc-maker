@@ -179,11 +179,35 @@ export function LrcMetadataEditor({ onClose }: { onClose?: () => void }) {
   }, [lrcMetadata]);
 
   const applyChanges = (currentFormData: LrcMetadata, currentCustomKeys: typeof customKeys, shouldCommit = false) => {
-    const finalData: LrcMetadata = {};
+    // Preserve existing tags from lrcMetadata to prevent any missing tags
+    const finalData: LrcMetadata = { ...lrcMetadata };
     const predefinedKeys = ['ti', 'ar', 'al', 'au', 'by', 'offset', 're', 've', 'length'];
+    
+    // Clear all predefined keys to respect user deletions
+    predefinedKeys.forEach(k => {
+        delete finalData[k];
+    });
+    
+    // Set updated predefined keys
     predefinedKeys.forEach(k => {
         if (currentFormData[k]) finalData[k] = currentFormData[k];
     });
+
+    // We also want to clear any old custom keys that are no longer in currentCustomKeys
+    // Let's identify which custom keys are active in currentCustomKeys edit list
+    const activeCustomKeys = new Set(currentCustomKeys.map(ck => ck.key).filter(Boolean));
+    
+    // Predefined keys and special KTV tags should not be blindly deleted as simple custom keys:
+    const predefinedAndSpecial = [...predefinedKeys, 'kti', 'kar', 'kal', 'ko', 'TT', 'tt', 'TTE', 'tte'];
+    
+    // Delete any custom keys that are not active anymore (meaning the user explicitly deleted them in LrcMetadataEditor)
+    for (const key of Object.keys(finalData)) {
+        if (!predefinedAndSpecial.includes(key) && !activeCustomKeys.has(key)) {
+            delete finalData[key];
+        }
+    }
+    
+    // Apply custom keys from currentCustomKeys
     currentCustomKeys.forEach(({ key, value }) => {
         if (key && value) finalData[key] = value;
     });
@@ -196,7 +220,8 @@ export function LrcMetadataEditor({ onClose }: { onClose?: () => void }) {
   };
 
   const getAutoFilledData = (prev: LrcMetadata, overwrite: boolean): LrcMetadata => {
-      const newData = { ...prev };
+      // Start with lrcMetadata as baseline to prevent missing properties (e.g. on mount race conditions)
+      const newData = { ...lrcMetadata, ...prev };
       
       if (metadata) {
           if (overwrite || !newData.ti) newData.ti = metadata.title || newData.ti;

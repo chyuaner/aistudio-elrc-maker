@@ -218,14 +218,16 @@ export function TextEditor() {
   };
 
   useEffect(() => {
-    // Initial sync from lines to text if not dirty
-    if (!isDirty.current) {
+    // Sync from lines to text if not dirty OR if the textarea does not have focus
+    const isFocused = typeof document !== 'undefined' && document.activeElement === textareaRef.current;
+    if (!isDirty.current || !isFocused) {
       let newText = exportLrc(lines, lrcMetadata, true, false); // force ELRC
 
       if (text !== newText) {
         // eslint-disable-next-line react-hooks/set-state-in-effect
         setText(newText || "");
         textRef.current = newText || "";
+        isDirty.current = false; // Reset dirty state since we cleanly synchronized
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

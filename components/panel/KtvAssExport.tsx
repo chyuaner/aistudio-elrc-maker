@@ -5,10 +5,18 @@ import { useEditor } from '@/components/base/EditorProvider';
 import { generateAss, AssOptions } from '@/lib/ass-generator';
 import { Download, SlidersHorizontal, Settings2, Image as ImageIcon } from 'lucide-react';
 import { RawTextDisplay } from '@/components/panel/RawTextDisplay';
+import { formatTime, parseSeconds } from '@/lib/lyric-utils';
 
 export function KtvAssExport() {
-  const { lines, lrcMetadata, audioFileName, dualLineGapSec, setDualLineGapSec, metadata, showToast } = useEditor();
+  const { lines, lrcMetadata, commitLrcMetadata, audioFileName, dualLineGapSec, setDualLineGapSec, metadata, showToast } = useEditor();
   
+  // 檢查是否有自訂歌曲開始資訊的時間戳 (TT / TTE)
+  const initialTT = lrcMetadata.TT || lrcMetadata.tt;
+  const initialTTE = lrcMetadata.TTE || lrcMetadata.tte;
+  const hasCustomTime = !!initialTT;
+  const parsedStart = hasCustomTime ? (parseSeconds(initialTT) || 1) : 1;
+  const parsedEnd = initialTTE ? (parseSeconds(initialTTE) || (parsedStart + 6)) : (parsedStart + 6);
+
   const [options, setOptions] = useState<Omit<AssOptions, 'interludeThreshold' | 'fadeInOutTime'>>({
     primaryColor: '#0000FF', // Blue
     color2: '#FF0000', // Red
@@ -22,9 +30,9 @@ export function KtvAssExport() {
     songInfoArtist: lrcMetadata.ar || '',
     songInfoAlbum: lrcMetadata.al || '',
     songInfoCustom: '',
-    customStartInfoTime: false,
-    startInfoStartTime: 1,
-    startInfoEndTime: 7,
+    customStartInfoTime: hasCustomTime,
+    startInfoStartTime: parsedStart,
+    startInfoEndTime: parsedEnd,
     dualRowSpacing: 160,
     nextTriggerIndex: 1,
     row2FadeoutMode: 'immediate',
@@ -76,8 +84,126 @@ export function KtvAssExport() {
      showToast('已從 LRC 屬性匯入資訊');
   };
 
+  const lastCommittedMetaRef = useRef<any>(null);
+
+  const syncToLrcMetadata = (newOptions: typeof options) => {
+    const updatedMeta = { ...lrcMetadata };
+    if (newOptions.customStartInfoTime) {
+      updatedMeta.TT = formatTime(newOptions.startInfoStartTime, true);
+      const isExactly6s = Math.abs(newOptions.startInfoEndTime - (newOptions.startInfoStartTime + 6)) < 0.005;
+      if (isExactly6s) {
+        delete updatedMeta.TTE;
+        delete updatedMeta.tte;
+      } else {
+        updatedMeta.TTE = formatTime(newOptions.startInfoEndTime, true);
+      }
+    } else {
+      delete updatedMeta.TT;
+      delete updatedMeta.tt;
+      delete updatedMeta.TTE;
+      delete updatedMeta.tte;
+    }
+    lastCommittedMetaRef.current = updatedMeta;
+    commitLrcMetadata(updatedMeta, 'Update Custom Info Time Props');
+  };
+
+  const [startInput, setStartInput] = useState('');
+  const [endInput, setEndInput] = useState('');
+
+  // 當外部/內部 options 時間改變時，同步其字串格式至精準格式 mm:ss.mmm
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setStartInput(formatTime(options.startInfoStartTime, true));
+  }, [options.startInfoStartTime]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setEndInput(formatTime(options.startInfoEndTime, true));
+  }, [options.startInfoEndTime]);
+
+  const parsePreciseTimeString = (val: string): number | null => {
+    const regex = /^(\d+):(\d{1,2})(?:\.(\d+))?$/;
+    const m = val.trim().match(regex);
+    if (m) {
+      const min = parseInt(m[1], 10);
+      const sec = parseInt(m[2], 10);
+      const msStr = m[3] || '0';
+      const ms = parseFloat(`0.${msStr}`);
+      return min * 60 + sec + ms;
+    }
+    const secValue = parseFloat(val.trim());
+    if (!isNaN(secValue) && !val.includes(':')) {
+      return secValue;
+    }
+    return null;
+  };
+
+  const handleStartInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setStartInput(val);
+    
+    const parsed = parsePreciseTimeString(val);
+    if (parsed !== null) {
+      const newEnd = Number((parsed + 6).toFixed(3));
+      const updated = {
+        ...options,
+        startInfoStartTime: parsed,
+        startInfoEndTime: newEnd
+      };
+      setOptions(updated);
+      syncToLrcMetadata(updated);
+    }
+  };
+
+  const handleStartInputBlur = () => {
+    const parsed = parsePreciseTimeString(startInput);
+    if (parsed !== null) {
+      const newEnd = Number((parsed + 6).toFixed(3));
+      const updated = {
+        ...options,
+        startInfoStartTime: parsed,
+        startInfoEndTime: newEnd
+      };
+      setOptions(updated);
+      syncToLrcMetadata(updated);
+    } else {
+      setStartInput(formatTime(options.startInfoStartTime, true));
+    }
+  };
+
+  const handleEndInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setEndInput(val);
+    
+    const parsed = parsePreciseTimeString(val);
+    if (parsed !== null) {
+      const updated = {
+        ...options,
+        startInfoEndTime: parsed
+      };
+      setOptions(updated);
+      syncToLrcMetadata(updated);
+    }
+  };
+
+  const handleEndInputBlur = () => {
+    const parsed = parsePreciseTimeString(endInput);
+    if (parsed !== null) {
+      const updated = {
+        ...options,
+        startInfoEndTime: parsed
+      };
+      setOptions(updated);
+      syncToLrcMetadata(updated);
+    } else {
+      setEndInput(formatTime(options.startInfoEndTime, true));
+    }
+  };
+
   // Sync state if metadata changed externally and we haven't touched it yet, or clear on lyrics close
   useEffect(() => {
+    if (lastCommittedMetaRef.current === lrcMetadata) return;
+
     if (lines.length === 0) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setOptions(o => ({
@@ -86,17 +212,29 @@ export function KtvAssExport() {
         songInfoArtist: '',
         songInfoAlbum: '',
         songInfoCustom: '',
+        customStartInfoTime: false,
+        startInfoStartTime: 1,
+        startInfoEndTime: 7,
       }));
     } else {
+      const extTT = lrcMetadata.TT || lrcMetadata.tt;
+      const extTTE = lrcMetadata.TTE || lrcMetadata.tte;
+      const hasExtCustom = !!extTT;
+      const extStart = hasExtCustom ? (parseSeconds(extTT) || 1) : 1;
+      const extEnd = extTTE ? (parseSeconds(extTTE) || (extStart + 6)) : (extStart + 6);
+
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setOptions(o => ({
         ...o,
         songInfoTitle: o.songInfoTitle || lrcMetadata.ti || '',
         songInfoArtist: o.songInfoArtist || lrcMetadata.ar || '',
         songInfoAlbum: o.songInfoAlbum || lrcMetadata.al || '',
+        customStartInfoTime: extTT !== undefined ? hasExtCustom : o.customStartInfoTime,
+        startInfoStartTime: extTT !== undefined ? extStart : o.startInfoStartTime,
+        startInfoEndTime: extTT !== undefined ? extEnd : o.startInfoEndTime,
       }));
     }
-  }, [lines.length, lrcMetadata.ti, lrcMetadata.ar, lrcMetadata.al]);
+  }, [lines.length, lrcMetadata, lrcMetadata.ti, lrcMetadata.ar, lrcMetadata.al, lrcMetadata.TT, lrcMetadata.TTE, lrcMetadata.tt, lrcMetadata.tte]);
 
   return (
     <div className="flex flex-col h-full bg-[var(--app-bg-main)] overflow-hidden">
@@ -235,24 +373,21 @@ export function KtvAssExport() {
 
                       <div className="flex items-center gap-2 border-t border-[var(--app-border-light)] pt-2 mt-1">
                           <label className="flex items-center gap-1.5 cursor-pointer text-[10px] text-[var(--app-text-muted)] hover:text-[var(--app-text-primary)] transition-colors select-none">
-                              <input type="checkbox" checked={options.customStartInfoTime} onChange={e => setOptions({...options, customStartInfoTime: e.target.checked})} className="accent-[var(--app-accent)]" />
+                              <input type="checkbox" checked={options.customStartInfoTime} onChange={e => {
+                                 const checked = e.target.checked;
+                                 const updated = { ...options, customStartInfoTime: checked };
+                                 setOptions(updated);
+                                 syncToLrcMetadata(updated);
+                              }} className="accent-[var(--app-accent)]" />
                               <span>特殊自訂顯示時間戳</span>
                           </label>
                       </div>
 
                       {options.customStartInfoTime && (
                          <div className="flex items-center gap-2 pl-[60px] animate-fade-in">
-                            <input type="number" step="0.1" value={options.startInfoStartTime} onChange={e => {
-                               const newStart = parseFloat(e.target.value) || 0;
-                               setOptions({
-                                 ...options,
-                                 startInfoStartTime: newStart,
-                                 startInfoEndTime: Number((newStart + 6).toFixed(1))
-                               });
-                            }} className="w-16 bg-[var(--app-bg-panel)] border border-[var(--app-border-input)] rounded px-2 py-1 text-xs text-[var(--app-text-primary)] focus:outline-none focus:border-[var(--app-accent)] text-center font-mono" />
+                            <input type="text" value={startInput} onChange={handleStartInputChange} onBlur={handleStartInputBlur} className="w-24 bg-[var(--app-bg-panel)] border border-[var(--app-border-input)] rounded px-2 py-1 text-xs text-[var(--app-text-primary)] focus:outline-none focus:border-[var(--app-accent)] text-center font-mono" title="Start Time" />
                             <span className="text-[var(--app-text-muted)]">~</span>
-                            <input type="number" step="0.1" value={options.startInfoEndTime} onChange={e => setOptions({...options, startInfoEndTime: parseFloat(e.target.value) || 0})} className="w-16 bg-[var(--app-bg-panel)] border border-[var(--app-border-input)] rounded px-2 py-1 text-xs text-[var(--app-text-primary)] focus:outline-none focus:border-[var(--app-accent)] text-center font-mono" />
-                            <span className="text-[10px] text-[var(--app-text-muted)]">秒</span>
+                            <input type="text" value={endInput} onChange={handleEndInputChange} onBlur={handleEndInputBlur} className="w-24 bg-[var(--app-bg-panel)] border border-[var(--app-border-input)] rounded px-2 py-1 text-xs text-[var(--app-text-primary)] focus:outline-none focus:border-[var(--app-accent)] text-center font-mono" title="End Time" />
                          </div>
                       )}
                    </div>

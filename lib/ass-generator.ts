@@ -24,8 +24,15 @@ export interface AssOptions {
   interludeBuffer: number;
 }
 
-// 內部控制參數定
+// 內部控制參數
 const DEFAULT_INFO_STAY_TIME = 6.0;
+
+// =========================================================================
+// 【核心設計參數：雙層模擬外框粗細調整】
+// =========================================================================
+// 如果需要調整之後所有白色外框的粗細 (不管是唱詞還是歌曲開始資訊)，
+// 請直接修改此處的數值 (單位為像素，預設為 4)。數值越大外框越粗，反之越細。
+const SIMULATED_OUTLINE_WIDTH = 4;
 
 function formatAssTime(timeInSeconds: number) {
   const h = Math.floor(timeInSeconds / 3600);
@@ -82,9 +89,9 @@ Style: Default,${options.fontFamily},20,&H00FFFFFF,&H000000FF,&H00000000,&H00000
 Style: TopLeft,${options.fontFamily},72,&H00FFFFFF,&H00FFFFFF,&H99000000,&H99000000,0,0,0,0,100,100,0,0,3,1.5,0,7,48,48,48,0
 Style: TopCenter,${options.fontFamily},72,&H00FFFFFF,&H00FFFFFF,&H99000000,&H99000000,0,0,0,0,100,100,0,0,3,1.5,0,8,48,48,48,0
 Style: TopRight,${options.fontFamily},72,&H00FFFFFF,&H00FFFFFF,&H99000000,&H99000000,0,0,0,0,100,100,0,0,3,1.5,0,9,48,48,48,0
-Style: BottomLeft,${options.fontFamily},${options.fontSize},${primaryAssColor},&H00FFFFFF,&H99000000,&H99000000,0,0,0,0,100,100,0,0,1,4,0,1,150,150,${50 + options.dualRowSpacing},0
-Style: BottomCenter,${options.fontFamily},${options.fontSize},${primaryAssColor},&H00FFFFFF,&H99000000,&H99000000,0,0,0,0,100,100,0,0,1,4,0,2,48,48,48,0
-Style: BottomRight,${options.fontFamily},${options.fontSize},${primaryAssColor},&H00FFFFFF,&H99000000,&H99000000,0,0,0,0,100,100,0,0,1,4,0,3,150,150,50,0
+Style: BottomLeft,${options.fontFamily},${options.fontSize},${primaryAssColor},&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,4,0,1,150,150,${50 + options.dualRowSpacing},0
+Style: BottomCenter,${options.fontFamily},${options.fontSize},${primaryAssColor},&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,4,0,2,48,48,48,0
+Style: BottomRight,${options.fontFamily},${options.fontSize},${primaryAssColor},&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,4,0,3,150,150,50,0
 Style: CenterInfo,${options.fontFamily},${options.infoFontSize || (options.fontSize - 40)},${primaryAssColor},&H00FFFFFF,&H99000000,&H99000000,0,0,0,0,100,100,0,0,1,4,0,5,48,48,48,0
 `;
 
@@ -222,16 +229,40 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
       titleY = Math.round(detailBottomY - detailHeight - 40 - (titleSize / 2));
   }
 
-  // 4. 產生紅色標題 Dialogue
+  const offsets = [
+    { dx: -SIMULATED_OUTLINE_WIDTH, dy: -SIMULATED_OUTLINE_WIDTH },
+    { dx: SIMULATED_OUTLINE_WIDTH, dy: -SIMULATED_OUTLINE_WIDTH },
+    { dx: -SIMULATED_OUTLINE_WIDTH, dy: SIMULATED_OUTLINE_WIDTH },
+    { dx: SIMULATED_OUTLINE_WIDTH, dy: SIMULATED_OUTLINE_WIDTH },
+  ];
+
+  // 4. 產生紅色標題 Dialogue (採用雙層構造實現白色模擬外框)
   if (options.songInfoTitle) {
-      const titleText = `{\\fad(${fadeMs},${fadeMs})\\an5\\pos(960,${titleY})\\fs${titleSize}\\c&H000000FF&\\b1}${options.songInfoTitle}{\\b0}`;
-      ass += `Dialogue: 10,${formatAssTime(infoStart)},${formatAssTime(infoEnd)},CenterInfo,,0,0,0,,${titleText}\n`;
+      // 外框層 (底層)：位移 4 個方向，顏色設為純白 &HFFFFFF&
+      offsets.forEach(({ dx, dy }) => {
+          const outlineTitleText = `{\\fad(${fadeMs},${fadeMs})\\an5\\pos(${960 + dx},${titleY + dy})\\fs${titleSize}\\c&HFFFFFF&\\bord0\\shad0\\b1}${options.songInfoTitle}{\\b0}`;
+          ass += `Dialogue: 10,${formatAssTime(infoStart)},${formatAssTime(infoEnd)},CenterInfo,,0,0,0,,${outlineTitleText}\n`;
+      });
+
+      // 核心層 (頂層)：疊在中央，層級設為 12，顏色維持為紅色 body
+      const coreTitleText = `{\\fad(${fadeMs},${fadeMs})\\an5\\pos(960,${titleY})\\fs${titleSize}\\c&H000000FF&\\bord0\\shad0\\b1}${options.songInfoTitle}{\\b0}`;
+      ass += `Dialogue: 12,${formatAssTime(infoStart)},${formatAssTime(infoEnd)},CenterInfo,,0,0,0,,${coreTitleText}\n`;
   }
 
-  // 5. 產生藍色歌曲資訊 Dialogue (底部往上排列，使用計算出的 detailBottomY)
+  // 5. 產生藍色歌曲資訊 Dialogue (底部往上排列，使用計算出的 detailBottomY，並採用雙層構造實現白色邊框)
   if (artistAlbum.length > 0) {
-      const detailText = `{\\fad(${fadeMs},${fadeMs})\\an2\\pos(960,${detailBottomY})\\fs${detailFontSize}}${artistAlbum.join('\\N')}`;
-      ass += `Dialogue: 10,${formatAssTime(infoStart)},${formatAssTime(infoEnd)},CenterInfo,,0,0,0,,${detailText}\n`;
+      // 藉由 replace 把 line 裡面的顏色變更為白色
+      const outlineArtistAlbum = artistAlbum.map(line => line.replace(/\\1?c&H[0-9A-Fa-f]+&/g, '\\c&HFFFFFF&'));
+
+      // 外框層 (底層)：位移 4 個方向，顏色變更為純白
+      offsets.forEach(({ dx, dy }) => {
+          const outlineText = `{\\fad(${fadeMs},${fadeMs})\\an2\\pos(${960 + dx},${detailBottomY + dy})\\fs${detailFontSize}\\bord0\\shad0}${outlineArtistAlbum.join('\\N')}`;
+          ass += `Dialogue: 10,${formatAssTime(infoStart)},${formatAssTime(infoEnd)},CenterInfo,,0,0,0,,${outlineText}\n`;
+      });
+
+      // 核心層 (頂層)：疊在最中央，層級設為 12，維持原來的藍色/自訂主體顏色
+      const detailText = `{\\fad(${fadeMs},${fadeMs})\\an2\\pos(960,${detailBottomY})\\fs${detailFontSize}\\bord0\\shad0}${artistAlbum.join('\\N')}`;
+      ass += `Dialogue: 12,${formatAssTime(infoStart)},${formatAssTime(infoEnd)},CenterInfo,,0,0,0,,${detailText}\n`;
   }
   // =========================================================================
 
@@ -307,91 +338,78 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
       }
 
       // 針對段落內的每行歌詞進行處理
+      const lineDisplayStarts: number[] = [];
+      const lineDisplayEnds: number[] = [];
+
       for (let i = 0; i < p.length; i++) {
-         const line = p[i];
-         // 判斷該段落最後一句是否為奇數行置中
          const lastIsCentered = p.length % 2 !== 0 && p.length >= 3;
          const isLast = i === p.length - 1;
          const isCentered = isLast && lastIsCentered;
 
-         const isSingleLine = p.length === 1;
-         const isReallyCentered = isCentered || isSingleLine;
-
-         // 決定雙行樣式
-         const row = isReallyCentered ? 2 : ((i % 2 === 0) ? 1 : 2);
-         const style = isReallyCentered ? 'BottomCenter' : (row === 1 ? 'BottomLeft' : 'BottomRight');
-
-         let displayStart = blockDisplayStart;
+         let start = blockDisplayStart;
          if (isCentered) {
-            // 如果是最後一句置中的，等前一句唱完才出現
-            const prevLine = p[i - 1];
-            displayStart = getLineEndTime(prevLine);
+            start = getLineEndTime(p[i - 1]);
          } else if (i >= 2) {
             if (i % 2 === 0) {
-               // 第一排 (偶數句) 換場：等下一句 (前排, 即 i-1) 唱到第2個字時切換
                const prevLine = p[i - 1];
                const trigIdx = Math.min(options.nextTriggerIndex, prevLine.words.length - 1);
                const trigWord = prevLine.words[trigIdx];
-               displayStart = (trigWord && trigWord.start !== null) ? trigWord.start : getLineEndTime(prevLine);
+               start = (trigWord && trigWord.start !== null) ? trigWord.start : getLineEndTime(prevLine);
             } else {
-               // 第二排 (奇數句) 換場：等自己上一句同排的字 (即 i-2) 唱完後立刻切換
                const prevSameRowLine = p[i - 2];
-               displayStart = getLineEndTime(prevSameRowLine);
+               start = getLineEndTime(prevSameRowLine);
             }
          }
+         lineDisplayStarts.push(start);
+      }
 
-         let displayEnd = truncatedBlockEnd;
-         
+      for (let i = 0; i < p.length; i++) {
+         const lastIsCentered = p.length % 2 !== 0 && p.length >= 3;
+         const isLast = i === p.length - 1;
+         const isCentered = isLast && lastIsCentered;
+         const isSingleLine = p.length === 1;
+         const isReallyCentered = isCentered || isSingleLine;
+
+         let end = truncatedBlockEnd;
          if (isReallyCentered) {
-            // 最後一句置中的句，一直留到段落結束
-            displayEnd = truncatedBlockEnd;
+            end = truncatedBlockEnd;
          } else if (lastIsCentered && i >= p.length - 3 && i !== p.length - 1) {
-            // 如果接下來有最後一句置中的情況：
-            // p.length - 2 (也就是第二句，row 2) 以及 p.length - 3 (第一句，row 1)
-            // 這兩句都應該在「最後置中句」出現時消失！也就是前一句唱完時結束
-            const prevLineToTarget = p[p.length - 2];
-            displayEnd = getLineEndTime(prevLineToTarget);
+            end = getLineEndTime(p[p.length - 2]);
          } else if (i < p.length - 2) {
             if (i % 2 === 0) {
-               // 第一排 (偶數句) 消失：等「下一句」唱到第2個字時被切掉
-               const nextLine = p[i + 1];
-               const trigIdx = Math.min(options.nextTriggerIndex, nextLine.words.length - 1);
-               const trigWord = nextLine.words[trigIdx];
-               const trigTime = (trigWord && trigWord.start !== null) ? trigWord.start : getLineEndTime(nextLine);
-               displayEnd = trigTime;
+               end = lineDisplayStarts[i + 2];
             } else {
-               if (options.row2FadeoutMode === 'delayed') {
-                   // 第二排 (奇數句) 消失：等下一句 (第一排) 唱到第2個字時才消失
-                   const nextLine = p[i + 1];
-                   const trigIdx = Math.min(options.nextTriggerIndex, nextLine.words.length - 1);
-                   const trigWord = nextLine.words[trigIdx];
-                   const trigTime = (trigWord && trigWord.start !== null) ? trigWord.start : getLineEndTime(nextLine);
-                   displayEnd = trigTime;
+               if (options.row2FadeoutMode === 'immediate') {
+                  end = getLineEndTime(p[i]);
                } else {
-                   // 第二排 (奇數句) 消失：自己唱完後立刻消失被切走
-                   const currLine = p[i];
-                   displayEnd = getLineEndTime(currLine);
+                  end = lineDisplayStarts[i + 2];
                }
             }
          }
-         
-         if (displayEnd <= displayStart) {
-            displayEnd = displayStart + 1;
-         }
+         lineDisplayEnds.push(end);
+      }
 
-         // 前兩行套用淡入，最後段落結尾套用淡出
-         let fadeIn = (i === 0 || i === 1) ? fadeMs : 0;
-         let fadeOut = 0;
-         if (lastIsCentered && i === p.length - 1) {
-             fadeOut = fadeMs;
-         } else if (!lastIsCentered && (i === p.length - 1 || i === p.length - 2)) {
-             fadeOut = fadeMs;
-         } else if (isSingleLine) {
-             fadeOut = fadeMs;
-         }
+      for (let i = 0; i < p.length; i++) {
+         const line = p[i];
+         const displayStart = lineDisplayStarts[i];
+         const displayEnd = lineDisplayEnds[i];
+
+         const lastIsCentered = p.length % 2 !== 0 && p.length >= 3;
+         const isLast = i === p.length - 1;
+         const isCentered = isLast && lastIsCentered;
+         const isSingleLine = p.length === 1;
+         const isReallyCentered = isCentered || isSingleLine;
+
+         const row = isReallyCentered ? 2 : ((i % 2 === 0) ? 1 : 2);
+         const style = isReallyCentered ? 'BottomCenter' : (row === 1 ? 'BottomLeft' : 'BottomRight');
+
+         const fadeIn = (displayStart === blockDisplayStart) ? fadeMs : 0;
+         const fadeOut = (displayEnd === truncatedBlockEnd) ? fadeMs : 0;
 
          let karaokeStr = '';
+         let karaokeKoStr = '';
          const validWords = line.words.filter(w => w.text.trim().length > 0 || w.text === ' ');
+         
          for (let wIdx = 0; wIdx < validWords.length; wIdx++) {
             const w = validWords[wIdx];
             
@@ -400,30 +418,62 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
                const nextW = validWords[wIdx + 1];
                const nextStart = nextW ? nextW.start : line.end;
                if (nextStart !== null && nextStart > w.start) {
-                   durCs = Math.round((nextStart - w.start) * 100);
+                  durCs = Math.round((nextStart - w.start) * 100);
                } else {
-                   durCs = 30; // 預設 300ms 保護機制
+                  durCs = 30;
                }
             } else {
                durCs = 30;
             }
+
             if (!w.text.trim()) {
                karaokeStr += `{\\k${durCs}}${w.text}`; 
+               karaokeKoStr += `{\\k${durCs}}${w.text}`; 
             } else {
                karaokeStr += `{\\kf${durCs}}${w.text}`;
+               karaokeKoStr += `{\\ko${durCs}}${w.text}`;
             }
          }
 
-         // 句首空白等待，確保 KTV 變色的精準性
          const startDelaySec = (line.start || displayStart) - displayStart;
          if (startDelaySec > 0) {
-            karaokeStr = `{\\kf${Math.round(startDelaySec * 100)}}${karaokeStr}`;
+            const startDelayCs = Math.round(startDelaySec * 100);
+            karaokeStr = `{\\kf${startDelayCs}}${karaokeStr}`;
+            karaokeKoStr = `{\\ko${startDelayCs}}${karaokeKoStr}`;
          }
 
-         ass += `Dialogue: ${row},${formatAssTime(displayStart)},${formatAssTime(displayEnd)},${style},,0,0,0,,{\\fad(${fadeIn},${fadeOut})}${karaokeStr}\n`;
+         // 核心定位座標計算：解析目前樣式對應的對齊與位置
+         let alignment = 2; // Default BottomCenter
+         let baseX = 960;
+         let baseY = 1080 - 48; // MarginV is 48
+
+         if (style === 'BottomLeft') {
+            alignment = 1;
+            baseX = 150; // MarginL is 150
+            baseY = 1080 - (50 + options.dualRowSpacing);
+         } else if (style === 'BottomRight') {
+            alignment = 3;
+            baseX = 1920 - 150; // MarginR is 150
+            baseY = 1080 - 50; // MarginV is 50
+         }
+
+         // 透過 4 個方向的微調偏移值來模擬完美勻稱的外框
+         const karaokeOffsets = [
+            { dx: -SIMULATED_OUTLINE_WIDTH, dy: -SIMULATED_OUTLINE_WIDTH },
+            { dx: SIMULATED_OUTLINE_WIDTH, dy: -SIMULATED_OUTLINE_WIDTH },
+            { dx: -SIMULATED_OUTLINE_WIDTH, dy: SIMULATED_OUTLINE_WIDTH },
+            { dx: SIMULATED_OUTLINE_WIDTH, dy: SIMULATED_OUTLINE_WIDTH },
+         ];
+
+         karaokeOffsets.forEach(({ dx, dy }) => {
+            // 外框層 (底層)：使用 \kf，未唱時為黑色 &H000000&，起唱漸變為白色外框 &HFFFFFF&
+            ass += `Dialogue: ${row},${formatAssTime(displayStart)},${formatAssTime(displayEnd)},${style},,0,0,0,,{\\an${alignment}\\pos(${baseX + dx},${baseY + dy})\\bord0\\shad0\\fs${options.fontSize}\\1c&HFFFFFF&\\2c&H000000&\\fad(${fadeIn},${fadeOut})}${karaokeStr}\n`;
+         });
+
+         // 核心唱詞本體層 (頂層)：疊在最中央，未唱時主體設為白色且不透明 \2c&HFFFFFF&\2a&H00&，起唱後漸變為設定的唱詞主體色
+         ass += `Dialogue: ${row + 2},${formatAssTime(displayStart)},${formatAssTime(displayEnd)},${style},,0,0,0,,{\\an${alignment}\\pos(${baseX},${baseY})\\bord0\\shad0\\fs${options.fontSize}\\1c${primaryAssColor}\\2c&HFFFFFF&\\2a&H00&\\fad(${fadeIn},${fadeOut})}${karaokeStr}\n`;
       }
-  });
+   });
 
   return ass;
 }
-

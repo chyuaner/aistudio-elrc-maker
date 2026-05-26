@@ -331,17 +331,19 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
           
           let xPos = 0;
           let yPos = 0;
+          const currentMarginV = options.dualRowMarginV !== undefined ? options.dualRowMarginV : 50;
+          const currentMarginL = options.dualRowMarginL !== undefined ? options.dualRowMarginL : 150;
           // 計算第一行文字上方的適當座標位置
           if (isSingleLine) {
              const totalW = (dotCount - 1) * dotSpacing + 2 * dotRadius;
              // BottomCenter 座標
              xPos = 960 - (totalW / 2) + dotRadius; 
-             yPos = 1080 - 48 - options.fontSize - dotRadius - 20;
+             yPos = 1080 - currentMarginV - options.fontSize - dotRadius - 20;
           } else {
-             // BottomLeft 座標
-             xPos = 160 + dotRadius;
-             // 50 為 BottomLeft 的基礎 MarginV, 離第一排歌詞上緣 20px
-             yPos = 1080 - 50 - options.fontSize - dotRadius - 20 - options.dualRowSpacing;
+             // BottomLeft 座標，小白圓發端對齊 BottomLeft 歌詞的起始位置（外外多出 10px 與第一行歌詞對齊）
+             xPos = currentMarginL + 15 + dotRadius;
+             // 離第一排歌詞上緣 20px
+             yPos = 1080 - currentMarginV - options.fontSize - dotRadius - 20 - options.dualRowSpacing;
           }
 
           for (let d = 0; d < dotCount; d++) {

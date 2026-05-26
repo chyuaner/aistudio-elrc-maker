@@ -262,9 +262,9 @@ export function KtvAssExport() {
         songInfoArtist: loadedArtist,
         songInfoAlbum: loadedAlbum,
         songInfoCustom: loadedCustom,
-        customStartInfoTime: extTT !== undefined ? hasExtCustom : o.customStartInfoTime,
-        startInfoStartTime: extTT !== undefined ? extStart : o.startInfoStartTime,
-        startInfoEndTime: extTT !== undefined ? extEnd : o.startInfoEndTime,
+        customStartInfoTime: hasExtCustom,
+        startInfoStartTime: extStart,
+        startInfoEndTime: extEnd,
       }));
     }
   }, [lines.length, lrcMetadata, lrcMetadata.ti, lrcMetadata.ar, lrcMetadata.al, lrcMetadata.kti, lrcMetadata.kar, lrcMetadata.kal, lrcMetadata.ko, lrcMetadata.TT, lrcMetadata.TTE, lrcMetadata.tt, lrcMetadata.tte]);

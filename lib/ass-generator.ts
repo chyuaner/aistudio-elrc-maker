@@ -28,10 +28,20 @@ export interface AssOptions {
 const DEFAULT_INFO_STAY_TIME = 6.0;
 
 // =========================================================================
-// 【核心設計參數：雙層模擬外框粗細調整】
+// 【核心設計與模式微調參數】
 // =========================================================================
-// 如果需要調整之後所有白色外框的粗細 (不管是唱詞還是歌曲開始資訊)，
-// 請直接修改此處的數值 (單位為像素，預設為 3)。數值越大外框越粗，反之越細。
+// 1. 歌詞邊框渲染模式 (LYRICS_OUTLINE_MODE)
+//    - 'simulated-dual-layer': 雙層模擬追光白邊模式（未唱白色+黑色外框，起唱漸變為設定主體色+白色外框）。
+//    - 'traditional': 傳統單層黑色邊框模式（外框永遠為完美實心黑色，歌詞本體由白字漸變為設定的主體色）。
+const LYRICS_OUTLINE_MODE: 'simulated-dual-layer' | 'traditional' = 'simulated-dual-layer';
+
+// 2. 歌曲資訊 (前奏/間奏開始資訊) 外框構造模式 (INFO_OUTLINE_MODE)
+//    - 'simulated-dual-layer': 雙層模擬白色粗外框模式（文字本體為紅色/藍色，背底微調多層純白外框，呈現粗白描邊效果）。
+//    - 'traditional': 傳統單層黑色描邊模式（文字本體為紅色/藍色，邊框為實心黑色）。
+const INFO_OUTLINE_MODE: 'simulated-dual-layer' | 'traditional' = 'simulated-dual-layer';
+
+// 3. 仿雙層邊框粗細設定 (SIMULATED_OUTLINE_WIDTH)
+//    適用於 'simulated-dual-layer' 模式，單位為像素，預設為 3。數值越大外框越粗，反之越細。
 const SIMULATED_OUTLINE_WIDTH = 3;
 
 function formatAssTime(timeInSeconds: number) {
@@ -236,33 +246,45 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
     { dx: SIMULATED_OUTLINE_WIDTH, dy: SIMULATED_OUTLINE_WIDTH },
   ];
 
-  // 4. 產生紅色標題 Dialogue (採用雙層構造實現白色模擬外框)
+  // 4. 產生紅色標題 Dialogue
   if (options.songInfoTitle) {
-      // 外框層 (底層)：位移 4 個方向，顏色設為純白 &HFFFFFF&
-      offsets.forEach(({ dx, dy }) => {
-          const outlineTitleText = `{\\fad(${fadeMs},${fadeMs})\\an5\\pos(${960 + dx},${titleY + dy})\\fs${titleSize}\\c&HFFFFFF&\\bord0\\shad0\\b1}${options.songInfoTitle}{\\b0}`;
-          ass += `Dialogue: 10,${formatAssTime(infoStart)},${formatAssTime(infoEnd)},CenterInfo,,0,0,0,,${outlineTitleText}\n`;
-      });
+      if (INFO_OUTLINE_MODE === 'simulated-dual-layer') {
+          // 外框層 (底層)：位移 4 個方向，顏色設為純白 &HFFFFFF&
+          offsets.forEach(({ dx, dy }) => {
+              const outlineTitleText = `{\\fad(${fadeMs},${fadeMs})\\an5\\pos(${960 + dx},${titleY + dy})\\fs${titleSize}\\c&HFFFFFF&\\bord0\\shad0\\b1}${options.songInfoTitle}{\\b0}`;
+              ass += `Dialogue: 10,${formatAssTime(infoStart)},${formatAssTime(infoEnd)},CenterInfo,,0,0,0,,${outlineTitleText}\n`;
+          });
 
-      // 核心層 (頂層)：疊在中央，層級設為 12，顏色維持為紅色 body
-      const coreTitleText = `{\\fad(${fadeMs},${fadeMs})\\an5\\pos(960,${titleY})\\fs${titleSize}\\c&H000000FF&\\bord0\\shad0\\b1}${options.songInfoTitle}{\\b0}`;
-      ass += `Dialogue: 12,${formatAssTime(infoStart)},${formatAssTime(infoEnd)},CenterInfo,,0,0,0,,${coreTitleText}\n`;
+          // 核心層 (頂層)：疊在中央，層級設為 12，顏色維持為紅色 body
+          const coreTitleText = `{\\fad(${fadeMs},${fadeMs})\\an5\\pos(960,${titleY})\\fs${titleSize}\\c&H000000FF&\\bord0\\shad0\\b1}${options.songInfoTitle}{\\b0}`;
+          ass += `Dialogue: 12,${formatAssTime(infoStart)},${formatAssTime(infoEnd)},CenterInfo,,0,0,0,,${coreTitleText}\n`;
+      } else {
+          // 傳統單層黑色邊框模式：使用組件內建 \bord3\3c&H000000&，本體為紅色 \c&H000000FF&
+          const coreTitleText = `{\\fad(${fadeMs},${fadeMs})\\an5\\pos(960,${titleY})\\fs${titleSize}\\c&H000000FF&\\bord3\\shad0\\3c&H000000&\\b1}${options.songInfoTitle}{\\b0}`;
+          ass += `Dialogue: 10,${formatAssTime(infoStart)},${formatAssTime(infoEnd)},CenterInfo,,0,0,0,,${coreTitleText}\n`;
+      }
   }
 
-  // 5. 產生藍色歌曲資訊 Dialogue (底部往上排列，使用計算出的 detailBottomY，並採用雙層構造實現白色邊框)
+  // 5. 產生歌曲資訊 Dialogue (底部往上排列，使用計算出的 detailBottomY)
   if (artistAlbum.length > 0) {
-      // 藉由 replace 把 line 裡面的顏色變更為白色
-      const outlineArtistAlbum = artistAlbum.map(line => line.replace(/\\1?c&H[0-9A-Fa-f]+&/g, '\\c&HFFFFFF&'));
+      if (INFO_OUTLINE_MODE === 'simulated-dual-layer') {
+          // 藉由 replace 把 line 裡面的顏色變更為白色
+          const outlineArtistAlbum = artistAlbum.map(line => line.replace(/\\1?c&H[0-9A-Fa-f]+&/g, '\\c&HFFFFFF&'));
 
-      // 外框層 (底層)：位移 4 個方向，顏色變更為純白
-      offsets.forEach(({ dx, dy }) => {
-          const outlineText = `{\\fad(${fadeMs},${fadeMs})\\an2\\pos(${960 + dx},${detailBottomY + dy})\\fs${detailFontSize}\\bord0\\shad0}${outlineArtistAlbum.join('\\N')}`;
-          ass += `Dialogue: 10,${formatAssTime(infoStart)},${formatAssTime(infoEnd)},CenterInfo,,0,0,0,,${outlineText}\n`;
-      });
+          // 外框層 (底層)：位移 4 個方向，顏色變更為純白
+          offsets.forEach(({ dx, dy }) => {
+              const outlineText = `{\\fad(${fadeMs},${fadeMs})\\an2\\pos(${960 + dx},${detailBottomY + dy})\\fs${detailFontSize}\\bord0\\shad0}${outlineArtistAlbum.join('\\N')}`;
+              ass += `Dialogue: 10,${formatAssTime(infoStart)},${formatAssTime(infoEnd)},CenterInfo,,0,0,0,,${outlineText}\n`;
+          });
 
-      // 核心層 (頂層)：疊在最中央，層級設為 12，維持原來的藍色/自訂主體顏色
-      const detailText = `{\\fad(${fadeMs},${fadeMs})\\an2\\pos(960,${detailBottomY})\\fs${detailFontSize}\\bord0\\shad0}${artistAlbum.join('\\N')}`;
-      ass += `Dialogue: 12,${formatAssTime(infoStart)},${formatAssTime(infoEnd)},CenterInfo,,0,0,0,,${detailText}\n`;
+          // 核心層 (頂層)：疊在最中央，層級設為 12，維持原來的藍色/自訂主體顏色
+          const detailText = `{\\fad(${fadeMs},${fadeMs})\\an2\\pos(960,${detailBottomY})\\fs${detailFontSize}\\bord0\\shad0}${artistAlbum.join('\\N')}`;
+          ass += `Dialogue: 12,${formatAssTime(infoStart)},${formatAssTime(infoEnd)},CenterInfo,,0,0,0,,${detailText}\n`;
+      } else {
+          // 傳統單層黑色邊框模式：使用組件內建 \bord3\3c&H000000&
+          const detailText = `{\\fad(${fadeMs},${fadeMs})\\an2\\pos(960,${detailBottomY})\\fs${detailFontSize}\\bord3\\shad0\\3c&H000000&}${artistAlbum.join('\\N')}`;
+          ass += `Dialogue: 10,${formatAssTime(infoStart)},${formatAssTime(infoEnd)},CenterInfo,,0,0,0,,${detailText}\n`;
+      }
   }
   // =========================================================================
 
@@ -457,21 +479,27 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             baseY = 1080 - 50; // MarginV is 50
          }
 
-         // 透過 4 個方向的微調偏移值來模擬完美勻稱的外框
-         const karaokeOffsets = [
-            { dx: -SIMULATED_OUTLINE_WIDTH, dy: -SIMULATED_OUTLINE_WIDTH },
-            { dx: SIMULATED_OUTLINE_WIDTH, dy: -SIMULATED_OUTLINE_WIDTH },
-            { dx: -SIMULATED_OUTLINE_WIDTH, dy: SIMULATED_OUTLINE_WIDTH },
-            { dx: SIMULATED_OUTLINE_WIDTH, dy: SIMULATED_OUTLINE_WIDTH },
-         ];
+         if (LYRICS_OUTLINE_MODE === 'simulated-dual-layer') {
+            // 透過 4 個方向的微調偏移值來模擬完美勻稱的外框
+            const karaokeOffsets = [
+               { dx: -SIMULATED_OUTLINE_WIDTH, dy: -SIMULATED_OUTLINE_WIDTH },
+               { dx: SIMULATED_OUTLINE_WIDTH, dy: -SIMULATED_OUTLINE_WIDTH },
+               { dx: -SIMULATED_OUTLINE_WIDTH, dy: SIMULATED_OUTLINE_WIDTH },
+               { dx: SIMULATED_OUTLINE_WIDTH, dy: SIMULATED_OUTLINE_WIDTH },
+            ];
 
-         karaokeOffsets.forEach(({ dx, dy }) => {
-            // 外框層 (底層)：使用 \kf，未唱時為黑色 &H000000&，起唱漸變為白色外框 &HFFFFFF&
-            ass += `Dialogue: ${row},${formatAssTime(displayStart)},${formatAssTime(displayEnd)},${style},,0,0,0,,{\\an${alignment}\\pos(${baseX + dx},${baseY + dy})\\bord0\\shad0\\fs${options.fontSize}\\1c&HFFFFFF&\\2c&H000000&\\fad(${fadeIn},${fadeOut})}${karaokeStr}\n`;
-         });
+            karaokeOffsets.forEach(({ dx, dy }) => {
+               // 外框層 (底層)：使用 \kf，未唱時為黑色 &H000000&，起唱漸變為白色外框 &HFFFFFF&
+               ass += `Dialogue: ${row},${formatAssTime(displayStart)},${formatAssTime(displayEnd)},${style},,0,0,0,,{\\an${alignment}\\pos(${baseX + dx},${baseY + dy})\\bord0\\shad0\\fs${options.fontSize}\\1c&HFFFFFF&\\2c&H000000&\\fad(${fadeIn},${fadeOut})}${karaokeStr}\n`;
+            });
 
-         // 核心唱詞本體層 (頂層)：疊在最中央，未唱時主體設為白色且不透明 \2c&HFFFFFF&\2a&H00&，起唱後漸變為設定的唱詞主體色
-         ass += `Dialogue: ${row + 2},${formatAssTime(displayStart)},${formatAssTime(displayEnd)},${style},,0,0,0,,{\\an${alignment}\\pos(${baseX},${baseY})\\bord0\\shad0\\fs${options.fontSize}\\1c${primaryAssColor}\\2c&HFFFFFF&\\2a&H00&\\fad(${fadeIn},${fadeOut})}${karaokeStr}\n`;
+            // 核心唱詞本體層 (頂層)：疊在最中央，未唱時主體設為白色且不透明 \2c&HFFFFFF&\2a&H00&，起唱後漸變為設定的唱詞主體色
+            ass += `Dialogue: ${row + 2},${formatAssTime(displayStart)},${formatAssTime(displayEnd)},${style},,0,0,0,,{\\an${alignment}\\pos(${baseX},${baseY})\\bord0\\shad0\\fs${options.fontSize}\\1c${primaryAssColor}\\2c&HFFFFFF&\\2a&H00&\\fad(${fadeIn},${fadeOut})}${karaokeStr}\n`;
+         } else {
+            // traditional 傳統單層模式：外框永遠是實心黑色 &H000000&，文字主體由白 (&HFFFFFF&) 漸變為設定色 (primaryAssColor)
+            // 直接使用 ASS 內建的 \bord4\3c&H000000& 確保描邊，將 \2c 設為白色 \1c 設為唱完的 primaryAssColor
+            ass += `Dialogue: ${row},${formatAssTime(displayStart)},${formatAssTime(displayEnd)},${style},,0,0,0,,{\\an${alignment}\\pos(${baseX},${baseY})\\bord4\\shad0\\fs${options.fontSize}\\1c${primaryAssColor}\\2c&HFFFFFF&\\3c&H000000&\\fad(${fadeIn},${fadeOut})}${karaokeStr}\n`;
+         }
       }
    });
 

@@ -115,28 +115,17 @@ export function KtvAssExport() {
     }
 
     // 同步自訂歌曲資訊欄位 (kti, kar, kal, ko)
-    if (newOptions.songInfoTitle && newOptions.songInfoTitle !== (lrcMetadata.ti || '')) {
+    if (newOptions.songInfoTitle !== undefined) {
       updatedMeta.kti = newOptions.songInfoTitle;
-    } else {
-      delete updatedMeta.kti;
     }
-
-    if (newOptions.songInfoArtist && newOptions.songInfoArtist !== (lrcMetadata.ar || '')) {
+    if (newOptions.songInfoArtist !== undefined) {
       updatedMeta.kar = newOptions.songInfoArtist;
-    } else {
-      delete updatedMeta.kar;
     }
-
-    if (newOptions.songInfoAlbum && newOptions.songInfoAlbum !== (lrcMetadata.al || '')) {
+    if (newOptions.songInfoAlbum !== undefined) {
       updatedMeta.kal = newOptions.songInfoAlbum;
-    } else {
-      delete updatedMeta.kal;
     }
-
-    if (newOptions.songInfoCustom) {
+    if (newOptions.songInfoCustom !== undefined) {
       updatedMeta.ko = newOptions.songInfoCustom;
-    } else {
-      delete updatedMeta.ko;
     }
 
     lastCommittedMetaRef.current = updatedMeta;
@@ -259,10 +248,12 @@ export function KtvAssExport() {
       const extStart = hasExtCustom ? (parseSeconds(extTT) || 1) : 1;
       const extEnd = extTTE ? (parseSeconds(extTTE) || (extStart + 6)) : (extStart + 6);
 
-      const loadedTitle = lrcMetadata.kti || lrcMetadata.ti || '';
-      const loadedArtist = lrcMetadata.kar || lrcMetadata.ar || '';
-      const loadedAlbum = lrcMetadata.kal || lrcMetadata.al || '';
-      const loadedCustom = lrcMetadata.ko || '';
+      // 歌曲資訊完全「不要」自動從預設的LRC標籤(ti, ar, al)匯入，只在明確設定了專用屬性(kti, kar, kal)時才讀取
+      // 如此一來可完美支援使用者刻意將原唱與專輯留空的需求
+      const loadedTitle = lrcMetadata.kti !== undefined ? lrcMetadata.kti : '';
+      const loadedArtist = lrcMetadata.kar !== undefined ? lrcMetadata.kar : '';
+      const loadedAlbum = lrcMetadata.kal !== undefined ? lrcMetadata.kal : '';
+      const loadedCustom = lrcMetadata.ko !== undefined ? lrcMetadata.ko : '';
 
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setOptions(o => ({

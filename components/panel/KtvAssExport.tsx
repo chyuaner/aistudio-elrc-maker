@@ -34,6 +34,9 @@ export function KtvAssExport() {
     startInfoStartTime: parsedStart,
     startInfoEndTime: parsedEnd,
     dualRowSpacing: 160,
+    dualRowMarginL: 150,
+    dualRowMarginR: 150,
+    dualRowMarginV: 50,
     nextTriggerIndex: 1,
     row2FadeoutMode: 'immediate',
     interludeBuffer: 1.0,
@@ -349,7 +352,18 @@ export function KtvAssExport() {
                       <div className="grid grid-cols-2 gap-2 text-[10px]">
                         <div className="flex flex-col">
                            <label className="text-[var(--app-text-muted)]">行間距 (px)</label>
-                           <input type="number" value={options.dualRowSpacing} onChange={e => setOptions({...options, dualRowSpacing: parseInt(e.target.value)})} className="bg-[var(--app-bg-input)] border border-[var(--app-border-input)] rounded px-1 py-0.5" />
+                           <input type="number" value={options.dualRowSpacing} onChange={e => setOptions({...options, dualRowSpacing: parseInt(e.target.value) || 0})} className="bg-[var(--app-bg-input)] border border-[var(--app-border-input)] rounded px-1 py-0.5" />
+                        </div>
+                        <div className="flex flex-col">
+                           <label className="text-[var(--app-text-muted)]">左右邊距 LR (px)</label>
+                           <input type="number" value={options.dualRowMarginL} onChange={e => {
+                              const val = parseInt(e.target.value) || 0;
+                              setOptions({...options, dualRowMarginL: val, dualRowMarginR: val});
+                           }} className="bg-[var(--app-bg-input)] border border-[var(--app-border-input)] rounded px-1 py-0.5" />
+                        </div>
+                        <div className="flex flex-col">
+                           <label className="text-[var(--app-text-muted)]">上下邊距 V (px)</label>
+                           <input type="number" value={options.dualRowMarginV} onChange={e => setOptions({...options, dualRowMarginV: parseInt(e.target.value) || 0})} className="bg-[var(--app-bg-input)] border border-[var(--app-border-input)] rounded px-1 py-0.5" />
                         </div>
                         <div className="flex flex-col">
                            <label className="text-[var(--app-text-muted)]">資訊字體</label>

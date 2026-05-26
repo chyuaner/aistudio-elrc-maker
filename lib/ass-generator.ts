@@ -19,6 +19,9 @@ export interface AssOptions {
   interludeThreshold: number; // in seconds
   fadeInOutTime: number; // in seconds
   dualRowSpacing: number; // in pixels
+  dualRowMarginL: number; // in pixels
+  dualRowMarginR: number; // in pixels
+  dualRowMarginV: number; // in pixels
   nextTriggerIndex: number;
   row2FadeoutMode: 'immediate' | 'delayed';
   interludeBuffer: number;
@@ -99,9 +102,9 @@ Style: Default,${options.fontFamily},20,&H00FFFFFF,&H000000FF,&H00000000,&H00000
 Style: TopLeft,${options.fontFamily},72,&H00FFFFFF,&H00FFFFFF,&H99000000,&H99000000,0,0,0,0,100,100,0,0,3,1.5,0,7,48,48,48,0
 Style: TopCenter,${options.fontFamily},72,&H00FFFFFF,&H00FFFFFF,&H99000000,&H99000000,0,0,0,0,100,100,0,0,3,1.5,0,8,48,48,48,0
 Style: TopRight,${options.fontFamily},72,&H00FFFFFF,&H00FFFFFF,&H99000000,&H99000000,0,0,0,0,100,100,0,0,3,1.5,0,9,48,48,48,0
-Style: BottomLeft,${options.fontFamily},${options.fontSize},${primaryAssColor},&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,4,0,1,150,150,${50 + options.dualRowSpacing},0
+Style: BottomLeft,${options.fontFamily},${options.fontSize},${primaryAssColor},&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,4,0,1,${options.dualRowMarginL !== undefined ? options.dualRowMarginL : 150},${options.dualRowMarginR !== undefined ? options.dualRowMarginR : 150},${(options.dualRowMarginV !== undefined ? options.dualRowMarginV : 50) + options.dualRowSpacing},0
 Style: BottomCenter,${options.fontFamily},${options.fontSize},${primaryAssColor},&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,4,0,2,48,48,48,0
-Style: BottomRight,${options.fontFamily},${options.fontSize},${primaryAssColor},&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,4,0,3,150,150,50,0
+Style: BottomRight,${options.fontFamily},${options.fontSize},${primaryAssColor},&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,4,0,3,${options.dualRowMarginL !== undefined ? options.dualRowMarginL : 150},${options.dualRowMarginR !== undefined ? options.dualRowMarginR : 150},${options.dualRowMarginV !== undefined ? options.dualRowMarginV : 50},0
 Style: CenterInfo,${options.fontFamily},${options.infoFontSize || (options.fontSize - 40)},${primaryAssColor},&H00FFFFFF,&H99000000,&H99000000,0,0,0,0,100,100,0,0,1,4,0,5,48,48,48,0
 `;
 
@@ -140,20 +143,20 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
   if (currentPara.length > 0) paragraphs.push(currentPara);
   
   // 歌曲前奏資訊計算
-  let infoStart = 1;
+  let infoStart = 0.5;
   let infoEnd = DEFAULT_INFO_STAY_TIME;
   if (!options.customStartInfoTime) {
     if (paragraphs.length > 0 && paragraphs[0][0].start! < DEFAULT_INFO_STAY_TIME) {
        const firstParaEnd = getLineEndTime(paragraphs[0][paragraphs[0].length - 1]);
        if (firstParaEnd > 60) {
-           infoStart = 1;
+           infoStart = 0.5;
            infoEnd = DEFAULT_INFO_STAY_TIME;
        } else {
            infoStart = firstParaEnd;
            infoEnd = firstParaEnd + DEFAULT_INFO_STAY_TIME;
        }
     } else {
-       infoStart = 1;
+       infoStart = 0.5;
        infoEnd = Math.min(DEFAULT_INFO_STAY_TIME, paragraphs.length > 0 ? paragraphs[0][0].start! : DEFAULT_INFO_STAY_TIME);
     }
   } else {
@@ -469,14 +472,15 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
          let baseX = 960;
          let baseY = 1080 - 48; // MarginV is 48
 
+         const currentMarginV = options.dualRowMarginV !== undefined ? options.dualRowMarginV : 50;
          if (style === 'BottomLeft') {
             alignment = 1;
-            baseX = 150; // MarginL is 150
-            baseY = 1080 - (50 + options.dualRowSpacing);
+            baseX = options.dualRowMarginL !== undefined ? options.dualRowMarginL : 150;
+            baseY = 1080 - (currentMarginV + options.dualRowSpacing);
          } else if (style === 'BottomRight') {
             alignment = 3;
-            baseX = 1920 - 150; // MarginR is 150
-            baseY = 1080 - 50; // MarginV is 50
+            baseX = 1920 - (options.dualRowMarginR !== undefined ? options.dualRowMarginR : 150);
+            baseY = 1080 - currentMarginV;
          }
 
          if (LYRICS_OUTLINE_MODE === 'simulated-dual-layer') {

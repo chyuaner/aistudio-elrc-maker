@@ -26,10 +26,10 @@ export function KtvAssExport() {
     fontSize: 135, // Default for BottomLeft
     infoFontSize: 85, // Default for CenterInfo (song info, fontSize - 40)
     infoTitleFontSize: 125, // Default for red Title (fontSize - 10)
-    songInfoTitle: lrcMetadata.kti || lrcMetadata.ti || '',
-    songInfoArtist: lrcMetadata.kar || lrcMetadata.ar || '',
-    songInfoAlbum: lrcMetadata.kal || lrcMetadata.al || '',
-    songInfoCustom: lrcMetadata.ko || '',
+    songInfoTitle: lrcMetadata.kti !== undefined ? lrcMetadata.kti : '',
+    songInfoArtist: lrcMetadata.kar !== undefined ? lrcMetadata.kar : '',
+    songInfoAlbum: lrcMetadata.kal !== undefined ? lrcMetadata.kal : '',
+    songInfoCustom: lrcMetadata.ko !== undefined ? lrcMetadata.ko : '',
     customStartInfoTime: hasCustomTime,
     startInfoStartTime: parsedStart,
     startInfoEndTime: parsedEnd,
@@ -112,14 +112,14 @@ export function KtvAssExport() {
     options.simulatedOutlineWidth
   ]);
 
-  // 當 Lrc 內部的中繼資料被更新時，將歌名、歌手、專輯與自訂欄位同步至 options，確保資料即時更新且不遺失自定義渲染樣式
+  // 當 Lrc 內部的自訂 KTV 中繼資料被更新時，將歌名、歌手、專輯與自訂欄位同步至 options，確保資料即時更新且不遺失自定義渲染樣式（不自動回退至通用屬性）
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setOptions(prev => {
-      const metadataTitle = lrcMetadata.kti || lrcMetadata.ti || '';
-      const metadataArtist = lrcMetadata.kar || lrcMetadata.ar || '';
-      const metadataAlbum = lrcMetadata.kal || lrcMetadata.al || '';
-      const metadataCustom = lrcMetadata.ko || '';
+      const metadataTitle = lrcMetadata.kti !== undefined ? lrcMetadata.kti : '';
+      const metadataArtist = lrcMetadata.kar !== undefined ? lrcMetadata.kar : '';
+      const metadataAlbum = lrcMetadata.kal !== undefined ? lrcMetadata.kal : '';
+      const metadataCustom = lrcMetadata.ko !== undefined ? lrcMetadata.ko : '';
       
       if (
         prev.songInfoTitle !== metadataTitle ||
@@ -137,7 +137,7 @@ export function KtvAssExport() {
       }
       return prev;
     });
-  }, [lrcMetadata.kti, lrcMetadata.ti, lrcMetadata.kar, lrcMetadata.ar, lrcMetadata.kal, lrcMetadata.al, lrcMetadata.ko]);
+  }, [lrcMetadata.kti, lrcMetadata.kar, lrcMetadata.kal, lrcMetadata.ko]);
 
   const [detectedVideo, setDetectedVideo] = useState<{ width: number, height: number } | null>(null);
 

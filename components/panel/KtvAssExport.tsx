@@ -24,7 +24,7 @@ export function KtvAssExport() {
     chorusColor: '#008000', // Green
     fontFamily: '微软雅黑',
     fontSize: 135, // Default for BottomLeft
-    infoFontSize: 85, // Default for CenterInfo (song info, fontSize - 40)
+    infoFontSize: 100, // Default for CenterInfo (song info, fontSize - 40)
     infoTitleFontSize: 125, // Default for red Title (fontSize - 10)
     songInfoTitle: lrcMetadata.kti !== undefined ? lrcMetadata.kti : '',
     songInfoArtist: lrcMetadata.kar !== undefined ? lrcMetadata.kar : '',

@@ -25,6 +25,9 @@ export interface AssOptions {
   nextTriggerIndex: number;
   row2FadeoutMode: 'immediate' | 'delayed';
   interludeBuffer: number;
+  playResX?: number;
+  playResY?: number;
+  simulatedOutlineWidth?: number;
 }
 
 // 內部控制參數
@@ -93,19 +96,43 @@ function getLineEndTime(line: LyricLine): number {
 }
 
 export function generateAss(lines: LyricLine[], metadata: LrcMetadata, options: AssOptions): string {
+  const playResX = options.playResX || 1920;
+  const playResY = options.playResY || 1080;
+  const centerX = playResX / 2;
+  const centerY = playResY / 2;
+
+  // 畫面寬高比若大於 16:9 (1920/1080 ≈ 1.777)，代表畫面高度變矮 (超寬比例，例如 3840x1636)，此時以高度為基準進行等比例縮小；
+  // 若寬高比小於等於 16:9 (高度高於或等於 16:9，例如 16:9 或 4:3)，則維持現有以寬度為基準的邏輯。
+  const scale = (playResX / playResY) > (1920 / 1080) ? (playResY / 1080) : (playResX / 1920);
+
+  // 動態比例縮放參數
+  const fontSize = Math.round(options.fontSize * scale);
+  const dualRowSpacing = Math.round((options.dualRowSpacing !== undefined ? options.dualRowSpacing : 30) * scale);
+  const dualRowMarginL = Math.round((options.dualRowMarginL !== undefined ? options.dualRowMarginL : 150) * scale);
+  const dualRowMarginR = Math.round((options.dualRowMarginR !== undefined ? options.dualRowMarginR : 150) * scale);
+  const dualRowMarginV = Math.round((options.dualRowMarginV !== undefined ? options.dualRowMarginV : 50) * scale);
+
+  const infoTitleFontSize = Math.round((options.infoTitleFontSize || (options.fontSize - 10)) * scale);
+  const infoFontSize = Math.round((options.infoFontSize || (options.fontSize - 40)) * scale);
+
+  const margin48Scaled = Math.round(48 * scale);
+  const outlineWidth = Math.max(1, Math.round((options.simulatedOutlineWidth !== undefined ? options.simulatedOutlineWidth : 3) * scale));
+  const border4Scaled = Math.max(1, Math.round(4 * scale));
+  const border3Scaled = Math.max(1, Math.round(3 * scale));
+
   const primaryAssColor = hexToAssColor(options.primaryColor);
   
   // 樣式設定
   const styles = `[V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Default,${options.fontFamily},20,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,2,2,2,10,10,10,1
-Style: TopLeft,${options.fontFamily},72,&H00FFFFFF,&H00FFFFFF,&H99000000,&H99000000,0,0,0,0,100,100,0,0,3,1.5,0,7,48,48,48,0
-Style: TopCenter,${options.fontFamily},72,&H00FFFFFF,&H00FFFFFF,&H99000000,&H99000000,0,0,0,0,100,100,0,0,3,1.5,0,8,48,48,48,0
-Style: TopRight,${options.fontFamily},72,&H00FFFFFF,&H00FFFFFF,&H99000000,&H99000000,0,0,0,0,100,100,0,0,3,1.5,0,9,48,48,48,0
-Style: BottomLeft,${options.fontFamily},${options.fontSize},${primaryAssColor},&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,4,0,1,${options.dualRowMarginL !== undefined ? options.dualRowMarginL : 150},${options.dualRowMarginR !== undefined ? options.dualRowMarginR : 150},${(options.dualRowMarginV !== undefined ? options.dualRowMarginV : 50) + options.dualRowSpacing},0
-Style: BottomCenter,${options.fontFamily},${options.fontSize},${primaryAssColor},&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,4,0,2,48,48,48,0
-Style: BottomRight,${options.fontFamily},${options.fontSize},${primaryAssColor},&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,4,0,3,${options.dualRowMarginL !== undefined ? options.dualRowMarginL : 150},${options.dualRowMarginR !== undefined ? options.dualRowMarginR : 150},${options.dualRowMarginV !== undefined ? options.dualRowMarginV : 50},0
-Style: CenterInfo,${options.fontFamily},${options.infoFontSize || (options.fontSize - 40)},${primaryAssColor},&H00FFFFFF,&H99000000,&H99000000,0,0,0,0,100,100,0,0,1,4,0,5,48,48,48,0
+Style: Default,${options.fontFamily},${Math.round(20 * scale)},&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,2,2,2,10,10,10,1
+Style: TopLeft,${options.fontFamily},${Math.round(72 * scale)},&H00FFFFFF,&H00FFFFFF,&H99000000,&H99000000,0,0,0,0,100,100,0,0,3,${(1.5 * scale).toFixed(1)},0,7,${margin48Scaled},${margin48Scaled},${margin48Scaled},0
+Style: TopCenter,${options.fontFamily},${Math.round(72 * scale)},&H00FFFFFF,&H00FFFFFF,&H99000000,&H99000000,0,0,0,0,100,100,0,0,3,${(1.5 * scale).toFixed(1)},0,8,${margin48Scaled},${margin48Scaled},${margin48Scaled},0
+Style: TopRight,${options.fontFamily},${Math.round(72 * scale)},&H00FFFFFF,&H00FFFFFF,&H99000000,&H99000000,0,0,0,0,100,100,0,0,3,${(1.5 * scale).toFixed(1)},0,9,${margin48Scaled},${margin48Scaled},${margin48Scaled},0
+Style: BottomLeft,${options.fontFamily},${fontSize},${primaryAssColor},&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,${border4Scaled},0,1,${dualRowMarginL},${dualRowMarginR},${dualRowMarginV + dualRowSpacing},0
+Style: BottomCenter,${options.fontFamily},${fontSize},${primaryAssColor},&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,${border4Scaled},0,2,${dualRowMarginL},${dualRowMarginR},${dualRowMarginV},0
+Style: BottomRight,${options.fontFamily},${fontSize},${primaryAssColor},&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,${border4Scaled},0,3,${dualRowMarginL},${dualRowMarginR},${dualRowMarginV},0
+Style: CenterInfo,${options.fontFamily},${infoFontSize},${primaryAssColor},&H00FFFFFF,&H99000000,&H99000000,0,0,0,0,100,100,0,0,1,${border4Scaled},0,5,${margin48Scaled},${margin48Scaled},${margin48Scaled},0
 `;
 
   let ass = `[Script Info]
@@ -115,8 +142,8 @@ ScriptType: v4.00+
 WrapStyle: 0
 ScaledBorderAndShadow: yes
 YCbCr Matrix: TV.601
-PlayResX: 1920
-PlayResY: 1080
+PlayResX: ${playResX}
+PlayResY: ${playResY}
 
 ${styles}
 [Events]
@@ -175,8 +202,8 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
   // =========================================================================
   // 【請注意！手動微調 KTV 開始資訊位置與防重疊避讓邏輯】
   // =========================================================================
-  const titleSize = options.infoTitleFontSize || (options.fontSize - 10);
-  const detailFontSize = options.infoFontSize || (options.fontSize - 40);
+  const titleSize = infoTitleFontSize;
+  const detailFontSize = infoFontSize;
 
   // 1. 檢測「歌曲開始資訊」的顯示區間 [infoStart, infoEnd] 是否與音軌中的任何段落（歌詞）顯示區間重疊
   let overlapsWithLyrics = false;
@@ -211,18 +238,18 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 
   // 2. 藍色歌曲資訊的排版：自底部往上排 (BottomCenter)
   // 若發生時間重疊，將 detailBottomY 拉到雙行歌詞之上
-  let detailBottomY = 1025; 
+  let detailBottomY = playResY - Math.round(55 * scale); 
   if (overlapsWithLyrics) {
-      // 雙行歌詞第一排(BottomLeft)的上緣：1080 - 50 - dualRowSpacing - fontSize
+      // 雙行歌詞第一排(BottomLeft)的上緣：playResY - dualRowMarginV - dualRowSpacing - fontSize
       // 我們要把歌曲詳細資訊底邊放在這個上緣之上至少 60 像素
-      const lyricsTopY = 1080 - 50 - options.dualRowSpacing - options.fontSize;
-      detailBottomY = Math.round(lyricsTopY - 60);
+      const lyricsTopY = playResY - dualRowMarginV - dualRowSpacing - fontSize;
+      detailBottomY = Math.round(lyricsTopY - 60 * scale);
   }
 
   // 3. 紅色標題字的排版：
-  // 若未重疊，則放畫面中央偏上 (540 - 1.5 行)
+  // 若未重疊，則放畫面中央偏上 (centerY - 1.5 行)
   // 若發生重疊，將其置於歌曲詳細資訊最上方行的上面，確保文字學上完全不重疊，且維持 40px 的安全間距 (標題是 an5 置中-置中，需減去半個字高與 40px 間距)
-  let titleY = 540 - Math.round(1.5 * titleSize);
+  let titleY = centerY - Math.round(1.5 * titleSize);
 
   // 建立歌曲資訊行陣列
   const artistAlbum = [];
@@ -245,36 +272,36 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
   if (overlapsWithLyrics && artistAlbum.length > 0) {
       // 計算歌曲詳細資訊的實際總高度 (包括新加的空行)
       const detailHeight = artistAlbum.length * detailFontSize;
-      titleY = Math.round(detailBottomY - detailHeight - 40 - (titleSize / 2));
+      titleY = Math.round(detailBottomY - detailHeight - Math.round(40 * scale) - (titleSize / 2));
   }
 
   const offsets = [
-    { dx: -SIMULATED_OUTLINE_WIDTH, dy: -SIMULATED_OUTLINE_WIDTH },
-    { dx: SIMULATED_OUTLINE_WIDTH, dy: -SIMULATED_OUTLINE_WIDTH },
-    { dx: -SIMULATED_OUTLINE_WIDTH, dy: SIMULATED_OUTLINE_WIDTH },
-    { dx: SIMULATED_OUTLINE_WIDTH, dy: SIMULATED_OUTLINE_WIDTH },
+    { dx: -outlineWidth, dy: -outlineWidth },
+    { dx: outlineWidth, dy: -outlineWidth },
+    { dx: -outlineWidth, dy: outlineWidth },
+    { dx: outlineWidth, dy: outlineWidth },
   ];
 
-  // 4. 產生紅色標題 Dialogue
+  // 3. 產生紅色標題 Dialogue
   if (options.songInfoTitle) {
       if (INFO_OUTLINE_MODE === 'simulated-dual-layer') {
           // 外框層 (底層)：位移 4 個方向，顏色設為純白 &HFFFFFF&
           offsets.forEach(({ dx, dy }) => {
-              const outlineTitleText = `{\\fad(${fadeMs},${fadeMs})\\an5\\pos(${960 + dx},${titleY + dy})\\fs${titleSize}\\c&HFFFFFF&\\bord0\\shad0\\b1}${options.songInfoTitle}{\\b0}`;
+              const outlineTitleText = `{\\fad(${fadeMs},${fadeMs})\\an5\\pos(${centerX + dx},${titleY + dy})\\fs${titleSize}\\c&HFFFFFF&\\bord0\\shad0\\b1}${options.songInfoTitle}{\\b0}`;
               ass += `Dialogue: 10,${formatAssTime(infoStart)},${formatAssTime(infoEnd)},CenterInfo,,0,0,0,,${outlineTitleText}\n`;
           });
 
           // 核心層 (頂層)：疊在中央，層級設為 12，顏色維持為紅色 body
-          const coreTitleText = `{\\fad(${fadeMs},${fadeMs})\\an5\\pos(960,${titleY})\\fs${titleSize}\\c&H000000FF&\\bord0\\shad0\\b1}${options.songInfoTitle}{\\b0}`;
+          const coreTitleText = `{\\fad(${fadeMs},${fadeMs})\\an5\\pos(${centerX},${titleY})\\fs${titleSize}\\c&H000000FF&\\bord0\\shad0\\b1}${options.songInfoTitle}{\\b0}`;
           ass += `Dialogue: 12,${formatAssTime(infoStart)},${formatAssTime(infoEnd)},CenterInfo,,0,0,0,,${coreTitleText}\n`;
       } else {
           // 傳統單層黑色邊框模式：使用組件內建 \bord3\3c&H000000&，本體為紅色 \c&H000000FF&
-          const coreTitleText = `{\\fad(${fadeMs},${fadeMs})\\an5\\pos(960,${titleY})\\fs${titleSize}\\c&H000000FF&\\bord3\\shad0\\3c&H000000&\\b1}${options.songInfoTitle}{\\b0}`;
+          const coreTitleText = `{\\fad(${fadeMs},${fadeMs})\\an5\\pos(${centerX},${titleY})\\fs${titleSize}\\c&H000000FF&\\bord${border3Scaled}\\shad0\\3c&H000000&\\b1}${options.songInfoTitle}{\\b0}`;
           ass += `Dialogue: 10,${formatAssTime(infoStart)},${formatAssTime(infoEnd)},CenterInfo,,0,0,0,,${coreTitleText}\n`;
       }
   }
 
-  // 5. 產生歌曲資訊 Dialogue (底部往上排列，使用計算出的 detailBottomY)
+  // 4. 產生歌曲資訊 Dialogue (底部往上排列，使用計算出的 detailBottomY)
   if (artistAlbum.length > 0) {
       if (INFO_OUTLINE_MODE === 'simulated-dual-layer') {
           // 藉由 replace 把 line 裡面的顏色變更為白色
@@ -282,25 +309,25 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 
           // 外框層 (底層)：位移 4 個方向，顏色變更為純白
           offsets.forEach(({ dx, dy }) => {
-              const outlineText = `{\\fad(${fadeMs},${fadeMs})\\an2\\pos(${960 + dx},${detailBottomY + dy})\\fs${detailFontSize}\\bord0\\shad0}${outlineArtistAlbum.join('\\N')}`;
+              const outlineText = `{\\fad(${fadeMs},${fadeMs})\\an2\\pos(${centerX + dx},${detailBottomY + dy})\\fs${detailFontSize}\\bord0\\shad0}${outlineArtistAlbum.join('\\N')}`;
               ass += `Dialogue: 10,${formatAssTime(infoStart)},${formatAssTime(infoEnd)},CenterInfo,,0,0,0,,${outlineText}\n`;
           });
 
           // 核心層 (頂層)：疊在最中央，層級設為 12，維持原來的藍色/自訂主體顏色
-          const detailText = `{\\fad(${fadeMs},${fadeMs})\\an2\\pos(960,${detailBottomY})\\fs${detailFontSize}\\bord0\\shad0}${artistAlbum.join('\\N')}`;
+          const detailText = `{\\fad(${fadeMs},${fadeMs})\\an2\\pos(${centerX},${detailBottomY})\\fs${detailFontSize}\\bord0\\shad0}${artistAlbum.join('\\N')}`;
           ass += `Dialogue: 12,${formatAssTime(infoStart)},${formatAssTime(infoEnd)},CenterInfo,,0,0,0,,${detailText}\n`;
       } else {
           // 傳統單層黑色邊框模式：使用組件內建 \bord3\3c&H000000&
-          const detailText = `{\\fad(${fadeMs},${fadeMs})\\an2\\pos(960,${detailBottomY})\\fs${detailFontSize}\\bord3\\shad0\\3c&H000000&}${artistAlbum.join('\\N')}`;
+          const detailText = `{\\fad(${fadeMs},${fadeMs})\\an2\\pos(${centerX},${detailBottomY})\\fs${detailFontSize}\\bord${border3Scaled}\\shad0\\3c&H000000&}${artistAlbum.join('\\N')}`;
           ass += `Dialogue: 10,${formatAssTime(infoStart)},${formatAssTime(infoEnd)},CenterInfo,,0,0,0,,${detailText}\n`;
       }
   }
   // =========================================================================
 
-  // 倒數小白圓的控制參數 (已在上方定義過 dotDuration)
+  // 倒數小白圓的控制參數
   // 計算小白圓與文字的相對大小，並使其「稍大一點點」
-  const dotRadius = Math.round(options.fontSize * 0.25); 
-  const dotSpacing = Math.round(options.fontSize * 0.75);
+  const dotRadius = Math.round(fontSize * 0.25); 
+  const dotSpacing = Math.round(fontSize * 0.75);
   
   // 第一階段 (Pass 1)：計算所有段落的 raw 資訊
   const pInfos = paragraphs.map((p, idx) => {
@@ -380,19 +407,21 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
           
           let xPos = 0;
           let yPos = 0;
-          const currentMarginV = options.dualRowMarginV !== undefined ? options.dualRowMarginV : 50;
-          const currentMarginL = options.dualRowMarginL !== undefined ? options.dualRowMarginL : 150;
+          const currentMarginV = dualRowMarginV;
+          const currentMarginL = dualRowMarginL;
+          const offset15 = Math.round(15 * scale);
+          const offset20 = Math.round(20 * scale);
           // 計算第一行文字上方的適當座標位置
           if (isSingleLine) {
              const totalW = (dotCount - 1) * dotSpacing + 2 * dotRadius;
              // BottomCenter 座標
-             xPos = 960 - (totalW / 2) + dotRadius; 
-             yPos = 1080 - currentMarginV - options.fontSize - dotRadius - 20;
+             xPos = centerX - (totalW / 2) + dotRadius; 
+             yPos = playResY - currentMarginV - fontSize - dotRadius - offset20;
           } else {
-             // BottomLeft 座標，小白圓發端對齊 BottomLeft 歌詞的起始位置（外外多出 10px 與第一行歌詞對齊）
-             xPos = currentMarginL + 15 + dotRadius;
-             // 離第一排歌詞上緣 20px
-             yPos = 1080 - currentMarginV - options.fontSize - dotRadius - 20 - options.dualRowSpacing;
+             // BottomLeft 座標，小白圓發端對齊 BottomLeft 歌詞的起始位置（外外多出 15px 左右與第一行歌詞對齊）
+             xPos = currentMarginL + offset15 + dotRadius;
+             // 離第一排歌詞上緣 offset20
+             yPos = playResY - currentMarginV - fontSize - dotRadius - offset20 - dualRowSpacing;
           }
 
           for (let d = 0; d < dotCount; d++) {
@@ -520,40 +549,39 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 
          // 核心定位座標計算：解析目前樣式對應的對齊與位置
          let alignment = 2; // Default BottomCenter
-         let baseX = 960;
-         let baseY = 1080 - 48; // MarginV is 48
+         let baseX = centerX;
+         let baseY = playResY - dualRowMarginV; // MarginV is dualRowMarginV scaled
 
-         const currentMarginV = options.dualRowMarginV !== undefined ? options.dualRowMarginV : 50;
          if (style === 'BottomLeft') {
             alignment = 1;
-            baseX = options.dualRowMarginL !== undefined ? options.dualRowMarginL : 150;
-            baseY = 1080 - (currentMarginV + options.dualRowSpacing);
+            baseX = dualRowMarginL;
+            baseY = playResY - (dualRowMarginV + dualRowSpacing);
          } else if (style === 'BottomRight') {
             alignment = 3;
-            baseX = 1920 - (options.dualRowMarginR !== undefined ? options.dualRowMarginR : 150);
-            baseY = 1080 - currentMarginV;
+            baseX = playResX - dualRowMarginR;
+             baseY = playResY - dualRowMarginV;
          }
 
          if (LYRICS_OUTLINE_MODE === 'simulated-dual-layer') {
             // 透過 4 個方向的微調偏移值來模擬完美勻稱的外框
             const karaokeOffsets = [
-               { dx: -SIMULATED_OUTLINE_WIDTH, dy: -SIMULATED_OUTLINE_WIDTH },
-               { dx: SIMULATED_OUTLINE_WIDTH, dy: -SIMULATED_OUTLINE_WIDTH },
-               { dx: -SIMULATED_OUTLINE_WIDTH, dy: SIMULATED_OUTLINE_WIDTH },
-               { dx: SIMULATED_OUTLINE_WIDTH, dy: SIMULATED_OUTLINE_WIDTH },
+               { dx: -outlineWidth, dy: -outlineWidth },
+               { dx: outlineWidth, dy: -outlineWidth },
+               { dx: -outlineWidth, dy: outlineWidth },
+               { dx: outlineWidth, dy: outlineWidth },
             ];
 
             karaokeOffsets.forEach(({ dx, dy }) => {
                // 外框層 (底層)：使用 \kf，未唱時為黑色 &H000000&，起唱漸變為白色外框 &HFFFFFF&
-               ass += `Dialogue: ${row},${formatAssTime(displayStart)},${formatAssTime(displayEnd)},${style},,0,0,0,,{\\an${alignment}\\pos(${baseX + dx},${baseY + dy})\\bord0\\shad0\\fs${options.fontSize}\\1c&HFFFFFF&\\2c&H000000&\\fad(${fadeIn},${fadeOut})}${karaokeStr}\n`;
+               ass += `Dialogue: ${row},${formatAssTime(displayStart)},${formatAssTime(displayEnd)},${style},,0,0,0,,{\\an${alignment}\\pos(${baseX + dx},${baseY + dy})\\bord0\\shad0\\fs${fontSize}\\1c&HFFFFFF&\\2c&H000000&\\fad(${fadeIn},${fadeOut})}${karaokeStr}\n`;
             });
 
             // 核心唱詞本體層 (頂層)：疊在最中央，未唱時主體設為白色且不透明 \2c&HFFFFFF&\2a&H00&，起唱後漸變為設定的唱詞主體色
-            ass += `Dialogue: ${row + 2},${formatAssTime(displayStart)},${formatAssTime(displayEnd)},${style},,0,0,0,,{\\an${alignment}\\pos(${baseX},${baseY})\\bord0\\shad0\\fs${options.fontSize}\\1c${primaryAssColor}\\2c&HFFFFFF&\\2a&H00&\\fad(${fadeIn},${fadeOut})}${karaokeStr}\n`;
+            ass += `Dialogue: ${row + 2},${formatAssTime(displayStart)},${formatAssTime(displayEnd)},${style},,0,0,0,,{\\an${alignment}\\pos(${baseX},${baseY})\\bord0\\shad0\\fs${fontSize}\\1c${primaryAssColor}\\2c&HFFFFFF&\\2a&H00&\\fad(${fadeIn},${fadeOut})}${karaokeStr}\n`;
          } else {
             // traditional 傳統單層模式：外框永遠是實心黑色 &H000000&，文字主體由白 (&HFFFFFF&) 漸變為設定色 (primaryAssColor)
             // 直接使用 ASS 內建的 \bord4\3c&H000000& 確保描邊，將 \2c 設為白色 \1c 設為唱完的 primaryAssColor
-            ass += `Dialogue: ${row},${formatAssTime(displayStart)},${formatAssTime(displayEnd)},${style},,0,0,0,,{\\an${alignment}\\pos(${baseX},${baseY})\\bord4\\shad0\\fs${options.fontSize}\\1c${primaryAssColor}\\2c&HFFFFFF&\\3c&H000000&\\fad(${fadeIn},${fadeOut})}${karaokeStr}\n`;
+            ass += `Dialogue: ${row},${formatAssTime(displayStart)},${formatAssTime(displayEnd)},${style},,0,0,0,,{\\an${alignment}\\pos(${baseX},${baseY})\\bord${border4Scaled}\\shad0\\fs${fontSize}\\1c${primaryAssColor}\\2c&HFFFFFF&\\3c&H000000&\\fad(${fadeIn},${fadeOut})}${karaokeStr}\n`;
          }
       }
    });

@@ -8,7 +8,7 @@ import { RawTextDisplay } from '@/components/panel/RawTextDisplay';
 import { formatTime, parseSeconds } from '@/lib/lyric-utils';
 
 export function KtvAssExport() {
-  const { lines, lrcMetadata, commitLrcMetadata, audioFileName, dualLineGapSec, setDualLineGapSec, metadata, showToast } = useEditor();
+  const { lines, lrcMetadata, commitLrcMetadata, audioFileName, dualLineGapSec, setDualLineGapSec, metadata, showToast, playerRef, fileUrl, duration } = useEditor();
   
   // 檢查是否有自訂歌曲開始資訊的時間戳 (TT / TTE)
   const initialTT = lrcMetadata.TT || lrcMetadata.tt;
@@ -24,8 +24,8 @@ export function KtvAssExport() {
     chorusColor: '#008000', // Green
     fontFamily: '微软雅黑',
     fontSize: 135, // Default for BottomLeft
-    infoFontSize: 110, // Default for CenterInfo (song info, fontSize - 40)
-    infoTitleFontSize: 140, // Default for red Title (fontSize - 10)
+    infoFontSize: 85, // Default for CenterInfo (song info, fontSize - 40)
+    infoTitleFontSize: 125, // Default for red Title (fontSize - 10)
     songInfoTitle: lrcMetadata.kti || lrcMetadata.ti || '',
     songInfoArtist: lrcMetadata.kar || lrcMetadata.ar || '',
     songInfoAlbum: lrcMetadata.kal || lrcMetadata.al || '',
@@ -34,13 +34,89 @@ export function KtvAssExport() {
     startInfoStartTime: parsedStart,
     startInfoEndTime: parsedEnd,
     dualRowSpacing: 160,
-    dualRowMarginL: 165,
-    dualRowMarginR: 165,
-    dualRowMarginV: 50,
+    dualRowMarginL: 160,
+    dualRowMarginR: 160,
+    dualRowMarginV: 65,
     nextTriggerIndex: 1,
     row2FadeoutMode: 'immediate',
     interludeBuffer: 1.0,
+    playResX: 1920,
+    playResY: 1080,
+    simulatedOutlineWidth: 3,
   });
+
+  // 當 Lrc 內部的中繼資料被更新時，將歌名、歌手、專輯與自訂欄位同步至 options，確保資料即時更新且不遺失自定義渲染樣式
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setOptions(prev => {
+      const metadataTitle = lrcMetadata.kti || lrcMetadata.ti || '';
+      const metadataArtist = lrcMetadata.kar || lrcMetadata.ar || '';
+      const metadataAlbum = lrcMetadata.kal || lrcMetadata.al || '';
+      const metadataCustom = lrcMetadata.ko || '';
+      
+      if (
+        prev.songInfoTitle !== metadataTitle ||
+        prev.songInfoArtist !== metadataArtist ||
+        prev.songInfoAlbum !== metadataAlbum ||
+        prev.songInfoCustom !== metadataCustom
+      ) {
+        return {
+          ...prev,
+          songInfoTitle: metadataTitle,
+          songInfoArtist: metadataArtist,
+          songInfoAlbum: metadataAlbum,
+          songInfoCustom: metadataCustom,
+        };
+      }
+      return prev;
+    });
+  }, [lrcMetadata.kti, lrcMetadata.ti, lrcMetadata.kar, lrcMetadata.ar, lrcMetadata.kal, lrcMetadata.al, lrcMetadata.ko]);
+
+  const [detectedVideo, setDetectedVideo] = useState<{ width: number, height: number } | null>(null);
+
+  // 自動偵測當前載入影片的原始解析度
+  useEffect(() => {
+    let active = true;
+    const checkResolution = () => {
+      if (!active) return;
+      const videoElement = playerRef?.current as HTMLVideoElement | null;
+      if (videoElement && videoElement.tagName === 'VIDEO') {
+        const w = videoElement.videoWidth;
+        const h = videoElement.videoHeight;
+        if (w > 0 && h > 0) {
+          if (!detectedVideo || detectedVideo.width !== w || detectedVideo.height !== h) {
+            setDetectedVideo({ width: w, height: h });
+            setOptions(o => {
+              if (o.playResX !== w || o.playResY !== h) {
+                return {
+                  ...o,
+                  playResX: w,
+                  playResY: h,
+                };
+              }
+              return o;
+            });
+            showToast(`已自動偵測影片解析度：${w} x ${h}`);
+          }
+        }
+      } else {
+        if (detectedVideo !== null) {
+          setDetectedVideo(null);
+        }
+      }
+    };
+
+    // 1. 立即檢查一次
+    checkResolution();
+
+    // 2. 設定一個 300 毫秒的 interval 進行輪詢，確保能在第 1 時間即時更新
+    const timer = setInterval(checkResolution, 300);
+
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
+  }, [playerRef, showToast, fileUrl, duration, detectedVideo]);
 
   const assContent = useMemo(() => {
     return generateAss(lines, lrcMetadata, { ...options, interludeThreshold: dualLineGapSec, fadeInOutTime: 0.5 });
@@ -282,24 +358,145 @@ export function KtvAssExport() {
                 
                 {/* Left Column */}
                 <div className="flex flex-col gap-5">
-                   {/* 字體設定 */}
-                   <div className="flex flex-col gap-1.5">
-                      <label className="font-semibold text-[var(--app-text-primary)] text-xs">字體設定</label>
-                      <div className="flex items-center gap-2">
-                         <input type="text" value={options.fontFamily} onChange={e => setOptions({...options, fontFamily: e.target.value})} className="flex-1 bg-[var(--app-bg-input)] border border-[var(--app-border-input)] rounded px-2 py-1.5 focus:outline-none focus:border-[var(--app-accent)]" />
-                         <input type="number" value={options.fontSize} onChange={e => {
-                             const newSize = parseInt(e.target.value) || 120;
-                             const diff = newSize - options.fontSize;
-                             setOptions({
-                               ...options,
-                               fontSize: newSize,
-                               infoFontSize: newSize - 40,
-                               infoTitleFontSize: newSize - 10
-                             });
-                          }} className="w-20 bg-[var(--app-bg-input)] border border-[var(--app-border-input)] rounded px-2 py-1.5 focus:outline-none focus:border-[var(--app-accent)] text-center font-mono" title="Font Size" />
-                      </div>
-                      <p className="text-[10px] text-[var(--app-text-muted)]">字體外框皆固定從反（白字體配黑框，彩字體配白框）。</p>
-                   </div>
+                    {/* 字體設定 */}
+                    <div className="flex flex-col gap-1.5">
+                       <label className="font-semibold text-[var(--app-text-primary)] text-xs">字體設定</label>
+                       <div className="flex flex-col gap-2">
+                          <div className="flex items-center gap-2">
+                             <span className="text-[10px] text-[var(--app-text-secondary)] w-16 shrink-0">字型與大小:</span>
+                             <input type="text" value={options.fontFamily} onChange={e => setOptions({...options, fontFamily: e.target.value})} className="flex-1 bg-[var(--app-bg-input)] border border-[var(--app-border-input)] rounded px-2 py-1 focus:outline-none focus:border-[var(--app-accent)]" />
+                             <input type="number" value={options.fontSize} onChange={e => {
+                                 const newSize = parseInt(e.target.value) || 120;
+                                 const diff = newSize - options.fontSize;
+                                 setOptions({
+                                   ...options,
+                                   fontSize: newSize,
+                                   infoFontSize: (options.infoFontSize || 110) + diff,
+                                   infoTitleFontSize: (options.infoTitleFontSize || 140) + diff
+                                 });
+                              }} className="w-16 bg-[var(--app-bg-input)] border border-[var(--app-border-input)] rounded px-2 py-1 focus:outline-none focus:border-[var(--app-accent)] text-center font-mono" title="Font Size" />
+                          </div>
+                          
+                          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                             <div className="flex items-center gap-1.5 flex-1 min-w-[80px]">
+                                <span className="text-[10px] text-[var(--app-text-secondary)] whitespace-nowrap">描邊粗細:</span>
+                                <input type="number" min="0" max="15" value={options.simulatedOutlineWidth !== undefined ? options.simulatedOutlineWidth : 3} onChange={e => {
+                                    const val = parseInt(e.target.value) || 0;
+                                    setOptions({ ...options, simulatedOutlineWidth: val });
+                                 }} className="w-full bg-[var(--app-bg-input)] border border-[var(--app-border-input)] rounded px-1.5 py-1 focus:outline-none focus:border-[var(--app-accent)] text-center font-mono" />
+                             </div>
+
+                             <div className="flex items-center gap-1.5 flex-1 min-w-[100px]">
+                                <span className="text-[10px] text-[var(--app-text-secondary)] whitespace-nowrap">標題大小:</span>
+                                <input type="number" value={options.infoTitleFontSize || 140} onChange={e => {
+                                    const val = parseInt(e.target.value) || 140;
+                                    setOptions({ ...options, infoTitleFontSize: val });
+                                 }} className="w-full bg-[var(--app-bg-input)] border border-[var(--app-border-input)] rounded px-1.5 py-1 focus:outline-none focus:border-[var(--app-accent)] text-center font-mono" />
+                             </div>
+                             
+                             <div className="flex items-center gap-1.5 flex-1 min-w-[100px]">
+                                <span className="text-[10px] text-[var(--app-text-secondary)] whitespace-nowrap">內文大小:</span>
+                                <input type="number" value={options.infoFontSize || 110} onChange={e => {
+                                    const val = parseInt(e.target.value) || 110;
+                                    setOptions({ ...options, infoFontSize: val });
+                                 }} className="w-full bg-[var(--app-bg-input)] border border-[var(--app-border-input)] rounded px-1.5 py-1 focus:outline-none focus:border-[var(--app-accent)] text-center font-mono" />
+                             </div>
+                          </div>
+                       </div>
+                       <p className="text-[10px] text-[var(--app-text-muted)]">字體外框皆固定從反（白字體配黑框，彩字體配白框）。</p>
+                    </div>
+
+                    {/* 視訊尺寸與 ASS 比例設定 */}
+                    <div className="flex flex-col gap-1.5 bg-[var(--app-bg-input)] p-3 border border-[var(--app-border-light)] rounded">
+                       <div className="flex justify-between items-center flex-wrap gap-2">
+                          <label className="font-semibold text-[var(--app-text-primary)] text-xs">視訊尺寸與 ASS 比例設定</label>
+                          {detectedVideo && (
+                             <button
+                                type="button"
+                                onClick={() => {
+                                   const v = { videoWidth: detectedVideo.width, videoHeight: detectedVideo.height };
+                                   setOptions({
+                                      ...options,
+                                      playResX: v.videoWidth,
+                                      playResY: v.videoHeight,
+                                   });
+                                   showToast(`已套用影片原始比例：${v.videoWidth} x ${v.videoHeight}`);
+                                }}
+                                className="text-[10px] text-[var(--app-accent)] hover:underline font-medium flex items-center gap-1 bg-[var(--app-bg-base)] border border-[var(--app-border-light)] rounded px-2 py-0.5"
+                             >
+                                🎯 套用影片原始大小 ({detectedVideo.width}x{detectedVideo.height})
+                             </button>
+                          )}
+                       </div>
+                       
+                       <div className="grid grid-cols-3 gap-2 mt-1">
+                          <div className="flex flex-col gap-1 col-span-3 sm:col-span-1">
+                             <span className="text-[10px] text-[var(--app-text-muted)] font-medium">比例預設值</span>
+                             <select
+                                value={
+                                   (options.playResX === 1920 && options.playResY === 1080) ? '1920x1080' :
+                                   (options.playResX === 1280 && options.playResY === 720) ? '1280x720' :
+                                   (options.playResX === 1440 && options.playResY === 1080) ? '1440x1080' :
+                                   (options.playResX === 960 && options.playResY === 720) ? '960x720' :
+                                   (options.playResX === 2560 && options.playResY === 1080) ? '2560x1080' : 'custom'
+                                }
+                                onChange={e => {
+                                   const val = e.target.value;
+                                   if (val === 'custom') return;
+                                   const [w, h] = val.split('x').map(Number);
+                                   setOptions({
+                                      ...options,
+                                      playResX: w,
+                                      playResY: h
+                                   });
+                                }}
+                                className="bg-[var(--app-bg-panel)] border border-[var(--app-border-input)] rounded px-2 py-1 focus:outline-none focus:border-[var(--app-accent)] text-xs"
+                             >
+                                <option value="1920x1080">16:9 FHD (1920 x 1080)</option>
+                                <option value="1280x720">16:9 HD (1280 x 720)</option>
+                                <option value="1440x1080">4:3 FHD (1440 x 1080)</option>
+                                <option value="960x720">4:3 Standard (960 x 720)</option>
+                                <option value="2560x1080">21:9 UltraWide (2560 x 1080)</option>
+                                <option value="custom">自訂比例大小</option>
+                             </select>
+                          </div>
+                          
+                          <div className="flex flex-col gap-1 col-span-3 sm:col-span-1">
+                             <span className="text-[10px] text-[var(--app-text-muted)] font-medium font-semibold">寬度 (PlayResX)</span>
+                             <div className="relative">
+                                <input
+                                   type="number"
+                                   value={options.playResX || 1920}
+                                   onChange={e => {
+                                      const w = parseInt(e.target.value) || 1920;
+                                      setOptions({ ...options, playResX: w });
+                                   }}
+                                   className="w-full bg-[var(--app-bg-panel)] border border-[var(--app-border-input)] rounded px-2 py-1 pr-6 focus:outline-none focus:border-[var(--app-accent)] text-xs font-mono"
+                                />
+                                <span className="absolute right-2 top-1.5 text-[9px] text-[var(--app-text-muted)] font-mono">px</span>
+                             </div>
+                          </div>
+
+                          <div className="flex flex-col gap-1 col-span-3 sm:col-span-1">
+                             <span className="text-[10px] text-[var(--app-text-muted)] font-medium font-semibold">高度 (PlayResY)</span>
+                             <div className="relative">
+                                <input
+                                   type="number"
+                                   value={options.playResY || 1080}
+                                   onChange={e => {
+                                      const h = parseInt(e.target.value) || 1080;
+                                      setOptions({ ...options, playResY: h });
+                                   }}
+                                   className="w-full bg-[var(--app-bg-panel)] border border-[var(--app-border-input)] rounded px-2 py-1 pr-6 focus:outline-none focus:border-[var(--app-accent)] text-xs font-mono"
+                                />
+                                <span className="absolute right-2 top-1.5 text-[9px] text-[var(--app-text-muted)] font-mono">px</span>
+                             </div>
+                          </div>
+                       </div>
+                       <p className="text-[10px] text-[var(--app-text-muted)] leading-tight mt-1">
+                          設定正確的影片解析度，可避免在播放不同比例（如 4:3 懷舊影片或寬螢幕電影）的影片時，小白圓等 SVG 向量繪圖圖案產生拉伸、扁平或任何變形的問題。
+                       </p>
+                    </div>
 
                    {/* 字幕顏色設定 */}
                    <div className="flex flex-col gap-2">

@@ -144,9 +144,35 @@ const InputRow = ({ label, mKey, placeholder, value, onChange, onBlur, tooltip }
 
 export function LrcMetadataEditor({ onClose }: { onClose?: () => void }) {
   const { lrcMetadata, setLrcMetadata, commitLrcMetadata, metadata, duration, lines, commitLines } = useEditor();
-  const [formData, setFormData] = useState<LrcMetadata>({});
-  const [customKeys, setCustomKeys] = useState<{key: string, value: string}[]>([]);
-  const [systemKeys, setSystemKeys] = useState<{key: string, value: string}[]>([]);
+  const [formData, setFormData] = useState<LrcMetadata>(() => ({ ...lrcMetadata }));
+  const [customKeys, setCustomKeys] = useState<{key: string, value: string}[]>(() => {
+    const predefinedKeys = ['ti', 'ar', 'al', 'au', 'by', 'offset', 're', 've', 'length'];
+    const sysKeysList = ['kti', 'kar', 'kal', 'ko', 'tt', 'tte'];
+    const currentCustom: {key: string, value: string}[] = [];
+    for (const [key, value] of Object.entries(lrcMetadata)) {
+        if (!predefinedKeys.includes(key) && value) {
+            const lowerKey = key.toLowerCase();
+            if (!sysKeysList.includes(lowerKey)) {
+                currentCustom.push({ key, value });
+            }
+        }
+    }
+    return currentCustom;
+  });
+  const [systemKeys, setSystemKeys] = useState<{key: string, value: string}[]>(() => {
+    const predefinedKeys = ['ti', 'ar', 'al', 'au', 'by', 'offset', 're', 've', 'length'];
+    const sysKeysList = ['kti', 'kar', 'kal', 'ko', 'tt', 'tte'];
+    const currentSystem: {key: string, value: string}[] = [];
+    for (const [key, value] of Object.entries(lrcMetadata)) {
+        if (!predefinedKeys.includes(key) && value) {
+            const lowerKey = key.toLowerCase();
+            if (sysKeysList.includes(lowerKey)) {
+                currentSystem.push({ key, value });
+            }
+        }
+    }
+    return currentSystem;
+  });
   const [systemKeysOpen, setSystemKeysOpen] = useState(false);
   const isDialog = !!onClose;
   const lastAppliedRef = useRef<LrcMetadata | null>(null);

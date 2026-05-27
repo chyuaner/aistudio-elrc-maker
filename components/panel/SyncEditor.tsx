@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, memo, useCallback, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useEditor } from '@/components/base/EditorProvider';
 import { useSyncHotkeys } from '@/components/base/useSyncHotkeys';
 import { formatTime } from '@/lib/lyric-utils';
@@ -771,9 +772,9 @@ export function SyncEditor() {
         </ContextMenu>
       )}
 
-      {editingText && (
+      {editingText && typeof window !== 'undefined' && createPortal(
          <div 
-           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+           className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
            style={{
              paddingLeft: 'max(1rem, var(--app-safe-area-left))',
              paddingRight: 'max(1rem, var(--app-safe-area-right))',
@@ -843,7 +844,8 @@ export function SyncEditor() {
                     </button>
                 </div>
             </div>
-         </div>
+         </div>,
+         document.body
       )}
     </div>
   );

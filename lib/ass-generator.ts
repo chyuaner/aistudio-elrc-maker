@@ -50,6 +50,22 @@ const INFO_OUTLINE_MODE: 'simulated-dual-layer' | 'traditional' = 'simulated-dua
 //    適用於 'simulated-dual-layer' 模式，單位為像素，預設為 3。數值越大外框越粗，反之越細。
 const SIMULATED_OUTLINE_WIDTH = 3;
 
+// 4. 卡拉OK歌詞追光時間上限與平滑微調參數 (KARAOKE_TIMING_SETTINGS)
+//    - ALWAYS_STRETCH_KARAOKE: 
+//      若設為 true，單一字/單字的追光動畫（\kf / \ko）會總是拉滿到下一個字起點（無縫緊接下一字，不套用上限）。
+//      若設為 false，則會受限於下方設定的時間上限，在達到上限後原地停留呈已唱完追光狀態，等候下一個字唱出。
+const ALWAYS_STRETCH_KARAOKE = false;
+
+//    - KARAOKE_LIMIT_CHINESE: 非英文字（如中/日/韓文等）的追光動畫上限制（單位為厘秒，1厘秒 = 0.01秒），預設為 50 厘秒 (0.5 秒)。
+const KARAOKE_LIMIT_CHINESE = 40;
+
+//    - KARAOKE_LIMIT_ENGLISH: 英文單字或字母（只要含英文字母 A-Z, a-z）的追光動畫上限制（單位為厘秒），預設為 100 厘秒 (1.0 秒)。
+const KARAOKE_LIMIT_ENGLISH = 100;
+
+function isEnglishWord(text: string): boolean {
+  return /[a-zA-Z]/.test(text);
+}
+
 function formatAssTime(timeInSeconds: number) {
   const h = Math.floor(timeInSeconds / 3600);
   const m = Math.floor((timeInSeconds % 3600) / 60);
@@ -517,26 +533,61 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
          
          for (let wIdx = 0; wIdx < validWords.length; wIdx++) {
             const w = validWords[wIdx];
+            const defaultLimitVal = isEnglishWord(w.text) ? KARAOKE_LIMIT_ENGLISH : KARAOKE_LIMIT_CHINESE;
             
             let durCs = 0;
             if (w.start !== null) {
                const nextW = validWords[wIdx + 1];
-               const nextStart = nextW ? nextW.start : line.end;
-               if (nextStart !== null && nextStart > w.start) {
-                  durCs = Math.round((nextStart - w.start) * 100);
+               if (nextW) {
+                  const nextStart = nextW.start;
+                  if (nextStart !== null && nextStart >= w.start) {
+                     durCs = Math.round((nextStart - w.start) * 100);
+                  } else {
+                     durCs = defaultLimitVal;
+                  }
                } else {
-                  durCs = 30;
+                  // This is the last word in the line
+                  const hasTrailingTag = line.words && line.words.length > 0 && line.words[line.words.length - 1].text.trim() === '';
+                  const preciseEnd = line.end !== null ? line.end : (hasTrailingTag ? line.words[line.words.length - 1].start : null);
+                  
+                  if (preciseEnd !== null && preciseEnd >= w.start) {
+                     durCs = Math.round((preciseEnd - w.start) * 100);
+                  } else {
+                     // No precise user-defined end, default to 30 cs
+                     // BUT, if the next line starts in less than 30 cs, align to the next line's start
+                     const lineGlobalIdx = validLines.indexOf(line);
+                     const nextLineInSong = lineGlobalIdx !== -1 ? validLines[lineGlobalIdx + 1] : undefined;
+                     
+                     if (nextLineInSong && nextLineInSong.start !== null) {
+                        const gapToNextLine = nextLineInSong.start - w.start;
+                        const defaultLimitSec = defaultLimitVal / 100;
+                        if (gapToNextLine >= 0 && gapToNextLine < defaultLimitSec) {
+                           durCs = Math.round(gapToNextLine * 100);
+                        } else {
+                           durCs = defaultLimitVal;
+                        }
+                     } else {
+                        durCs = defaultLimitVal;
+                     }
+                  }
                }
             } else {
-               durCs = 30;
+               durCs = defaultLimitVal;
             }
 
             if (!w.text.trim()) {
                karaokeStr += `{\\k${durCs}}${w.text}`; 
                karaokeKoStr += `{\\k${durCs}}${w.text}`; 
             } else {
-               karaokeStr += `{\\kf${durCs}}${w.text}`;
-               karaokeKoStr += `{\\ko${durCs}}${w.text}`;
+               if (!ALWAYS_STRETCH_KARAOKE && durCs > defaultLimitVal) {
+                  const fillCs = defaultLimitVal;
+                  const delayCs = durCs - defaultLimitVal;
+                  karaokeStr += `{\\kf${fillCs}}${w.text}{\\k${delayCs}}`;
+                  karaokeKoStr += `{\\ko${fillCs}}${w.text}{\\k${delayCs}}`;
+               } else {
+                  karaokeStr += `{\\kf${durCs}}${w.text}`;
+                  karaokeKoStr += `{\\ko${durCs}}${w.text}`;
+               }
             }
          }
 

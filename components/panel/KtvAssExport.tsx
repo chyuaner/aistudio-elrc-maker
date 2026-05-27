@@ -252,7 +252,7 @@ export function KtvAssExport() {
       const extEnd = extTTE ? (parseSeconds(extTTE) || (extStart + 6)) : (extStart + 6);
 
       // 歌曲資訊完全「不要」自動從預設的LRC標籤(ti, ar, al)匯入，只在明確設定了專用屬性(kti, kar, kal)時才讀取
-      // 如此一來可完美支援使用者刻意將原唱與專輯留空的需求
+      // 如此一來可完美支援使用者刻意將主唱與專輯留空的需求
       const loadedTitle = lrcMetadata.kti !== undefined ? lrcMetadata.kti : '';
       const loadedArtist = lrcMetadata.kar !== undefined ? lrcMetadata.kar : '';
       const loadedAlbum = lrcMetadata.kal !== undefined ? lrcMetadata.kal : '';
@@ -412,7 +412,7 @@ export function KtvAssExport() {
                              syncToLrcMetadata(updated);
                           }} className="bg-[var(--app-bg-panel)] border border-[var(--app-border-input)] rounded px-2 py-1 focus:outline-none focus:border-[var(--app-accent)] text-xs text-[var(--app-text-primary)]" />
                           
-                          <span className="text-[var(--app-text-muted)] text-[10px] text-right">原唱</span>
+                          <span className="text-[var(--app-text-muted)] text-[10px] text-right">主唱</span>
                           <input type="text" value={options.songInfoArtist} onChange={e => {
                              const updated = { ...options, songInfoArtist: e.target.value };
                              setOptions(updated);

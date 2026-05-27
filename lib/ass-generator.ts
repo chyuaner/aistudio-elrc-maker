@@ -226,7 +226,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 
   // 建立歌曲資訊行陣列
   const artistAlbum = [];
-  if (options.songInfoArtist) artistAlbum.push(`{\\c&H00FF0000&}原唱：${options.songInfoArtist}`);
+  if (options.songInfoArtist) artistAlbum.push(`{\\c&H00FF0000&}主唱：${options.songInfoArtist}`);
   if (options.songInfoAlbum) artistAlbum.push(`{\\c&H00FF0000&}專輯：${options.songInfoAlbum}`);
   if (options.songInfoCustom) {
       const customLines = options.songInfoCustom.split('\n');

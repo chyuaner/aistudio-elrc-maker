@@ -101,9 +101,9 @@ export function generateAss(lines: LyricLine[], metadata: LrcMetadata, options: 
   const centerX = playResX / 2;
   const centerY = playResY / 2;
 
-  // 畫面寬高比若大於 16:9 (1920/1080 ≈ 1.777)，代表畫面高度變矮 (超寬比例，例如 3840x1636)，此時以高度為基準進行等比例縮小；
-  // 若寬高比小於等於 16:9 (高度高於或等於 16:9，例如 16:9 或 4:3)，則維持現有以寬度為基準的邏輯。
-  const scale = (playResX / playResY) > (1920 / 1080) ? (playResY / 1080) : (playResX / 1920);
+  // 畫面寬高比若大於 16:9，且當等效高度低於 900 門檻時，才開始以高度 900 為基準之比例進行等比例縮小。
+  // 這可以避免在度過寬（如 3840x1636）時歌詞過大，同時也保證當等效高度高於 900 時，不會過度放大的問題。
+  const scale = Math.min(playResX / 1920, playResY / 900);
 
   // 動態比例縮放參數
   const fontSize = Math.round(options.fontSize * scale);

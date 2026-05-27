@@ -45,6 +45,73 @@ export function KtvAssExport() {
     simulatedOutlineWidth: 3,
   });
 
+  // 在掛載時載入 localStorage 中的使用者自訂樣式設定 (透過 useEffect 避免 Next.js Hydration Mismatch)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('ktv_ass_export_options');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          // eslint-disable-next-line react-hooks/set-state-in-effect
+          setOptions(prev => ({
+            ...prev,
+            ...parsed
+          }));
+        }
+      } catch (e) {
+        console.error('Failed to load ASS options from localStorage', e);
+      }
+    }
+  }, []);
+
+  // 持久化 options 中的渲染樣式設定至 localStorage 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const styleOptionsOnly = {
+          primaryColor: options.primaryColor,
+          color2: options.color2,
+          color3: options.color3,
+          chorusColor: options.chorusColor,
+          fontFamily: options.fontFamily,
+          fontSize: options.fontSize,
+          infoFontSize: options.infoFontSize,
+          infoTitleFontSize: options.infoTitleFontSize,
+          dualRowSpacing: options.dualRowSpacing,
+          dualRowMarginL: options.dualRowMarginL,
+          dualRowMarginR: options.dualRowMarginR,
+          dualRowMarginV: options.dualRowMarginV,
+          row2FadeoutMode: options.row2FadeoutMode,
+          interludeBuffer: options.interludeBuffer,
+          playResX: options.playResX,
+          playResY: options.playResY,
+          simulatedOutlineWidth: options.simulatedOutlineWidth,
+        };
+        localStorage.setItem('ktv_ass_export_options', JSON.stringify(styleOptionsOnly));
+      } catch (e) {
+        console.error('Failed to save ASS options to localStorage', e);
+      }
+    }
+  }, [
+    options.primaryColor,
+    options.color2,
+    options.color3,
+    options.chorusColor,
+    options.fontFamily,
+    options.fontSize,
+    options.infoFontSize,
+    options.infoTitleFontSize,
+    options.dualRowSpacing,
+    options.dualRowMarginL,
+    options.dualRowMarginR,
+    options.dualRowMarginV,
+    options.row2FadeoutMode,
+    options.interludeBuffer,
+    options.playResX,
+    options.playResY,
+    options.simulatedOutlineWidth
+  ]);
+
   // 當 Lrc 內部的中繼資料被更新時，將歌名、歌手、專輯與自訂欄位同步至 options，確保資料即時更新且不遺失自定義渲染樣式
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect

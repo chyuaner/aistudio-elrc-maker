@@ -147,7 +147,7 @@ export function LrcMetadataEditor({ onClose }: { onClose?: () => void }) {
   const [formData, setFormData] = useState<LrcMetadata>(() => ({ ...lrcMetadata }));
   const [customKeys, setCustomKeys] = useState<{key: string, value: string}[]>(() => {
     const predefinedKeys = ['ti', 'ar', 'al', 'au', 'by', 'offset', 're', 've', 'length'];
-    const sysKeysList = ['kti', 'kar', 'kal', 'ko', 'tt', 'tte'];
+    const sysKeysList = ['kti', 'kar', 'kal', 'ko', 'tt', 'tte', 'kth'];
     const currentCustom: {key: string, value: string}[] = [];
     for (const [key, value] of Object.entries(lrcMetadata)) {
         if (!predefinedKeys.includes(key) && value) {
@@ -161,7 +161,7 @@ export function LrcMetadataEditor({ onClose }: { onClose?: () => void }) {
   });
   const [systemKeys, setSystemKeys] = useState<{key: string, value: string}[]>(() => {
     const predefinedKeys = ['ti', 'ar', 'al', 'au', 'by', 'offset', 're', 've', 'length'];
-    const sysKeysList = ['kti', 'kar', 'kal', 'ko', 'tt', 'tte'];
+    const sysKeysList = ['kti', 'kar', 'kal', 'ko', 'tt', 'tte', 'kth'];
     const currentSystem: {key: string, value: string}[] = [];
     for (const [key, value] of Object.entries(lrcMetadata)) {
         if (!predefinedKeys.includes(key) && value) {
@@ -199,7 +199,7 @@ export function LrcMetadataEditor({ onClose }: { onClose?: () => void }) {
      
      setFormData({ ...lrcMetadata });
      const predefinedKeys = ['ti', 'ar', 'al', 'au', 'by', 'offset', 're', 've', 'length'];
-     const sysKeysList = ['kti', 'kar', 'kal', 'ko', 'tt', 'tte'];
+     const sysKeysList = ['kti', 'kar', 'kal', 'ko', 'tt', 'tte', 'kth'];
      
      const currentCustom: {key: string, value: string}[] = [];
      const currentSystem: {key: string, value: string}[] = [];
@@ -386,7 +386,7 @@ export function LrcMetadataEditor({ onClose }: { onClose?: () => void }) {
       const newSystemKeys = [...systemKeys];
       const newFormData = { ...formData };
       const predefinedKeys = ['ti', 'ar', 'al', 'au', 'by', 'offset', 're', 've', 'length'];
-      const sysKeysList = ['kti', 'kar', 'kal', 'ko', 'tt', 'tte'];
+      const sysKeysList = ['kti', 'kar', 'kal', 'ko', 'tt', 'tte', 'kth'];
 
       selected.forEach(ext => {
            ext.suggestions.forEach(sug => {
@@ -539,7 +539,7 @@ export function LrcMetadataEditor({ onClose }: { onClose?: () => void }) {
                     <div className="space-y-3 animate-in fade-in duration-200">
                         <div className="flex items-center justify-between">
                             <span className="text-[10px] text-[var(--app-text-muted)] italic">
-                                系統專用標籤 (如: kti, kar, kal, ko, tt, tte)。調整不當可能影響 KTV ASS 的導出
+                                系統專用標籤 (如: kti, kar, kal, ko, tt, tte, kth)。調整不當可能影響 KTV ASS 的導出
                             </span>
                             <button 
                                 onClick={addSystem}

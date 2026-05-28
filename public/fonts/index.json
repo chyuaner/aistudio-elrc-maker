@@ -1,0 +1,82 @@
+[
+  {
+    "id": "noto-sans-tc",
+    "displayName": "思源黑體 (Noto Sans TC)",
+    "systemName": "Noto Sans TC",
+    "filename": "NotoSansTC-Regular.ttf",
+    "license": "SIL Open Font License 1.1",
+    "officialUrl": "https://fonts.google.com/noto/specimen/Noto+Sans+TC"
+  },
+  {
+    "id": "jf-open-huninn",
+    "displayName": "jf open 粉圓體",
+    "systemName": "jf open huninn 2.0",
+    "filename": "jf-openhuninn-2.0.ttf",
+    "license": "SIL Open Font License 1.1",
+    "officialUrl": "https://justfont.com/huninn/"
+  },
+  {
+    "id": "taipei-sans-tc",
+    "displayName": "台北黑體 (Taipei Sans TC Beta)",
+    "systemName": "Taipei Sans TC Beta",
+    "filename": "TaipeiSansTCBeta-Regular.ttf",
+    "license": "SIL Open Font License 1.1 (基於思源黑體)",
+    "officialUrl": "https://sites.google.com/view/jtfoundry/zh-tw"
+  },
+  {
+    "id": "pingfang-tc",
+    "displayName": "蘋果蘋方繁體 (PingFang TC)",
+    "systemName": "PingFang TC",
+    "filename": "",
+    "license": "macOS 內置字體",
+    "officialUrl": "https://developer.apple.com/fonts/"
+  },
+  {
+    "id": "lihei-pro",
+    "displayName": "蘋果儷黑 (LiHei Pro)",
+    "systemName": "LiHei Pro",
+    "filename": "",
+    "license": "macOS 內置字體",
+    "officialUrl": "https://developer.apple.com/fonts/"
+  },
+  {
+    "id": "ms-yahei",
+    "displayName": "微軟雅黑 (Microsoft YaHei)",
+    "systemName": "Microsoft YaHei",
+    "filename": "",
+    "license": "Windows 內置字體",
+    "officialUrl": "https://docs.microsoft.com/en-us/typography/font-list/microsoft-yahei"
+  },
+  {
+    "id": "ms-jhenghei",
+    "displayName": "微軟正黑體 (Microsoft JhengHei)",
+    "systemName": "Microsoft JhengHei",
+    "filename": "",
+    "license": "Windows 內置字體",
+    "officialUrl": "https://docs.microsoft.com/en-us/typography/font-list/microsoft-jhenghei"
+  },
+  {
+    "id": "droid-sans",
+    "displayName": "Droid Sans",
+    "systemName": "Droid Sans",
+    "filename": "DroidSans.ttf",
+    "license": "Apache License 2.0",
+    "officialUrl": "https://android.googlesource.com/platform/frameworks/base/+/master/data/fonts/"
+  },
+  {
+    "id": "droid-sans-fallback",
+    "displayName": "Droid Sans Fallback (中日韓)",
+    "systemName": "Droid Sans Fallback",
+    "filename": "DroidSansFallback.ttf",
+    "license": "Apache License 2.0",
+    "officialUrl": "https://android.googlesource.com/platform/frameworks/base/+/master/data/fonts/"
+  },
+  {
+    "id": "wqy-microhei",
+    "displayName": "文泉驛微米黑 (WenQuanYi Micro Hei)",
+    "systemName": "WenQuanYi Micro Hei",
+    "filename": "wqy-microhei.ttf",
+    "license": "GPL v3 (with font exception) / Apache 2.0",
+    "officialUrl": "http://wenq.org/wqy2/index.cgi?MicroHei"
+  }
+]

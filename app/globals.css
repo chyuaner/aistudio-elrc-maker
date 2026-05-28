@@ -5,6 +5,7 @@
   body {
     user-select: none;
     -webkit-user-select: none;
+    font-family: var(--font-noto-sans-tc), system-ui, -apple-system, sans-serif;
   }
 
   input, textarea, [contenteditable="true"] {

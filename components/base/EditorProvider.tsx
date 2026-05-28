@@ -422,6 +422,15 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
     setActiveLineIndex(0);
     setActiveWordIndex(0);
 
+    if (payloadMetadata && payloadMetadata.kth) {
+      const parsed = parseFloat(payloadMetadata.kth);
+      if (!isNaN(parsed) && parsed > 0) {
+        setDualLineGapSec(parsed);
+      }
+    } else {
+      setDualLineGapSec(6); // Reset to default
+    }
+
     // Smart detect word timestamps on load
     const hasWordTimestamps = newLines.some(l => l.words && l.words.some(w => w.start !== null));
     if (hasWordTimestamps) {

@@ -138,17 +138,22 @@ export function generateAss(lines: LyricLine[], metadata: LrcMetadata, options: 
 
   const primaryAssColor = hexToAssColor(options.primaryColor);
   
+  // Font Fallback 機制: 主字體, 台北黑體 Beta, 思源黑體, 蘋果儷黑, 微軟雅黑
+  const primaryFont = options.fontFamily ? options.fontFamily.trim() : 'Noto Sans TC';
+  const fallbackFonts = ['Taipei Sans TC Beta', 'Noto Sans TC', 'LiHei Pro', 'Microsoft YaHei', 'WenQuanYi Micro Hei', 'Droid Sans Fallback'];
+  const finalFontChain = [primaryFont, ...fallbackFonts.filter(f => f !== primaryFont)].join(', ');
+  
   // 樣式設定
   const styles = `[V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Default,${options.fontFamily},${Math.round(20 * scale)},&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,2,2,2,10,10,10,1
-Style: TopLeft,${options.fontFamily},${Math.round(72 * scale)},&H00FFFFFF,&H00FFFFFF,&H99000000,&H99000000,0,0,0,0,100,100,0,0,3,${(1.5 * scale).toFixed(1)},0,7,${margin48Scaled},${margin48Scaled},${margin48Scaled},0
-Style: TopCenter,${options.fontFamily},${Math.round(72 * scale)},&H00FFFFFF,&H00FFFFFF,&H99000000,&H99000000,0,0,0,0,100,100,0,0,3,${(1.5 * scale).toFixed(1)},0,8,${margin48Scaled},${margin48Scaled},${margin48Scaled},0
-Style: TopRight,${options.fontFamily},${Math.round(72 * scale)},&H00FFFFFF,&H00FFFFFF,&H99000000,&H99000000,0,0,0,0,100,100,0,0,3,${(1.5 * scale).toFixed(1)},0,9,${margin48Scaled},${margin48Scaled},${margin48Scaled},0
-Style: BottomLeft,${options.fontFamily},${fontSize},${primaryAssColor},&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,${border4Scaled},0,1,${dualRowMarginL},${dualRowMarginR},${dualRowMarginV + dualRowSpacing},0
-Style: BottomCenter,${options.fontFamily},${fontSize},${primaryAssColor},&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,${border4Scaled},0,2,${dualRowMarginL},${dualRowMarginR},${dualRowMarginV},0
-Style: BottomRight,${options.fontFamily},${fontSize},${primaryAssColor},&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,${border4Scaled},0,3,${dualRowMarginL},${dualRowMarginR},${dualRowMarginV},0
-Style: CenterInfo,${options.fontFamily},${infoFontSize},${primaryAssColor},&H00FFFFFF,&H99000000,&H99000000,0,0,0,0,100,100,0,0,1,${border4Scaled},0,5,${margin48Scaled},${margin48Scaled},${margin48Scaled},0
+Style: Default,${finalFontChain},${Math.round(20 * scale)},&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,2,2,2,10,10,10,1
+Style: TopLeft,${finalFontChain},${Math.round(72 * scale)},&H00FFFFFF,&H00FFFFFF,&H99000000,&H99000000,0,0,0,0,100,100,0,0,3,${(1.5 * scale).toFixed(1)},0,7,${margin48Scaled},${margin48Scaled},${margin48Scaled},0
+Style: TopCenter,${finalFontChain},${Math.round(72 * scale)},&H00FFFFFF,&H00FFFFFF,&H99000000,&H99000000,0,0,0,0,100,100,0,0,3,${(1.5 * scale).toFixed(1)},0,8,${margin48Scaled},${margin48Scaled},${margin48Scaled},0
+Style: TopRight,${finalFontChain},${Math.round(72 * scale)},&H00FFFFFF,&H00FFFFFF,&H99000000,&H99000000,0,0,0,0,100,100,0,0,3,${(1.5 * scale).toFixed(1)},0,9,${margin48Scaled},${margin48Scaled},${margin48Scaled},0
+Style: BottomLeft,${finalFontChain},${fontSize},${primaryAssColor},&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,${border4Scaled},0,1,${dualRowMarginL},${dualRowMarginR},${dualRowMarginV + dualRowSpacing},0
+Style: BottomCenter,${finalFontChain},${fontSize},${primaryAssColor},&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,${border4Scaled},0,2,${dualRowMarginL},${dualRowMarginR},${dualRowMarginV},0
+Style: BottomRight,${finalFontChain},${fontSize},${primaryAssColor},&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,${border4Scaled},0,3,${dualRowMarginL},${dualRowMarginR},${dualRowMarginV},0
+Style: CenterInfo,${finalFontChain},${infoFontSize},${primaryAssColor},&H00FFFFFF,&H99000000,&H99000000,0,0,0,0,100,100,0,0,1,${border4Scaled},0,5,${margin48Scaled},${margin48Scaled},${margin48Scaled},0
 `;
 
   let ass = `[Script Info]

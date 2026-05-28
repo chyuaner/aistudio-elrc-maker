@@ -1,5 +1,13 @@
 import type {Metadata, Viewport} from 'next';
+import { Noto_Sans_TC } from 'next/font/google';
 import './globals.css'; // Global styles
+
+const notoSansTC = Noto_Sans_TC({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-noto-sans-tc',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: 'Enhanced LRC Studio',
@@ -23,7 +31,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({children}: {children: React.ReactNode}) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning className={notoSansTC.variable}>
       <head>
         <script dangerouslySetInnerHTML={{__html: `
           (function() {

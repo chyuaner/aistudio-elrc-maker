@@ -15,7 +15,7 @@
     "filename": "",
     "license": "SIL Open Font License 1.1",
     "officialUrl": "https://fonts.google.com/noto/specimen/Noto+Sans+TC",
-    "sizeOffset": 0
+    "sizeOffset": 15
   },
   {
     "id": "noto-sans-medium",
@@ -24,7 +24,7 @@
     "filename": "NotoSansTC-Medium.ttf",
     "license": "SIL Open Font License 1.1",
     "officialUrl": "https://fonts.google.com/noto/specimen/Noto+Sans+TC",
-    "sizeOffset": 0
+    "sizeOffset": 8
   },
   {
     "id": "wqy-microhei",
@@ -33,7 +33,7 @@
     "filename": "wqy-microhei.ttf",
     "license": "GPL v3 (with font exception) / Apache 2.0",
     "officialUrl": "http://wenq.org/wqy2/index.cgi?MicroHei",
-    "sizeOffset": 0
+    "sizeOffset": -5
   },
   {
     "id": "noto-sans-cjk-tc",
@@ -42,7 +42,7 @@
     "filename": "",
     "license": "SIL Open Font License 1.1",
     "officialUrl": "https://fonts.google.com/noto/specimen/Noto+Sans+TC",
-    "sizeOffset": 0
+    "sizeOffset": 20
   },
   {
     "id": "noto-sans",
@@ -51,7 +51,7 @@
     "filename": "NotoSansTC-Regular.ttf",
     "license": "SIL Open Font License 1.1",
     "officialUrl": "https://fonts.google.com/noto/specimen/Noto+Sans+TC",
-    "sizeOffset": 0
+    "sizeOffset": 10
   },
   {
     "id": "wqy-zenhei",
@@ -60,7 +60,7 @@
     "filename": "",
     "license": "GPL v2 (with font exception)",
     "officialUrl": "http://wenq.org/wqy2/index.cgi?ZenHei",
-    "sizeOffset": 0
+    "sizeOffset": 8
   },
   {
     "id": "jf-open-huninn-2-1",
@@ -69,7 +69,7 @@
     "filename": "jf-openhuninn-2.1.ttf",
     "license": "SIL Open Font License 1.1",
     "officialUrl": "https://justfont.com/huninn/",
-    "sizeOffset": 0
+    "sizeOffset": -5
   },
   {
     "id": "ms-yahei",

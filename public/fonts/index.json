@@ -1,21 +1,12 @@
 [
   {
-    "id": "taipei-sans-tc",
-    "displayName": "台北黑體 (Taipei Sans TC Beta)",
-    "systemName": "Taipei Sans TC Beta",
-    "filename": "TaipeiSansTCBeta-Regular.ttf",
-    "license": "SIL Open Font License 1.1",
-    "officialUrl": "https://sites.google.com/view/jtfoundry/zh-tw",
-    "sizeOffset": -15
-  },
-  {
     "id": "noto-sans-cjk-tc-medium",
     "displayName": "思源黑體 CJK 中黑 (Noto Sans CJK TC Medium)",
     "systemName": "Noto Sans CJK TC Medium",
     "filename": "",
     "license": "SIL Open Font License 1.1",
     "officialUrl": "https://fonts.google.com/noto/specimen/Noto+Sans+TC",
-    "sizeOffset": 15
+    "sizeOffset": 20
   },
   {
     "id": "noto-sans-medium",
@@ -27,13 +18,13 @@
     "sizeOffset": 8
   },
   {
-    "id": "wqy-microhei",
-    "displayName": "文泉驛微米黑",
-    "systemName": "文泉驛微米黑",
-    "filename": "wqy-microhei.ttf",
-    "license": "GPL v3 (with font exception) / Apache 2.0",
-    "officialUrl": "http://wenq.org/wqy2/index.cgi?MicroHei",
-    "sizeOffset": -5
+    "id": "taipei-sans-tc",
+    "displayName": "台北黑體 (Taipei Sans TC Beta)",
+    "systemName": "Taipei Sans TC Beta",
+    "filename": "TaipeiSansTCBeta-Regular.ttf",
+    "license": "SIL Open Font License 1.1",
+    "officialUrl": "https://sites.google.com/view/jtfoundry/zh-tw",
+    "sizeOffset": -15
   },
   {
     "id": "noto-sans-cjk-tc",
@@ -43,6 +34,15 @@
     "license": "SIL Open Font License 1.1",
     "officialUrl": "https://fonts.google.com/noto/specimen/Noto+Sans+TC",
     "sizeOffset": 20
+  },
+  {
+    "id": "wqy-microhei",
+    "displayName": "文泉驛微米黑",
+    "systemName": "文泉驛微米黑",
+    "filename": "wqy-microhei.ttf",
+    "license": "GPL v3 (with font exception) / Apache 2.0",
+    "officialUrl": "http://wenq.org/wqy2/index.cgi?MicroHei",
+    "sizeOffset": -5
   },
   {
     "id": "noto-sans",
@@ -72,6 +72,15 @@
     "sizeOffset": -5
   },
   {
+    "id": "lihei-pro",
+    "displayName": "蘋果儷黑 (LiHei Pro)",
+    "systemName": "LiHei Pro",
+    "filename": "",
+    "license": "macOS 內置字體",
+    "officialUrl": "https://developer.apple.com/fonts/",
+    "sizeOffset": 0
+  },
+  {
     "id": "ms-yahei",
     "displayName": "微軟雅黑 (Microsoft YaHei)",
     "systemName": "Microsoft YaHei",
@@ -87,15 +96,6 @@
     "filename": "",
     "license": "Windows 內置字體",
     "officialUrl": "https://docs.microsoft.com/en-us/typography/font-list/microsoft-jhenghei",
-    "sizeOffset": 0
-  },
-  {
-    "id": "lihei-pro",
-    "displayName": "蘋果儷黑 (LiHei Pro)",
-    "systemName": "LiHei Pro",
-    "filename": "",
-    "license": "macOS 內置字體",
-    "officialUrl": "https://developer.apple.com/fonts/",
     "sizeOffset": 0
   }
 ]

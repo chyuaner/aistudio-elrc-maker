@@ -796,9 +796,13 @@ export function KtvAssExport() {
                         </span>
                         <FontSelect
                           value={options.fontFamily}
-                          onChange={(val) =>
-                            setOptions({ ...options, fontFamily: val })
-                          }
+                          onChange={(val, font) => {
+                            const updates: any = { fontFamily: val };
+                            if (font && font.sizeOffset !== undefined) {
+                              updates.fontSizeOffset = font.sizeOffset;
+                            }
+                            setOptions({ ...options, ...updates });
+                          }}
                         />
                         <input
                           type="number"
@@ -980,6 +984,23 @@ export function KtvAssExport() {
                         })
                       }
                       className="bg-[var(--app-bg-input)] border border-[var(--app-border-input)] rounded px-1 py-0.5"
+                    />
+                  </div>
+                  <div className="flex flex-col">
+                    <label className="text-[var(--app-text-muted)]">
+                      字體補正 (px)
+                    </label>
+                    <input
+                      type="number"
+                      value={options.fontSizeOffset || 0}
+                      onChange={(e) =>
+                        setOptions({
+                          ...options,
+                          fontSizeOffset: parseInt(e.target.value) || 0,
+                        })
+                      }
+                      className="bg-[var(--app-bg-input)] border border-[var(--app-border-input)] rounded px-1 py-0.5 text-[var(--app-accent)] border-dashed border-[var(--app-accent)/50]"
+                      title="字體大小強制補正值 (隨字體切換自動載入)"
                     />
                   </div>
                   <div className="flex flex-col">

@@ -11,11 +11,12 @@ export interface FontInfo {
   license: string;
   officialUrl: string;
   disabled?: boolean;
+  sizeOffset?: number;
 }
 
 interface FontSelectProps {
   value: string;
-  onChange: (value: string) => void;
+  onChange: (value: string, font?: FontInfo) => void;
   className?: string;
 }
 
@@ -65,7 +66,11 @@ export function FontSelect({ value, onChange, className }: FontSelectProps) {
           <input
              type="text"
              value={value}
-             onChange={e => onChange(e.target.value)}
+             onChange={e => {
+                 const newFamily = e.target.value;
+                 const matchedFont = fonts.find(f => f.systemName === newFamily);
+                 onChange(newFamily, matchedFont);
+             }}
              onFocus={() => setIsOpen(true)}
              placeholder="輸入系統字體或選擇"
              className="w-full bg-[var(--app-bg-panel)] border border-[var(--app-border-input)] rounded px-2 py-1 pr-6 focus:outline-none focus:border-[var(--app-accent)] text-xs h-full"
@@ -86,7 +91,7 @@ export function FontSelect({ value, onChange, className }: FontSelectProps) {
               <div key={font.id}
                    className="flex items-center justify-between px-2 py-2 hover:bg-[var(--app-hover-active)] transition-colors cursor-pointer group"
                    onClick={() => {
-                      onChange(font.systemName);
+                      onChange(font.systemName, font);
                       setIsOpen(false);
                    }}
               >

@@ -1,43 +1,75 @@
 [
   {
-    "id": "noto-sans-tc",
-    "displayName": "思源黑體 (Noto Sans TC)",
-    "systemName": "Noto Sans TC",
-    "filename": "NotoSansTC-Regular.ttf",
-    "license": "SIL Open Font License 1.1",
-    "officialUrl": "https://fonts.google.com/noto/specimen/Noto+Sans+TC"
-  },
-  {
-    "id": "jf-open-huninn",
-    "displayName": "jf open 粉圓體",
-    "systemName": "jf open huninn 2.0",
-    "filename": "jf-openhuninn-2.0.ttf",
-    "license": "SIL Open Font License 1.1",
-    "officialUrl": "https://justfont.com/huninn/"
-  },
-  {
     "id": "taipei-sans-tc",
     "displayName": "台北黑體 (Taipei Sans TC Beta)",
     "systemName": "Taipei Sans TC Beta",
     "filename": "TaipeiSansTCBeta-Regular.ttf",
-    "license": "SIL Open Font License 1.1 (基於思源黑體)",
-    "officialUrl": "https://sites.google.com/view/jtfoundry/zh-tw"
+    "license": "SIL Open Font License 1.1",
+    "officialUrl": "https://sites.google.com/view/jtfoundry/zh-tw",
+    "sizeOffset": -15
   },
   {
-    "id": "pingfang-tc",
-    "displayName": "蘋果蘋方繁體 (PingFang TC)",
-    "systemName": "PingFang TC",
+    "id": "noto-sans-cjk-tc-medium",
+    "displayName": "思源黑體 CJK 中黑 (Noto Sans CJK TC Medium)",
+    "systemName": "Noto Sans CJK TC Medium",
     "filename": "",
-    "license": "macOS 內置字體",
-    "officialUrl": "https://developer.apple.com/fonts/"
+    "license": "SIL Open Font License 1.1",
+    "officialUrl": "https://fonts.google.com/noto/specimen/Noto+Sans+TC",
+    "sizeOffset": 0
   },
   {
-    "id": "lihei-pro",
-    "displayName": "蘋果儷黑 (LiHei Pro)",
-    "systemName": "LiHei Pro",
+    "id": "noto-sans-medium",
+    "displayName": "思源黑體 中黑 (Noto Sans Medium)",
+    "systemName": "Noto Sans Medium",
+    "filename": "NotoSansTC-Medium.ttf",
+    "license": "SIL Open Font License 1.1",
+    "officialUrl": "https://fonts.google.com/noto/specimen/Noto+Sans+TC",
+    "sizeOffset": 0
+  },
+  {
+    "id": "wqy-microhei",
+    "displayName": "文泉驛微米黑",
+    "systemName": "文泉驛微米黑",
+    "filename": "wqy-microhei.ttf",
+    "license": "GPL v3 (with font exception) / Apache 2.0",
+    "officialUrl": "http://wenq.org/wqy2/index.cgi?MicroHei",
+    "sizeOffset": 0
+  },
+  {
+    "id": "noto-sans-cjk-tc",
+    "displayName": "思源黑體 CJK (Noto Sans CJK TC)",
+    "systemName": "Noto Sans CJK TC",
     "filename": "",
-    "license": "macOS 內置字體",
-    "officialUrl": "https://developer.apple.com/fonts/"
+    "license": "SIL Open Font License 1.1",
+    "officialUrl": "https://fonts.google.com/noto/specimen/Noto+Sans+TC",
+    "sizeOffset": 0
+  },
+  {
+    "id": "noto-sans",
+    "displayName": "思源黑體 (Noto Sans)",
+    "systemName": "Noto Sans",
+    "filename": "NotoSansTC-Regular.ttf",
+    "license": "SIL Open Font License 1.1",
+    "officialUrl": "https://fonts.google.com/noto/specimen/Noto+Sans+TC",
+    "sizeOffset": 0
+  },
+  {
+    "id": "wqy-zenhei",
+    "displayName": "文泉驛正黑",
+    "systemName": "文泉驛正黑",
+    "filename": "",
+    "license": "GPL v2 (with font exception)",
+    "officialUrl": "http://wenq.org/wqy2/index.cgi?ZenHei",
+    "sizeOffset": 0
+  },
+  {
+    "id": "jf-open-huninn-2-1",
+    "displayName": "jf open 粉圓 2.1",
+    "systemName": "jf open 粉圓 2.1",
+    "filename": "jf-openhuninn-2.1.ttf",
+    "license": "SIL Open Font License 1.1",
+    "officialUrl": "https://justfont.com/huninn/",
+    "sizeOffset": 0
   },
   {
     "id": "ms-yahei",
@@ -45,7 +77,8 @@
     "systemName": "Microsoft YaHei",
     "filename": "",
     "license": "Windows 內置字體",
-    "officialUrl": "https://docs.microsoft.com/en-us/typography/font-list/microsoft-yahei"
+    "officialUrl": "https://docs.microsoft.com/en-us/typography/font-list/microsoft-yahei",
+    "sizeOffset": 0
   },
   {
     "id": "ms-jhenghei",
@@ -53,30 +86,16 @@
     "systemName": "Microsoft JhengHei",
     "filename": "",
     "license": "Windows 內置字體",
-    "officialUrl": "https://docs.microsoft.com/en-us/typography/font-list/microsoft-jhenghei"
+    "officialUrl": "https://docs.microsoft.com/en-us/typography/font-list/microsoft-jhenghei",
+    "sizeOffset": 0
   },
   {
-    "id": "droid-sans",
-    "displayName": "Droid Sans",
-    "systemName": "Droid Sans",
-    "filename": "DroidSans.ttf",
-    "license": "Apache License 2.0",
-    "officialUrl": "https://android.googlesource.com/platform/frameworks/base/+/master/data/fonts/"
-  },
-  {
-    "id": "droid-sans-fallback",
-    "displayName": "Droid Sans Fallback (中日韓)",
-    "systemName": "Droid Sans Fallback",
-    "filename": "DroidSansFallback.ttf",
-    "license": "Apache License 2.0",
-    "officialUrl": "https://android.googlesource.com/platform/frameworks/base/+/master/data/fonts/"
-  },
-  {
-    "id": "wqy-microhei",
-    "displayName": "文泉驛微米黑 (WenQuanYi Micro Hei)",
-    "systemName": "WenQuanYi Micro Hei",
-    "filename": "wqy-microhei.ttf",
-    "license": "GPL v3 (with font exception) / Apache 2.0",
-    "officialUrl": "http://wenq.org/wqy2/index.cgi?MicroHei"
+    "id": "lihei-pro",
+    "displayName": "蘋果儷黑 (LiHei Pro)",
+    "systemName": "LiHei Pro",
+    "filename": "",
+    "license": "macOS 內置字體",
+    "officialUrl": "https://developer.apple.com/fonts/",
+    "sizeOffset": 0
   }
 ]

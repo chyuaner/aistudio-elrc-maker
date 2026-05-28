@@ -47,8 +47,9 @@ export function KtvAssExport() {
     color2: "#FF0000", // Red
     color3: "#800080", // Purple
     chorusColor: "#008000", // Green
-    fontFamily: "Noto Sans TC",
+    fontFamily: "Noto Sans CJK TC Medium",
     fontSize: 135, // Default for BottomLeft
+    fontSizeOffset: 20, // Pre-offset for Noto Sans CJK TC Medium
     infoFontSize: 100, // Default for CenterInfo (song info, fontSize - 40)
     infoTitleFontSize: 125, // Default for red Title (fontSize - 10)
     songInfoTitle: lrcMetadata.kti !== undefined ? lrcMetadata.kti : "",
@@ -100,6 +101,7 @@ export function KtvAssExport() {
           chorusColor: options.chorusColor,
           fontFamily: options.fontFamily,
           fontSize: options.fontSize,
+          fontSizeOffset: options.fontSizeOffset,
           infoFontSize: options.infoFontSize,
           infoTitleFontSize: options.infoTitleFontSize,
           dualRowSpacing: options.dualRowSpacing,
@@ -127,6 +129,7 @@ export function KtvAssExport() {
     options.chorusColor,
     options.fontFamily,
     options.fontSize,
+    options.fontSizeOffset,
     options.infoFontSize,
     options.infoTitleFontSize,
     options.dualRowSpacing,

@@ -138,10 +138,11 @@ export function generateAss(lines: LyricLine[], metadata: LrcMetadata, options: 
 
   const primaryAssColor = hexToAssColor(options.primaryColor);
   
-  // Font Fallback 機制: 主字體, 台北黑體 Beta, 思源黑體, 蘋果儷黑, 微軟雅黑
+  // Font Fallback 機制: ASS 格式的 Style 是使用逗號 (,) 分隔各個欄位的，不能在 Fontname 裡面包含逗號，否則會導致後面的 Fontsize 解析為 0，造成字體完全無法顯示！
+  // Subtitle 渲染器 (如 VSFilter, libass) 底層本身就有作業系統層級的 glyph fallback 機制。
+  // 我們這邊只能指定單一的首選字體名稱。
   const primaryFont = options.fontFamily ? options.fontFamily.trim() : 'Noto Sans TC';
-  const fallbackFonts = ['Taipei Sans TC Beta', 'Noto Sans TC', 'LiHei Pro', 'Microsoft YaHei', 'WenQuanYi Micro Hei', 'Droid Sans Fallback'];
-  const finalFontChain = [primaryFont, ...fallbackFonts.filter(f => f !== primaryFont)].join(', ');
+  const finalFontChain = primaryFont;
   
   // 樣式設定
   const styles = `[V4+ Styles]

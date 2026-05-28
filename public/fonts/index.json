@@ -3,7 +3,7 @@
     "id": "noto-sans-cjk-tc-medium",
     "displayName": "思源黑體 CJK 中黑 (Noto Sans CJK TC Medium)",
     "systemName": "Noto Sans CJK TC Medium",
-    "filename": "",
+    "filename": "NotoSansCJKjp-Medium.ttf",
     "license": "SIL Open Font License 1.1",
     "officialUrl": "https://fonts.google.com/noto/specimen/Noto+Sans+TC",
     "sizeOffset": 20
@@ -12,7 +12,7 @@
     "id": "noto-sans-medium",
     "displayName": "思源黑體 中黑 (Noto Sans Medium)",
     "systemName": "Noto Sans Medium",
-    "filename": "NotoSansTC-Medium.ttf",
+    "filename": "NotoSans-Medium.ttf",
     "license": "SIL Open Font License 1.1",
     "officialUrl": "https://fonts.google.com/noto/specimen/Noto+Sans+TC",
     "sizeOffset": 8
@@ -30,7 +30,7 @@
     "id": "noto-sans-cjk-tc",
     "displayName": "思源黑體 CJK (Noto Sans CJK TC)",
     "systemName": "Noto Sans CJK TC",
-    "filename": "",
+    "filename": "NotoSansCJKjp-Regular.ttf",
     "license": "SIL Open Font License 1.1",
     "officialUrl": "https://fonts.google.com/noto/specimen/Noto+Sans+TC",
     "sizeOffset": 20
@@ -39,7 +39,7 @@
     "id": "wqy-microhei",
     "displayName": "文泉驛微米黑",
     "systemName": "文泉驛微米黑",
-    "filename": "wqy-microhei.ttf",
+    "filename": "",
     "license": "GPL v3 (with font exception) / Apache 2.0",
     "officialUrl": "http://wenq.org/wqy2/index.cgi?MicroHei",
     "sizeOffset": -5
@@ -48,7 +48,7 @@
     "id": "noto-sans",
     "displayName": "思源黑體 (Noto Sans)",
     "systemName": "Noto Sans",
-    "filename": "NotoSansTC-Regular.ttf",
+    "filename": "NotoSans-Regular.ttf",
     "license": "SIL Open Font License 1.1",
     "officialUrl": "https://fonts.google.com/noto/specimen/Noto+Sans+TC",
     "sizeOffset": 10

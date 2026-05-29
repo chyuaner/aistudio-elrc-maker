@@ -30,6 +30,11 @@ export interface AssOptions {
   playResX?: number;
   playResY?: number;
   simulatedOutlineWidth?: number;
+  dotOuterColor?: string; // hex
+  dotInnerColor?: string; // hex
+  dotOuterSize?: number; // ratio (0.1 ~ 0.5)
+  dotInnerSize?: number; // ratio (0.05 ~ 0.4)
+  dotSpacing?: number; // ratio (0.5 ~ 1.2)
 }
 
 // 內部控制參數
@@ -427,9 +432,11 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
   // =========================================================================
 
   // 倒數小白圓的控制參數
-  // 計算小白圓與文字的相對大小，並使其「稍大一點點」
-  const dotRadius = Math.round(fontSize * 0.25);
-  const dotSpacing = Math.round(fontSize * 0.75);
+  const outerRatio = options.dotOuterSize !== undefined ? options.dotOuterSize : 0.3;
+  const innerRatio = options.dotInnerSize !== undefined ? options.dotInnerSize : 0.28;
+  const dotSpacingRatio = options.dotSpacing !== undefined ? options.dotSpacing : 0.75;
+  const dotRadius = Math.round(fontSize * outerRatio);
+  const dotSpacing = Math.round(fontSize * dotSpacingRatio);
 
   // 第一階段 (Pass 1)：計算所有段落的 raw 資訊
   const pInfos = paragraphs.map((p, idx) => {
@@ -568,9 +575,20 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
           dotFadeIn = fadeMs;
         }
 
-        const vecStr = getDotsVector(dDots, dotRadius, dotSpacing);
-        // {\\p1} 使用 SVG Vector 畫法, {\\c...\\3c...} 指定填滿與邊框色彩
-        ass += `Dialogue: 5,${formatAssTime(dotStart)},${formatAssTime(dotEnd)},TopLeft,,0,0,0,,{\\fad(${dotFadeIn},0)\\pos(${xPos},${yPos})\\c&HFFFFFF&\\bord0\\shad0\\1a&H00&}{\\p1}${vecStr}{\\p0}\n`;
+        // 為了相容所有播放器對 ASS Vector Outlines 大小和 Opaque Border Style 3 的處理，
+        // 我們採用最穩定且效果最好的雙層同心圓繪製法 (Double-layer Concentric Circles)：
+        const dotOuterColorAss = hexToAssColor(options.dotOuterColor || "#888888");
+        const dotInnerColorAss = hexToAssColor(options.dotInnerColor || "#FFFFFF");
+        const outerRadius = Math.round(fontSize * outerRatio);
+        const innerRadius = Math.max(1, Math.round(fontSize * innerRatio));
+
+        // 1. 底層繪製稍微大一點、顏色可由用戶定義的圓形外框 (預設暗灰色)
+        const vecOuter = getDotsVector(dDots, outerRadius, dotSpacing);
+        ass += `Dialogue: 5,${formatAssTime(dotStart)},${formatAssTime(dotEnd)},TopLeft,,0,0,0,,{\\fad(${dotFadeIn},0)\\pos(${xPos},${yPos})\\c${dotOuterColorAss}&\\bord0\\shad0\\1a&H00&}{\\p1}${vecOuter}{\\p0}\n`;
+
+        // 2. 頂層繪製稍微小一點、顏色可由用戶定義的圓形本體 (預設純白色)，疊加在相同位置，形成極為完美的圓形外邊框效果
+        const vecInner = getDotsVector(dDots, innerRadius, dotSpacing);
+        ass += `Dialogue: 6,${formatAssTime(dotStart)},${formatAssTime(dotEnd)},TopLeft,,0,0,0,,{\\fad(${dotFadeIn},0)\\pos(${xPos},${yPos})\\c${dotInnerColorAss}&\\bord0\\shad0\\1a&H00&}{\\p1}${vecInner}{\\p0}\n`;
       }
     }
 

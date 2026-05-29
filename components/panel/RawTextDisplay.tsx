@@ -464,13 +464,7 @@ export function RawTextDisplay({
             搜尋
           </button>
           
-          {customRightControls ? customRightControls : (
-            <div className="flex items-center gap-2">
-               <span className="text-[10px] text-[var(--app-text-muted)] font-bold">間距閥值</span>
-               <input type="number" value={dualLineGapSec} onChange={(e) => setDualLineGapSec(Number(e.target.value) || 0)} className="w-12 bg-[var(--app-bg-input)] border border-[var(--app-border-light)] rounded px-1 min-h-[1.5rem] py-0.5 text-xs text-center" step="0.5" />
-               <span className="text-[10px] text-[var(--app-text-muted)]">秒</span>
-            </div>
-          )}
+          {customRightControls}
           
           <div className="flex gap-2">
             <button 

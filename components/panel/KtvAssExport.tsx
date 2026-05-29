@@ -60,6 +60,11 @@ export function getDefaultAssOptions(lrcMetadata: any) {
     playResX: 1920,
     playResY: 1080,
     simulatedOutlineWidth: 3,
+    dotOuterColor: "#DEDDDA",
+    dotInnerColor: "#FFFFFF",
+    dotOuterSize: 0.28,
+    dotInnerSize: 0.26,
+    dotSpacing: 0.75,
   };
 }
 
@@ -79,8 +84,10 @@ export function KtvAssExport() {
   } = useEditor();
   const [fontConfigOpen, setFontConfigOpen] = useState(false);
   const [colorConfigOpen, setColorConfigOpen] = useState(false);
+  const [dotConfigOpen, setDotConfigOpen] = useState(false);
   const [testParamsOpen, setTestParamsOpen] = useState(false);
   const [burnVideoDialogOpen, setBurnVideoDialogOpen] = useState(false);
+  const [rawPreviewOpen, setRawPreviewOpen] = useState(false);
   const [ffmpegMode, setFfmpegMode] = useState<"cpu" | "nvidia">("cpu");
   const [copiedFeedback, setCopiedFeedback] = useState(false);
 
@@ -112,6 +119,14 @@ export function KtvAssExport() {
         const saved = localStorage.getItem("ktv_ass_export_options");
         if (saved) {
           const parsed = JSON.parse(saved);
+          
+          // 移除從 localStorage 載入小白圓設定（避免使用者 legacy 或舊設定汙染新預設值）
+          delete parsed.dotOuterColor;
+          delete parsed.dotInnerColor;
+          delete parsed.dotOuterSize;
+          delete parsed.dotInnerSize;
+          delete parsed.dotSpacing;
+
           // eslint-disable-next-line react-hooks/set-state-in-effect
           setOptions((prev) => ({
             ...prev,
@@ -993,6 +1008,159 @@ export function KtvAssExport() {
                 )}
               </div>
 
+              {/* 間奏倒數小圓設定 */}
+              {SHOW_INTERNAL_TEST_PARAMS && (
+                <div className="flex flex-col gap-1.5">
+                  <div
+                    onClick={() => setDotConfigOpen(!dotConfigOpen)}
+                    className="flex items-center justify-between font-semibold text-[var(--app-text-primary)] text-xs cursor-pointer group hover:text-white transition-colors"
+                  >
+                    <span>間奏倒數小圓設定 (內部)</span>
+                    {dotConfigOpen ? (
+                      <ChevronDown className="w-4 h-4 text-[var(--app-text-muted)] group-hover:text-white" />
+                    ) : (
+                      <ChevronRight className="w-4 h-4 text-[var(--app-text-muted)] group-hover:text-white" />
+                    )}
+                  </div>
+
+                  {dotConfigOpen && (
+                    <div className="flex flex-col gap-3 bg-[var(--app-bg-input)] p-3 border border-[var(--app-border-light)] rounded animate-in fade-in duration-200">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="flex flex-col gap-1">
+                          <span className="text-[10px] text-[var(--app-text-muted)] font-medium">
+                            外框部分顏色 (Hex)
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="color"
+                              value={options.dotOuterColor || "#DEDDDA"}
+                              onChange={(e) =>
+                                setOptions({
+                                  ...options,
+                                  dotOuterColor: e.target.value,
+                                })
+                              }
+                              className="h-6 w-6 rounded cursor-pointer bg-transparent border-0 p-0 shrink-0"
+                            />
+                            <span className="font-mono text-[10px] text-[var(--app-text-primary)]">
+                              {(options.dotOuterColor || "#DEDDDA").toUpperCase()}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <span className="text-[10px] text-[var(--app-text-muted)] font-medium">
+                            內圓本體顏色 (Hex)
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="color"
+                              value={options.dotInnerColor || "#FFFFFF"}
+                              onChange={(e) =>
+                                setOptions({
+                                  ...options,
+                                  dotInnerColor: e.target.value,
+                                })
+                              }
+                              className="h-6 w-6 rounded cursor-pointer bg-transparent border-0 p-0 shrink-0"
+                            />
+                            <span className="font-mono text-[10px] text-[var(--app-text-primary)]">
+                              {(options.dotInnerColor || "#FFFFFF").toUpperCase()}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col gap-1">
+                        <div className="flex justify-between text-[10px]">
+                          <span className="text-[var(--app-text-muted)] font-medium">
+                            外圓形半徑比例
+                          </span>
+                          <span className="font-mono text-[var(--app-text-primary)]">
+                            {options.dotOuterSize !== undefined ? options.dotOuterSize : 0.28}
+                          </span>
+                        </div>
+                        <input
+                          type="range"
+                          min="0.1"
+                          max="0.5"
+                          step="0.01"
+                          value={options.dotOuterSize !== undefined ? options.dotOuterSize : 0.28}
+                          onChange={(e) =>
+                            setOptions({
+                              ...options,
+                              dotOuterSize: parseFloat(e.target.value),
+                            })
+                          }
+                          className="w-full accent-[var(--app-accent)]"
+                        />
+                      </div>
+
+                      <div className="flex flex-col gap-1">
+                        <div className="flex justify-between text-[10px]">
+                          <span className="text-[var(--app-text-muted)] font-medium">
+                            內圓形半徑比例 (小於外圓形)
+                          </span>
+                          <span className="font-mono text-[var(--app-text-primary)]">
+                            {options.dotInnerSize !== undefined
+                              ? options.dotInnerSize
+                              : 0.26}
+                          </span>
+                        </div>
+                        <input
+                          type="range"
+                          min="0.05"
+                          max="0.4"
+                          step="0.01"
+                          value={
+                            options.dotInnerSize !== undefined
+                              ? options.dotInnerSize
+                              : 0.26
+                          }
+                          onChange={(e) =>
+                            setOptions({
+                              ...options,
+                              dotInnerSize: parseFloat(e.target.value),
+                            })
+                          }
+                          className="w-full accent-[var(--app-accent)]"
+                        />
+                      </div>
+
+                      <div className="flex flex-col gap-1">
+                        <div className="flex justify-between text-[10px]">
+                          <span className="text-[var(--app-text-muted)] font-medium">
+                            小白圓間距比例
+                          </span>
+                          <span className="font-mono text-[var(--app-text-primary)]">
+                            {options.dotSpacing !== undefined
+                              ? options.dotSpacing
+                              : 0.75}
+                          </span>
+                        </div>
+                        <input
+                          type="range"
+                          min="0.5"
+                          max="1.2"
+                          step="0.01"
+                          value={
+                            options.dotSpacing !== undefined
+                              ? options.dotSpacing
+                              : 0.75
+                          }
+                          onChange={(e) =>
+                            setOptions({
+                              ...options,
+                              dotSpacing: parseFloat(e.target.value),
+                            })
+                          }
+                          className="w-full accent-[var(--app-accent)]"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* 密集測試區 */}
               {SHOW_INTERNAL_TEST_PARAMS && (
                 <div className="flex flex-col gap-1.5">
@@ -1363,22 +1531,48 @@ export function KtvAssExport() {
       </div>
 
       {/* Editor / Preview Area */}
-      <div className="flex-1 flex flex-col min-h-[300px] overflow-hidden lg:relative">
-        <RawTextDisplay
-          customText={
-            assContent ||
-            "; 沒有包含同步時間標籤的歌詞資料。請先到「逐字同步」頁尾打節拍。"
-          }
-          hideKaraokePreview={true}
-          customLeftControls={
-            <div className="flex items-center gap-2">
-              <SlidersHorizontal className="w-4 h-4 text-[var(--app-text-muted)]" />
-              <span className="text-xs font-mono text-[var(--app-text-muted)]">
-                .ass RAW Preview
-              </span>
-            </div>
-          }
-        />
+      <div className="border border-[var(--app-border-light)] rounded overflow-hidden mb-4">
+        <div 
+          onClick={() => setRawPreviewOpen(!rawPreviewOpen)}
+          className="flex items-center justify-between px-4 py-2.5 bg-[var(--app-bg-input)] cursor-pointer hover:bg-[var(--app-bg-hover)] transition-colors select-none"
+        >
+          <div className="flex items-center gap-2">
+            <SlidersHorizontal className="w-4 h-4 text-[var(--app-text-muted)]" />
+            <span className="text-xs font-semibold text-[var(--app-text-primary)]">
+              .ass RAW Preview 字幕內容預覽
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-[var(--app-text-muted)]">
+              {rawPreviewOpen ? "點擊收合" : "點擊展開"}
+            </span>
+            {rawPreviewOpen ? (
+              <ChevronDown className="w-4 h-4 text-[var(--app-text-muted)]" />
+            ) : (
+              <ChevronRight className="w-4 h-4 text-[var(--app-text-muted)]" />
+            )}
+          </div>
+        </div>
+        
+        {rawPreviewOpen && (
+          <div className="flex flex-col min-h-[300px] max-h-[500px] overflow-hidden lg:relative border-t border-[var(--app-border-light)]">
+            <RawTextDisplay
+              customText={
+                assContent ||
+                "; 沒有包含同步時間標籤的歌詞資料。請先到「逐字同步」頁尾打節拍。"
+              }
+              hideKaraokePreview={true}
+              customLeftControls={
+                <div className="flex items-center gap-2">
+                  <SlidersHorizontal className="w-4 h-4 text-[var(--app-text-muted)]" />
+                  <span className="text-xs font-mono text-[var(--app-text-muted)]">
+                    .ass RAW Preview
+                  </span>
+                </div>
+              }
+            />
+          </div>
+        )}
       </div>
 
       {/* FFmpeg 壓製影片教學 Dialog */}

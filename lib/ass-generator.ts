@@ -34,7 +34,7 @@ export interface AssOptions {
 
 // 內部控制參數
 const DEFAULT_INFO_STAY_TIME = 6.0;
-const INTRO_DELAY_BUFFER_TIME = 0.5;
+const INTRO_DELAY_BUFFER_TIME = 1;
 
 // =========================================================================
 // 【核心設計與模式微調參數】

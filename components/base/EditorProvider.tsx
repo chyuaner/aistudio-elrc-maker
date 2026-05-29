@@ -390,7 +390,7 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
       }
 
       const prevIsSingle = !!prevLine.isSingleLine;
-      const forceNewPara = !!line.isSingleLine || prevIsSingle;
+      const forceNewPara = !!line.isSingleLine || prevIsSingle || line.ktvsp != null;
 
       if (gapSec >= dualLineGapSec || explicitInterludePending || forceNewPara) {
         currentTrack = 0;

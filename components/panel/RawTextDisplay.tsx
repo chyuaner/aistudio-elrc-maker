@@ -80,7 +80,7 @@ export function RawTextDisplay({
             gapSec = currentStart - prevEnd;
           }
           const isPrevEmpty = prevLine.words?.every((w: any) => !w.text.trim());
-          if (gapSec >= dualLineGapSec || isPrevEmpty) {
+          if (gapSec >= dualLineGapSec || isPrevEmpty || lines[i].ktvsp != null) {
             result[i] = true;
           }
         }
@@ -368,6 +368,16 @@ export function RawTextDisplay({
           for (let i = 0; i < lines.length; i++) {
               if (exportFormat === 'simple' && simpleIncludeInstrumental && i > 0 && paragraphStarts[i]) {
                   currentRawIndex++; // Empty line
+              }
+              if (exportFormat !== 'simple') {
+                  if (lines[i].isSingleLine) {
+                      rawIdxToLineIdx.set(currentRawIndex, i);
+                      currentRawIndex++;
+                  }
+                  if (lines[i].ktvsp != null) {
+                      rawIdxToLineIdx.set(currentRawIndex, i);
+                      currentRawIndex++;
+                  }
               }
               rawIdxToLineIdx.set(currentRawIndex, i);
               currentRawIndex++;

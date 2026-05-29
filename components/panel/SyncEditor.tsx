@@ -42,10 +42,12 @@ const SyncCell = memo(({
       }}
       className={`p-0 align-top group cursor-pointer border-r border-[var(--app-border-base)] transition-colors relative ${isDual ? 'w-1/2' : 'w-full'}
         ${isActive ? 
-          (line.isSingleLine ? 'bg-[var(--app-border-base)] text-[var(--app-text-primary)] shadow-[inset_3px_0_0_0_#a855f7]' : 'bg-[var(--app-border-base)] text-[var(--app-text-primary)] shadow-[inset_2px_0_0_0_var(--app-accent)]') : 
+          (line.isSingleLine ? 'bg-[var(--app-border-base)] text-[var(--app-text-primary)] shadow-[inset_3px_0_0_0_#a855f7]' : 
+            (line.ktvsp != null ? 'bg-[var(--app-border-base)] text-[var(--app-text-primary)] shadow-[inset_3px_0_0_0_#22c55e]' : 'bg-[var(--app-border-base)] text-[var(--app-text-primary)] shadow-[inset_2px_0_0_0_var(--app-accent)]')) : 
           (line.isSingleLine ? 'bg-purple-500/10 dark:bg-purple-950/30 hover:bg-purple-500/20 dark:hover:bg-purple-950/50 text-[var(--app-text-muted)] shadow-[inset_2px_0_0_0_#a855f7]' :
-            (paragraphStart ? 'bg-[#293B33]/40 hover:bg-[#293B33]/60 text-[var(--app-text-muted)] shadow-[inset_2px_0_0_0_rgba(65,168,125,0.5)]' : 'hover:bg-[var(--app-bg-panel-alt)] text-[var(--app-text-muted)]'))}
-        ${(!isActive && isPassed && !paragraphStart && !line.isSingleLine) ? ' opacity-60' : ''}`}
+            (line.ktvsp != null ? 'bg-green-500/10 dark:bg-green-950/30 hover:bg-green-500/20 dark:hover:bg-green-950/50 text-[var(--app-text-muted)] shadow-[inset_2px_0_0_0_#22c55e]' :
+              (paragraphStart ? 'bg-[#293B33]/40 hover:bg-[#293B33]/60 text-[var(--app-text-muted)] shadow-[inset_2px_0_0_0_rgba(65,168,125,0.5)]' : 'hover:bg-[var(--app-bg-panel-alt)] text-[var(--app-text-muted)]')))}
+        ${(!isActive && isPassed && !paragraphStart && !line.isSingleLine && line.ktvsp == null) ? ' opacity-60' : ''}`}
     >
       <LyricCellContent
         line={line}
@@ -149,7 +151,7 @@ export function SyncEditor() {
             gapSec = currentStart - prevEnd;
           }
           const isPrevEmpty = prevLine.words?.every((w: any) => !w.text.trim());
-          if (gapSec >= dualLineGapSec || isPrevEmpty) {
+          if (gapSec >= dualLineGapSec || isPrevEmpty || lines[i].ktvsp != null) {
             result[i] = true;
           }
         }
@@ -196,6 +198,7 @@ export function SyncEditor() {
   }, []);
 
   const [editingText, setEditingText] = useState<{ globalIndex: number, text: string, type: 'raw' | 'text' } | null>(null);
+  const [ktvspDialog, setKtvspDialog] = useState<{ globalIndex: number, text: string } | null>(null);
 
   const handleEditRawText = useCallback((globalIndex: number) => {
     const defaultRaw = getLineRawText(lines[globalIndex]);
@@ -700,6 +703,12 @@ export function SyncEditor() {
               <ContextMenuItem icon={<span className="w-3.5 h-3.5 flex items-center justify-center font-bold text-[10px]">繁</span>} label="這行字轉繁體" onClick={() => { handleLineConvertToTraditional(ctxMenu.globalIndex); setCtxMenu(null); }} />
               <ContextMenuItem icon={<span className="w-3.5 h-3.5 flex items-center justify-center font-bold text-[10px]">簡</span>} label="這行字轉簡體" onClick={() => { handleLineConvertToSimplified(ctxMenu.globalIndex); setCtxMenu(null); }} />
               <ContextMenuItem icon={<span className="w-3.5 h-3.5 flex items-center justify-center font-semibold text-[10px] text-purple-500">3</span>} label={lines[ctxMenu.globalIndex]?.isSingleLine ? "✓ 算做第三句 (已啟用)" : "算做第三句（強制單行）"} onClick={() => { handleToggleSingleLine(ctxMenu.globalIndex); setCtxMenu(null); }} />
+              <ContextMenuItem icon={<span className="w-3.5 h-3.5 flex items-center justify-center font-bold text-[10px] text-green-500">SP</span>} label={lines[ctxMenu.globalIndex]?.ktvsp != null ? `✓ 特殊作為段落開始 (${formatTime(lines[ctxMenu.globalIndex].ktvsp!)})` : "特殊作為段落開始 (ktvsp)"} onClick={() => { 
+                const line = lines[ctxMenu.globalIndex];
+                const defSec = line.start !== null ? Math.max(0, line.start - 5.5) : 0;
+                setKtvspDialog({ globalIndex: ctxMenu.globalIndex, text: line.ktvsp != null ? formatTime(line.ktvsp, true) : formatTime(defSec, true) });
+                setCtxMenu(null); 
+              }} />
               <ContextMenuItem icon={<FileText className="w-3.5 h-3.5" />} label="到編輯原始文字" onClick={() => { 
                 const targetIndex = ctxMenu.globalIndex;
                 setCtxMenu(null);
@@ -837,6 +846,72 @@ export function SyncEditor() {
                  ));
               })()}
             </div>
+          </div>
+        )}
+      </BaseDialog>
+
+      <BaseDialog
+        isOpen={ktvspDialog !== null}
+        onClose={() => setKtvspDialog(null)}
+        title="特殊作為段落開始 (ktvsp)"
+        maxWidthClass="max-w-sm"
+        footer={
+          <>
+            <button 
+              onClick={() => {
+                if (!ktvspDialog) return;
+                commitLines(prev => {
+                    const newLines = [...prev];
+                    newLines[ktvspDialog.globalIndex] = { ...newLines[ktvspDialog.globalIndex], ktvsp: undefined };
+                    return newLines;
+                }, '清除 ktvsp');
+                setKtvspDialog(null);
+              }}
+              className="px-4 py-2 text-xs text-[var(--app-text-secondary)] hover:bg-[var(--app-bg-hover)] rounded transition-colors mr-auto border border-[var(--app-border-base)]"
+            >
+              恢復預設 (清除)
+            </button>
+            <button 
+              onClick={() => setKtvspDialog(null)} 
+              className="px-4 py-2 text-xs text-[var(--app-text-secondary)] hover:bg-[var(--app-bg-hover)] rounded transition-colors font-semibold"
+            >
+              取消
+            </button>
+            <button 
+              onClick={() => {
+                if (!ktvspDialog) return;
+                const { parseSeconds } = require('@/lib/lyric-utils');
+                const pSec = parseSeconds(ktvspDialog.text);
+                if (typeof pSec === 'number' && !isNaN(pSec)) {
+                    commitLines(prev => {
+                        const newLines = [...prev];
+                        newLines[ktvspDialog.globalIndex] = { ...newLines[ktvspDialog.globalIndex], ktvsp: pSec };
+                        return newLines;
+                    }, '設定 ktvsp');
+                }
+                setKtvspDialog(null);
+              }}
+              className="px-4 py-2 text-xs bg-[var(--app-accent)] text-black hover:bg-[var(--app-accent-hover)] rounded shadow-sm transition-colors font-semibold"
+            >
+              確定
+            </button>
+          </>
+        }
+      >
+        {ktvspDialog && (
+          <div className="flex flex-col gap-3">
+             <p className="text-xs text-[var(--app-text-muted)]">
+                 該段落將會強制作為新的段落顯示（無論上一句是何時），並於您指定的時間點提早開始淡入顯示。
+             </p>
+             <label className="text-xs font-bold text-[var(--app-text-secondary)]">提前顯示時間戳 (mm:ss.xx)</label>
+             <input
+               autoFocus
+               type="text"
+               className="w-full bg-[var(--app-bg-input)] border border-[var(--app-border-base)] rounded-lg p-2 text-[var(--app-text-primary)] outline-none focus:border-[var(--app-accent)] font-mono text-sm uppercase"
+               value={ktvspDialog.text}
+               onChange={(e) => setKtvspDialog({ ...ktvspDialog, text: e.target.value })}
+               placeholder="例如: 01:23.45"
+             />
           </div>
         )}
       </BaseDialog>

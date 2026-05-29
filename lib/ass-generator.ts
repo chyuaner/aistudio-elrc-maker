@@ -34,6 +34,7 @@ export interface AssOptions {
 
 // 內部控制參數
 const DEFAULT_INFO_STAY_TIME = 6.0;
+const INTRO_DELAY_BUFFER_TIME = 0.5;
 
 // =========================================================================
 // 【核心設計與模式微調參數】
@@ -250,7 +251,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
       const firstParaEnd = getLineEndTime(
         paragraphs[0][paragraphs[0].length - 1],
       );
-      const delayedStart = firstParaEnd + options.interludeBuffer + options.fadeInOutTime;
+      const delayedStart = firstParaEnd + options.interludeBuffer + options.fadeInOutTime + INTRO_DELAY_BUFFER_TIME;
       if (delayedStart > options.introDelayLimit) {
         infoStart = 0.5;
         infoEnd = DEFAULT_INFO_STAY_TIME;

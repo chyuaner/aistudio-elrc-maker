@@ -237,20 +237,35 @@ export function TextEditor() {
     const handler = (e: any) => {
       const lineIndex = e.detail?.lineIndex;
       if (lineIndex !== undefined && textareaRef.current) {
-        const splitLines = text.split("\n");
+        // Strip tags in the exactly same way as parseRawLyrics, but preserving \n
+        let cleanTextForIndex = text.replace(
+          /\[([^:：\]]+)[:：]((?:\\.|[^\]])*)\]/g,
+          (match, rawKey) => {
+            let trimmedKey = rawKey.trim();
+            if (/^\d+$/.test(trimmedKey)) return match;
+            if (
+              trimmedKey.toLowerCase() === "ktv" ||
+              trimmedKey.toLowerCase() === "ktvsp"
+            )
+              return match;
+            // Return only newlines to keep line count synced
+            return match.replace(/[^\n]/g, "");
+          },
+        );
+
+        const splitLines = cleanTextForIndex.split("\n");
+        const originalLines = text.split("\n");
+
         let currentLineIndex = -1;
         let targetRow = -1;
-
-        const lineTimeRegex = /^\[(\d+:\d+(?:\.\d+)?)\]/;
-        const metaRegex = /^\[([^:：\]]+)[:：](.*)\]\s*$/;
 
         for (let i = 0; i < splitLines.length; i++) {
           const lineText = splitLines[i];
           if (!lineText.trim()) continue;
 
-          if (metaRegex.test(lineText) && !lineTimeRegex.test(lineText)) {
+          if (/^\[ktv\s*:\s*singleline\]$/i.test(lineText.trim())) continue;
+          if (/^\[ktvsp\s*:\s*(\d+:\d+(?:\.\d+)?)\]$/i.exec(lineText.trim()))
             continue;
-          }
 
           currentLineIndex++;
           if (currentLineIndex === lineIndex) {
@@ -263,14 +278,14 @@ export function TextEditor() {
 
         let pos = 0;
         for (let i = 0; i < targetRow; i++) {
-          pos += splitLines[i].length + 1;
+          pos += originalLines[i].length + 1;
         }
 
         const textarea = textareaRef.current;
         textarea.focus();
         textarea.setSelectionRange(
           pos,
-          pos + (splitLines[targetRow]?.length || 0),
+          pos + (originalLines[targetRow]?.length || 0),
         );
 
         // Hack to scroll into view

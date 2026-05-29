@@ -11,6 +11,7 @@ export interface LyricLine {
   words: LyricWord[];
   raw?: string;
   isSingleLine?: boolean;
+  ktvsp?: number | null;
 }
 
 export function generateId() {
@@ -79,7 +80,7 @@ export function parseRawLyrics(text: string): { lines: LyricLine[], metadata: Lr
     }
     
     // Skip KTV tags from being treated as metadata
-    if (trimmedKey.toLowerCase() === 'ktv') {
+    if (trimmedKey.toLowerCase() === 'ktv' || trimmedKey.toLowerCase() === 'ktvsp') {
       return match;
     }
     
@@ -102,6 +103,7 @@ export function parseRawLyrics(text: string): { lines: LyricLine[], metadata: Lr
   const wordTimeRegex = /<(\d+:\d+(?:\.\d+)?)>([^<]*)/g;
   
   let pendingSingleLine = false;
+  let pendingKtvsp: number | null = null;
   
   for (const line of lines) {
     if (!line.trim()) continue;
@@ -109,6 +111,12 @@ export function parseRawLyrics(text: string): { lines: LyricLine[], metadata: Lr
     // Check if this line is [ktv:singleline]
     if (/^\[ktv\s*:\s*singleline\]$/i.test(line.trim())) {
       pendingSingleLine = true;
+      continue;
+    }
+
+    const spMatch = /^\[ktvsp\s*:\s*(\d+:\d+(?:\.\d+)?)\]$/i.exec(line.trim());
+    if (spMatch) {
+      pendingKtvsp = parseSeconds(spMatch[1]);
       continue;
     }
     
@@ -148,8 +156,10 @@ export function parseRawLyrics(text: string): { lines: LyricLine[], metadata: Lr
         words: words.length > 0 ? words : splitWordsAegisub(cleanText.replace(/<\d+:\d+\.\d+>/g, '')),
         raw: cleanText.replace(/<\d+:\d+\.\d+>/g, ''),
         isSingleLine: pendingSingleLine ? true : undefined,
+        ktvsp: pendingKtvsp ? pendingKtvsp : undefined,
       });
       pendingSingleLine = false;
+      pendingKtvsp = null;
     } else {
       result.push({
         id: generateId(),
@@ -158,8 +168,10 @@ export function parseRawLyrics(text: string): { lines: LyricLine[], metadata: Lr
         words: splitWordsAegisub(cleanText),
         raw: cleanText,
         isSingleLine: pendingSingleLine ? true : undefined,
+        ktvsp: pendingKtvsp ? pendingKtvsp : undefined,
       });
       pendingSingleLine = false;
+      pendingKtvsp = null;
     }
   }
   
@@ -194,6 +206,10 @@ export function exportLrc(lines: LyricLine[], metadata?: LrcMetadata, isEnhanced
       lrc += `[ktv:singleline]\n`;
     }
     
+    if (line.ktvsp !== undefined && line.ktvsp !== null) {
+      lrc += `[ktvsp:${formatTime(line.ktvsp, true)}]\n`;
+    }
+
     if (line.start === null) {
       lrc += `${line.words.map(w => w.text).join('')}\n`;
       continue;

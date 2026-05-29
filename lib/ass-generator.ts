@@ -26,6 +26,7 @@ export interface AssOptions {
   nextTriggerIndex: number;
   row2FadeoutMode: "immediate" | "delayed";
   interludeBuffer: number;
+  introDelayLimit: number;
   playResX?: number;
   playResY?: number;
   simulatedOutlineWidth?: number;
@@ -227,6 +228,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
       (currentPara.length > 0 &&
         line.start! - prevEnd >= options.interludeThreshold) ||
       (currentPara.length > 0 && !!line.isSingleLine) ||
+      (currentPara.length > 0 && line.ktvsp != null) ||
       prevIsSingle;
 
     if (shouldCut && currentPara.length > 0) {
@@ -248,12 +250,13 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
       const firstParaEnd = getLineEndTime(
         paragraphs[0][paragraphs[0].length - 1],
       );
-      if (firstParaEnd > 60) {
+      const delayedStart = firstParaEnd + options.interludeBuffer + options.fadeInOutTime;
+      if (delayedStart > options.introDelayLimit) {
         infoStart = 0.5;
         infoEnd = DEFAULT_INFO_STAY_TIME;
       } else {
-        infoStart = firstParaEnd;
-        infoEnd = firstParaEnd + DEFAULT_INFO_STAY_TIME;
+        infoStart = delayedStart;
+        infoEnd = delayedStart + DEFAULT_INFO_STAY_TIME;
       }
     } else {
       infoStart = 0.5;
@@ -287,23 +290,33 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         : 0;
     const gap = p[0].start! - prevEnd;
 
-    let dotCount = 0;
     let maxAdvance = p[0].start!;
     if (idx > 0) maxAdvance = gap;
-    if (maxAdvance > 1.0) {
+    if (p[0].ktvsp != null) maxAdvance = p[0].start! - p[0].ktvsp;
+
+    const isRealInterlude = idx === 0 ? true : (gap >= options.interludeThreshold || p[0].ktvsp != null);
+
+    let dotCount = 0;
+    if (isRealInterlude && maxAdvance > 1.0) {
       dotCount = Math.min(4, Math.floor(maxAdvance - 1.0));
+      while (dotCount > 0 && dotCount * dotDuration + 1.0 + options.fadeInOutTime > maxAdvance + 0.1) {
+          dotCount--;
+      }
     }
 
     let actualAdvance = 0;
-    if (dotCount > 0) {
-      actualAdvance = dotCount * dotDuration + 1.0 + options.fadeInOutTime;
+    if (p[0].ktvsp != null) {
+       actualAdvance = maxAdvance;
     } else {
-      actualAdvance = Math.min(2.0, maxAdvance) + options.fadeInOutTime;
+       if (dotCount > 0) {
+         actualAdvance = dotCount * dotDuration + 1.0 + options.fadeInOutTime;
+       } else {
+         actualAdvance = Math.min(2.0 + options.fadeInOutTime, maxAdvance);
+       }
     }
 
     const blockDisplayStart = Math.max(prevEnd, p[0].start! - actualAdvance);
-    const blockDisplayEnd =
-      getLineEndTime(p[p.length - 1]) + 2.0 + options.fadeInOutTime;
+    const blockDisplayEnd = getLineEndTime(p[p.length - 1]) + options.interludeBuffer + options.fadeInOutTime;
     const truncatedBlockEnd =
       idx < paragraphs.length - 1
         ? Math.min(blockDisplayEnd, paragraphs[idx + 1][0].start! - 0.1)
@@ -427,29 +440,40 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 
     const isRealInterlude =
       idx === 0
-        ? p[0].start! >= options.interludeThreshold
-        : gap >= options.interludeThreshold;
+        ? true
+        : (gap >= options.interludeThreshold || p[0].ktvsp != null);
 
-    let maxAdvance = p[0].start!; // 首段的話，可利用的時間是 0 到 start
+    let maxAdvance = p[0].start!; 
     if (idx > 0) maxAdvance = gap;
+    
+    // 如果有指定 ktvsp，強制重寫這段歌詞能提早進場的時間
+    if (p[0].ktvsp != null) {
+       maxAdvance = p[0].start! - p[0].ktvsp;
+    }
 
     let dotCount = 0;
     if (isRealInterlude && maxAdvance > 1.0) {
-      // 最多顯示 4 個倒數小圓
       dotCount = Math.min(4, Math.floor(maxAdvance - 1.0));
+      // 確保扣掉淡入淡出時間後，dot 不會過早出現而超出強制範圍太多
+      while (dotCount > 0 && dotCount * dotDuration + 1.0 + options.fadeInOutTime > maxAdvance + 0.1) {
+          dotCount--;
+      }
     }
 
     let actualAdvance = 0;
-    if (dotCount > 0) {
-      // 若有倒數小白圓，歌詞提早顯示時間配合圓點
-      actualAdvance = dotCount * dotDuration + 1.0 + options.fadeInOutTime;
+    if (p[0].ktvsp != null) {
+       actualAdvance = maxAdvance;
     } else {
-      actualAdvance = Math.min(2.0, maxAdvance) + options.fadeInOutTime;
+       if (dotCount > 0) {
+         actualAdvance = dotCount * dotDuration + 1.0 + options.fadeInOutTime;
+       } else {
+         actualAdvance = Math.min(2.0 + options.fadeInOutTime, maxAdvance);
+       }
     }
 
     const blockDisplayStart = Math.max(prevEnd, p[0].start! - actualAdvance);
     const blockDisplayEnd =
-      getLineEndTime(p[p.length - 1]) + 2.0 + options.fadeInOutTime;
+      getLineEndTime(p[p.length - 1]) + options.interludeBuffer + options.fadeInOutTime;
 
     return {
       p,

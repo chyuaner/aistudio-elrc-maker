@@ -54,7 +54,9 @@ export function getDefaultAssOptions(lrcMetadata: any) {
     dualRowMarginV: 50,
     nextTriggerIndex: 1,
     row2FadeoutMode: "immediate" as const,
-    interludeBuffer: 1.0,
+    interludeBuffer: 0.3,
+    introDelayLimit: 60.0,
+    fadeInOutTime: 0.5,
     playResX: 1920,
     playResY: 1080,
     simulatedOutlineWidth: 3,
@@ -83,7 +85,7 @@ export function KtvAssExport() {
   const [copiedFeedback, setCopiedFeedback] = useState(false);
 
   const [options, setOptions] = useState<
-    Omit<AssOptions, "interludeThreshold" | "fadeInOutTime">
+    Omit<AssOptions, "interludeThreshold">
   >(() => getDefaultAssOptions(lrcMetadata));
 
   const originalVideoName = audioFileName || "video.mp4";
@@ -142,6 +144,8 @@ export function KtvAssExport() {
           dualRowMarginV: options.dualRowMarginV,
           row2FadeoutMode: options.row2FadeoutMode,
           interludeBuffer: options.interludeBuffer,
+          introDelayLimit: options.introDelayLimit,
+          fadeInOutTime: options.fadeInOutTime,
           playResX: options.playResX,
           playResY: options.playResY,
           simulatedOutlineWidth: options.simulatedOutlineWidth,
@@ -170,6 +174,8 @@ export function KtvAssExport() {
     options.dualRowMarginV,
     options.row2FadeoutMode,
     options.interludeBuffer,
+    options.introDelayLimit,
+    options.fadeInOutTime,
     options.playResX,
     options.playResY,
     options.simulatedOutlineWidth,
@@ -262,7 +268,6 @@ export function KtvAssExport() {
     return generateAss(lines, lrcMetadata, {
       ...options,
       interludeThreshold: dualLineGapSec,
-      fadeInOutTime: 0.5,
     });
   }, [lines, lrcMetadata, options, dualLineGapSec]);
 
@@ -320,11 +325,25 @@ export function KtvAssExport() {
     const title = lrcMetadata.ti || "";
     const artist = lrcMetadata.ar || "";
     const album = lrcMetadata.al || "";
+    
+    // 把所有的LRC屬性「自訂標籤」（排除本系統專用的標籤）也一起填入「自訂內容」
+    const predefinedKeys = ['ti', 'ar', 'al', 'au', 'by', 'offset', 're', 've', 'length'];
+    const sysKeysList = ['kti', 'kar', 'kal', 'ko', 'tt', 'tte', 'kth'];
+    
+    const customParts: string[] = [];
+    for (const [key, value] of Object.entries(lrcMetadata)) {
+      if (!predefinedKeys.includes(key) && !sysKeysList.includes(key.toLowerCase()) && value) {
+        customParts.push(`${key}：${value}`);
+      }
+    }
+    const custom = customParts.join("\n");
+
     const updated = {
       ...options,
       songInfoTitle: title,
       songInfoArtist: artist,
       songInfoAlbum: album,
+      songInfoCustom: custom,
     };
     setOptions(updated);
     syncToLrcMetadata(updated);
@@ -1142,6 +1161,40 @@ export function KtvAssExport() {
                           <option value="immediate">Immediate</option>
                           <option value="delayed">Delayed</option>
                         </select>
+                      </div>
+                      <div className="flex flex-col">
+                        <label className="text-[var(--app-text-muted)]">
+                          淡入淡出時間 (s)
+                        </label>
+                        <input
+                          type="number"
+                          step="0.1"
+                          value={options.fadeInOutTime}
+                          onChange={(e) =>
+                            setOptions({
+                              ...options,
+                              fadeInOutTime: parseFloat(e.target.value) || 0,
+                            })
+                          }
+                          className="bg-[var(--app-bg-input)] border border-[var(--app-border-input)] rounded px-1 py-0.5"
+                        />
+                      </div>
+                      <div className="flex flex-col">
+                        <label className="text-[var(--app-text-muted)]">
+                          延遲顯示資訊門檻 (s)
+                        </label>
+                        <input
+                          type="number"
+                          step="1"
+                          value={options.introDelayLimit}
+                          onChange={(e) =>
+                            setOptions({
+                              ...options,
+                              introDelayLimit: parseFloat(e.target.value) || 0,
+                            })
+                          }
+                          className="bg-[var(--app-bg-input)] border border-[var(--app-border-input)] rounded px-1 py-0.5"
+                        />
                       </div>
                     </div>
                   )}

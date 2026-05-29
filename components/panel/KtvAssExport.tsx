@@ -15,23 +15,7 @@ import { RawTextDisplay } from "@/components/panel/RawTextDisplay";
 import { formatTime, parseSeconds } from "@/lib/lyric-utils";
 import { FontSelect } from "@/components/common/FontSelect";
 
-export function KtvAssExport() {
-  const {
-    lines,
-    lrcMetadata,
-    commitLrcMetadata,
-    audioFileName,
-    dualLineGapSec,
-    setDualLineGapSec,
-    metadata,
-    showToast,
-    playerRef,
-    fileUrl,
-    duration,
-  } = useEditor();
-  const [fontConfigOpen, setFontConfigOpen] = useState(false);
-
-  // 檢查是否有自訂歌曲開始資訊的時間戳 (TT / TTE)
+export function getDefaultAssOptions(lrcMetadata: any) {
   const initialTT = lrcMetadata.TT || lrcMetadata.tt;
   const initialTTE = lrcMetadata.TTE || lrcMetadata.tte;
   const hasCustomTime = !!initialTT;
@@ -40,9 +24,7 @@ export function KtvAssExport() {
     ? parseSeconds(initialTTE) || parsedStart + 6
     : parsedStart + 6;
 
-  const [options, setOptions] = useState<
-    Omit<AssOptions, "interludeThreshold" | "fadeInOutTime">
-  >({
+  return {
     primaryColor: "#0000FF", // Blue
     color2: "#FF0000", // Red
     color3: "#800080", // Purple
@@ -64,12 +46,33 @@ export function KtvAssExport() {
     dualRowMarginR: 150,
     dualRowMarginV: 50,
     nextTriggerIndex: 1,
-    row2FadeoutMode: "immediate",
+    row2FadeoutMode: "immediate" as const,
     interludeBuffer: 1.0,
     playResX: 1920,
     playResY: 1080,
     simulatedOutlineWidth: 3,
-  });
+  };
+}
+
+export function KtvAssExport() {
+  const {
+    lines,
+    lrcMetadata,
+    commitLrcMetadata,
+    audioFileName,
+    dualLineGapSec,
+    setDualLineGapSec,
+    metadata,
+    showToast,
+    playerRef,
+    fileUrl,
+    duration,
+  } = useEditor();
+  const [fontConfigOpen, setFontConfigOpen] = useState(false);
+
+  const [options, setOptions] = useState<
+    Omit<AssOptions, "interludeThreshold" | "fadeInOutTime">
+  >(() => getDefaultAssOptions(lrcMetadata));
 
   // 在掛載時載入 localStorage 中的使用者自訂樣式設定 (透過 useEffect 避免 Next.js Hydration Mismatch)
   useEffect(() => {

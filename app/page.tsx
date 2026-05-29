@@ -6,12 +6,16 @@ import { DialogProvider } from '@/components/dialog/DialogProvider';
 import { WebSystemIntegration } from '@/components/base/WebSystemIntegration';
 import { TextContextMenu } from '@/components/common/TextContextMenu';
 import { GlobalToast } from '@/components/common/GlobalToast';
+import { CliExportHandler } from '@/components/base/CliExportHandler';
+import { OpenAssociatedFileHandler } from '@/components/base/OpenAssociatedFileHandler';
 
 export default function Page() {
   return (
     <DialogProvider>
       <WebSystemIntegration />
+      <CliExportHandler />
       <EditorProvider>
+        <OpenAssociatedFileHandler />
         <TextContextMenu />
         <main 
           className="h-[100dvh] w-full bg-[var(--app-bg-base)] text-[var(--app-text-secondary)] font-sans flex flex-col overflow-hidden selection:bg-[var(--app-accent)]/30"

@@ -6,6 +6,7 @@ import { formatTime } from '@/lib/lyric-utils';
 import { KaraokePreview } from '@/components/panel/KaraokePreview';
 import { Tooltip } from '@/components/common/Tooltip';
 import { Edit2, Trash2, X, ArrowRight, MoreVertical, ArrowUpFromLine, Copy, Play, SplitSquareVertical, Clock, Scissors, Type, Plus, FileText, Eraser, SlidersHorizontal, Settings2 } from 'lucide-react';
+import { BaseDialog } from '@/components/dialog/BaseDialog';
 
 import { ContextMenu, ContextMenuItem, ContextMenuSeparator } from '@/components/common/ContextMenu';
 import { useAutoScroll } from '@/components/base/useAutoScroll';
@@ -772,81 +773,73 @@ export function SyncEditor() {
         </ContextMenu>
       )}
 
-      {editingText && typeof window !== 'undefined' && createPortal(
-         <div 
-           className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
-           style={{
-             paddingLeft: 'max(1rem, var(--app-safe-area-left))',
-             paddingRight: 'max(1rem, var(--app-safe-area-right))',
-             paddingTop: 'max(1rem, var(--app-safe-area-top))',
-             paddingBottom: 'max(1rem, var(--app-safe-area-bottom))'
-           }}
-         >
-            <div className="bg-[var(--app-bg-panel)] rounded-xl shadow-2xl w-full max-w-xl border border-[var(--app-border-base)] flex flex-col overflow-hidden">
-                <div className="px-4 py-3 border-b border-[var(--app-border-base)] flex items-center justify-between bg-[var(--app-bg-panel-alt)]">
-                    <h3 className="font-bold text-[var(--app-text-primary)]">
-                        {editingText.type === 'raw' ? '編輯這行字 RAW (含時間戳)' : '編輯這行字'}
-                    </h3>
-                    <button onClick={() => setEditingText(null)} className="text-[var(--app-text-muted)] hover:text-[var(--app-text-primary)] transition-colors">
-                        <X className="w-5 h-5" />
-                    </button>
-                </div>
-                <div className="p-4 flex flex-col gap-3">
-                    <textarea 
-                        autoFocus
-                        style={{ fieldSizing: 'content' }}
-                        className="w-full bg-[var(--app-bg-input)] border border-[var(--app-border-base)] rounded-lg p-3 text-[var(--app-text-primary)] outline-none focus:border-[var(--app-accent)] min-h-[100px] resize-none font-mono"
-                        value={editingText.text}
-                        onChange={(e) => setEditingText({ ...editingText, text: e.target.value })}
-                    />
-                    <div className="text-xs text-[var(--app-text-muted)] font-bold uppercase tracking-widest mt-2 px-1">拆字預覽</div>
-                    <div className="flex flex-wrap gap-1 p-3 bg-[var(--app-bg-input)] rounded-lg border border-[var(--app-border-light)] min-h-[3rem] items-center">
-                        {(() => {
-                           const { parseRawLyrics, splitWordsAegisub } = require('@/lib/lyric-utils');
-                           const words = editingText.type === 'raw' 
-                               ? (parseRawLyrics(editingText.text).lines[0]?.words || [])
-                               : splitWordsAegisub(editingText.text);
-                           
-                           if (words.length === 0) return <span className="opacity-50 text-xs">無內容</span>;
-                           
-                           return words.map((w: any, i: number) => (
-                               <span key={i} className="px-2 py-0.5 bg-[var(--app-bg-panel-alt)] border border-[var(--app-border-dark)] rounded text-sm group relative">
-                                   {w.text || '⏎'}
-                                   {w.start !== null && <span className="absolute -top-2 -right-2 text-[8px] bg-[var(--app-accent)] text-black px-1 rounded font-bold">{formatTime(w.start, true)}</span>}
-                               </span>
-                           ));
-                        })()}
-                    </div>
-                </div>
-                <div className="p-4 pt-0 flex justify-end gap-2 text-sm mt-2">
-                    <button onClick={() => setEditingText(null)} className="px-4 py-2 text-[var(--app-text-secondary)] hover:bg-[var(--app-bg-hover)] rounded-lg transition-colors font-bold">
-                        取消
-                    </button>
-                    <button 
-                        onClick={() => {
-                            commitLines(prev => {
-                                const newLines = [...prev];
-                                const currentLine = newLines[editingText.globalIndex];
-                                const { parseRawLyrics, splitWordsAegisub } = require('@/lib/lyric-utils');
-                                if (editingText.type === 'raw') {
-                                    const parsed = parseRawLyrics(editingText.text).lines[0];
-                                    newLines[editingText.globalIndex] = { ...currentLine, raw: editingText.text, words: parsed ? parsed.words : [] };
-                                } else {
-                                    newLines[editingText.globalIndex] = { ...currentLine, raw: editingText.text, words: splitWordsAegisub(editingText.text), start: null };
-                                }
-                                return newLines;
-                            }, 'Edit Text');
-                            setEditingText(null);
-                        }}
-                        className="px-6 py-2 bg-[var(--app-accent)] hover:bg-[var(--app-accent-hover)] text-black rounded-lg transition-colors font-bold shadow"
-                    >
-                        儲存
-                    </button>
-                </div>
+      <BaseDialog
+        isOpen={editingText !== null}
+        onClose={() => setEditingText(null)}
+        title={editingText?.type === 'raw' ? '編輯這行字 RAW (含時間戳)' : '編輯這行字'}
+        maxWidthClass="max-w-xl"
+        footer={
+          <>
+            <button 
+              onClick={() => setEditingText(null)} 
+              className="px-4 py-2 text-xs text-[var(--app-text-secondary)] hover:bg-[var(--app-bg-hover)] rounded transition-colors font-semibold"
+            >
+              取消
+            </button>
+            <button 
+              onClick={() => {
+                if (!editingText) return;
+                commitLines(prev => {
+                    const newLines = [...prev];
+                    const currentLine = newLines[editingText.globalIndex];
+                    const { parseRawLyrics, splitWordsAegisub } = require('@/lib/lyric-utils');
+                    if (editingText.type === 'raw') {
+                        const parsed = parseRawLyrics(editingText.text).lines[0];
+                        newLines[editingText.globalIndex] = { ...currentLine, raw: editingText.text, words: parsed ? parsed.words : [] };
+                    } else {
+                        newLines[editingText.globalIndex] = { ...currentLine, raw: editingText.text, words: splitWordsAegisub(editingText.text), start: null };
+                    }
+                    return newLines;
+                }, 'Edit Text');
+                setEditingText(null);
+              }}
+              className="px-5 py-2 bg-[var(--app-accent)] hover:bg-[var(--app-accent-hover)] text-black rounded font-semibold text-xs transition-colors shadow-sm"
+            >
+              儲存
+            </button>
+          </>
+        }
+      >
+        {editingText && (
+          <div className="flex flex-col gap-3">
+            <textarea 
+              autoFocus
+              style={{ fieldSizing: 'content' }}
+              className="w-full bg-[var(--app-bg-input)] border border-[var(--app-border-base)] rounded-lg p-3 text-[var(--app-text-primary)] outline-none focus:border-[var(--app-accent)] min-h-[100px] resize-none font-mono text-sm leading-relaxed"
+              value={editingText.text}
+              onChange={(e) => setEditingText({ ...editingText, text: e.target.value })}
+            />
+            <div className="text-xs text-[var(--app-text-muted)] font-bold uppercase tracking-widest mt-2 px-1">拆字預覽</div>
+            <div className="flex flex-wrap gap-1 p-3 bg-[var(--app-bg-input)] rounded-lg border border-[var(--app-border-light)] min-h-[3rem] items-center">
+              {(() => {
+                 const { parseRawLyrics, splitWordsAegisub } = require('@/lib/lyric-utils');
+                 const words = editingText.type === 'raw' 
+                     ? (parseRawLyrics(editingText.text).lines[0]?.words || [])
+                     : splitWordsAegisub(editingText.text);
+                 
+                 if (words.length === 0) return <span className="opacity-50 text-xs text-[var(--app-text-muted)]">無內容</span>;
+                 
+                 return words.map((w: any, i: number) => (
+                     <span key={i} className="px-2 py-0.5 bg-[var(--app-bg-panel-alt)] border border-[var(--app-border-dark)] rounded text-xs text-[var(--app-text-primary)] group relative font-mono">
+                         {w.text || '⏎'}
+                         {w.start !== null && <span className="absolute -top-2 -right-2 text-[8px] bg-[var(--app-accent)] text-black px-1 rounded font-bold">{formatTime(w.start, true)}</span>}
+                     </span>
+                 ));
+              })()}
             </div>
-         </div>,
-         document.body
-      )}
+          </div>
+        )}
+      </BaseDialog>
     </div>
   );
 }

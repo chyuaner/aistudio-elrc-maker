@@ -28,6 +28,7 @@ export function FontSelect({ value, onChange, className }: FontSelectProps) {
   const [infoModalFont, setInfoModalFont] = useState<FontInfo | null>(null);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
     fetch('/api/fonts')
       .then(r => r.json())
@@ -45,6 +46,31 @@ export function FontSelect({ value, onChange, className }: FontSelectProps) {
        document.addEventListener('mousedown', handleClickOutside);
     }
     return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isOpen]);
+
+  const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 });
+
+  useEffect(() => {
+    const updatePosition = () => {
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        setCoords({
+          top: rect.bottom + window.scrollY,
+          left: rect.left + window.scrollX,
+          width: rect.width,
+        });
+      }
+    };
+
+    if (isOpen) {
+      updatePosition();
+      window.addEventListener('scroll', updatePosition, true);
+      window.addEventListener('resize', updatePosition);
+    }
+    return () => {
+      window.removeEventListener('scroll', updatePosition, true);
+      window.removeEventListener('resize', updatePosition);
+    };
   }, [isOpen]);
 
   return (
@@ -85,11 +111,18 @@ export function FontSelect({ value, onChange, className }: FontSelectProps) {
           </button>
        </div>
 
-       {isOpen && (
-         <div className="absolute top-full left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-[var(--app-bg-panel)] border border-[var(--app-border-base)] rounded shadow-xl z-[#100] flex flex-col py-1 text-xs outline outline-1 outline-[rgba(0,0,0,0.1)]">
+       {isOpen && mounted && createPortal(
+         <div 
+           className="fixed max-h-60 overflow-y-auto bg-[var(--app-bg-panel)] border border-[var(--app-border-base)] rounded shadow-xl z-[99999] flex flex-col py-1 text-xs outline outline-1 outline-[rgba(0,0,0,0.1)] font-sans animate-in fade-in duration-100"
+           style={{
+             top: `${coords.top}px`,
+             left: `${coords.left}px`,
+             width: `${coords.width}px`,
+           }}
+         >
             {fonts.filter(font => !font.disabled).map(font => (
               <div key={font.id}
-                   className="flex items-center justify-between px-2 py-2 hover:bg-[var(--app-hover-active)] transition-colors cursor-pointer group"
+                   className="flex items-center justify-between px-2 py-2 hover:bg-[var(--app-hover-active)] transition-colors cursor-pointer group animate-in fade-in duration-75"
                    onClick={() => {
                       onChange(font.systemName, font);
                       setIsOpen(false);
@@ -111,14 +144,14 @@ export function FontSelect({ value, onChange, className }: FontSelectProps) {
                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity ml-1 shrink-0">
                     {/* Details button (Info Modal) */}
                     <button
-                       type="button"
-                       title="詳細資訊"
-                       onClick={e => {
-                          e.stopPropagation();
-                          setInfoModalFont(font);
-                       }}
-                       className="p-1 text-[var(--app-text-secondary)] hover:text-[var(--app-accent)] hover:bg-[var(--app-bg-hover)] rounded">
-                       <Info size={14} />
+                      type="button"
+                      title="詳細資訊"
+                      onClick={e => {
+                         e.stopPropagation();
+                         setInfoModalFont(font);
+                      }}
+                      className="p-1 text-[var(--app-text-secondary)] hover:text-[var(--app-accent)] hover:bg-[var(--app-bg-hover)] rounded">
+                      <Info size={14} />
                     </button>
                     {/* Download button */}
                     {font.filename && (
@@ -136,7 +169,8 @@ export function FontSelect({ value, onChange, className }: FontSelectProps) {
                  沒有讀取到字體
               </div>
             )}
-         </div>
+         </div>,
+         document.body
        )}
 
        {/* Info Modal Portal */}
@@ -153,18 +187,18 @@ export function FontSelect({ value, onChange, className }: FontSelectProps) {
                      {infoModalFont.filename ? (
                         <div className="flex"><span className="text-[var(--app-text-muted)] w-[65px] shrink-0">預期檔名:</span> <span className="text-[var(--app-text-primary)] break-all">{infoModalFont.filename}</span></div>
                      ) : (
-                        <div className="flex"><span className="text-[var(--app-text-muted)] w-[65px] shrink-0">標籤屬性:</span> <span className="text-[var(--app-text-primary)] break-all">作業系統內置字體</span></div>
+                        <div className="flex"><span className="text(--app-text-muted)] w-[65px] shrink-0">標籤屬性:</span> <span className="text-[var(--app-text-primary)] break-all">作業系統內置字體</span></div>
                      )}
                      <div className="flex"><span className="text-[var(--app-text-muted)] w-[65px] shrink-0">授權方式:</span> <span className="text-[var(--app-text-primary)] break-all">{infoModalFont.license}</span></div>
                  </div>
                  <div className="flex justify-end gap-2 mt-2">
                      {infoModalFont.officialUrl && (
-                         <a href={infoModalFont.officialUrl} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 text-xs font-medium text-[var(--app-text-primary)] bg-[var(--app-bg-panel)] border border-[var(--app-border-base)] rounded hover:bg-[var(--app-active)] transition-colors">
-                             字體來源
-                         </a>
+                          <a href={infoModalFont.officialUrl} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 text-xs font-medium text-[var(--app-text-primary)] bg-[var(--app-bg-panel)] border border-[var(--app-border-base)] rounded hover:bg-[var(--app-active)] transition-colors">
+                              字體來源
+                          </a>
                      )}
                      <button onClick={() => setInfoModalFont(null)} className="px-3 py-1.5 text-xs font-medium bg-[var(--app-accent)] text-white rounded hover:opacity-90 transition-opacity">
-                         確認關閉
+                          確認關閉
                      </button>
                  </div>
              </div>

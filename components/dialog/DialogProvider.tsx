@@ -1,5 +1,6 @@
 'use client';
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { BaseDialog } from './BaseDialog';
 
 type DialogContextType = {
   alert: (msg: string) => Promise<void>;
@@ -84,102 +85,84 @@ export function DialogProvider({ children }: { children: ReactNode }) {
       {children}
       
       {/* Alert Modal */}
-      {alertState && (
-        <div 
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200 app-region-no-drag"
-          style={{
-            paddingLeft: 'var(--app-safe-area-left)',
-            paddingRight: 'var(--app-safe-area-right)',
-            paddingTop: 'var(--app-safe-area-top)',
-            paddingBottom: 'var(--app-safe-area-bottom)'
-          }}
-        >
-          <div className="bg-[var(--app-bg-panel)] border border-[var(--app-border-base)] p-6 rounded shadow-xl max-w-sm w-full mx-4 animate-in zoom-in-95 duration-200">
-            <p className="text-[var(--app-text-secondary)] mb-6 whitespace-pre-wrap">{alertState.msg}</p>
-            <div className="flex justify-end gap-3">
-              <button 
-                onClick={handleAlertClose}
-                className="px-4 py-2 rounded text-sm bg-[var(--app-accent)] hover:bg-[var(--app-accent-hover)] text-black font-medium transition-colors"
-              >
-                OK
-              </button>
-            </div>
-          </div>
+      <BaseDialog
+        isOpen={alertState !== null}
+        onClose={handleAlertClose}
+        title="系統提示"
+        maxWidthClass="max-w-sm"
+        closeOnOverlayClick={false}
+      >
+        <p className="text-[var(--app-text-secondary)] mb-6 whitespace-pre-wrap text-sm leading-relaxed">{alertState?.msg}</p>
+        <div className="flex justify-end">
+          <button 
+            onClick={handleAlertClose}
+            className="px-5 py-2 rounded bg-[var(--app-accent)] hover:bg-[var(--app-accent-hover)] text-black font-semibold text-xs transition-colors"
+          >
+            確定
+          </button>
         </div>
-      )}
+      </BaseDialog>
       
       {/* Confirm Modal */}
-      {confirmState && (
-        <div 
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200 app-region-no-drag"
-          style={{
-            paddingLeft: 'var(--app-safe-area-left)',
-            paddingRight: 'var(--app-safe-area-right)',
-            paddingTop: 'var(--app-safe-area-top)',
-            paddingBottom: 'var(--app-safe-area-bottom)'
-          }}
-        >
-          <div className="bg-[var(--app-bg-panel)] border border-[var(--app-border-base)] p-6 rounded shadow-xl max-w-sm w-full mx-4 animate-in zoom-in-95 duration-200">
-            <p className="text-[var(--app-text-secondary)] mb-6 whitespace-pre-wrap">{confirmState.msg}</p>
-            <div className="flex justify-end gap-3">
-              <button 
-                onClick={() => handleConfirmClose(false)}
-                className="px-4 py-2 rounded text-sm text-[var(--app-text-secondary)] hover:bg-[var(--app-border-base)] transition-colors"
-              >
-                取消
-              </button>
-              <button 
-                onClick={() => handleConfirmClose(true)}
-                className="px-4 py-2 rounded text-sm bg-[var(--app-accent)] hover:bg-[var(--app-accent-hover)] text-black font-medium transition-colors"
-              >
-                確認
-              </button>
-            </div>
-          </div>
+      <BaseDialog
+        isOpen={confirmState !== null}
+        onClose={() => handleConfirmClose(false)}
+        title="確認動作"
+        maxWidthClass="max-w-sm"
+        closeOnOverlayClick={false}
+      >
+        <p className="text-[var(--app-text-secondary)] mb-6 whitespace-pre-wrap text-sm leading-relaxed">{confirmState?.msg}</p>
+        <div className="flex justify-end gap-3">
+          <button 
+            onClick={() => handleConfirmClose(false)}
+            className="px-4 py-2 rounded text-xs text-[var(--app-text-secondary)] hover:bg-[var(--app-border-base)] font-semibold transition-colors"
+          >
+            取消
+          </button>
+          <button 
+            onClick={() => handleConfirmClose(true)}
+            className="px-5 py-2 rounded bg-[var(--app-accent)] hover:bg-[var(--app-accent-hover)] text-black font-semibold text-xs transition-colors"
+          >
+            確認
+          </button>
         </div>
-      )}
+      </BaseDialog>
 
       {/* Prompt Modal */}
-      {promptState && (
-        <div 
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200 app-region-no-drag"
-          style={{
-            paddingLeft: 'var(--app-safe-area-left)',
-            paddingRight: 'var(--app-safe-area-right)',
-            paddingTop: 'var(--app-safe-area-top)',
-            paddingBottom: 'var(--app-safe-area-bottom)'
+      <BaseDialog
+        isOpen={promptState !== null}
+        onClose={() => handlePromptClose(false)}
+        title="請輸入"
+        maxWidthClass="max-w-sm"
+        closeOnOverlayClick={false}
+      >
+        <p className="text-[var(--app-text-secondary)] mb-4 text-sm leading-relaxed">{promptState?.msg}</p>
+        <input 
+          type="text" 
+          autoFocus
+          className="w-full bg-[var(--app-bg-base)] border border-[var(--app-border-base)] rounded p-2 text-[var(--app-text-primary)] mb-6 outline-none focus:border-[var(--app-accent)] transition-colors font-mono text-xs"
+          value={promptInput}
+          onChange={(e) => setPromptInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') handlePromptClose(true);
+            if (e.key === 'Escape') handlePromptClose(false);
           }}
-        >
-          <div className="bg-[var(--app-bg-panel)] border border-[var(--app-border-base)] p-6 rounded shadow-xl max-w-sm w-full mx-4 animate-in zoom-in-95 duration-200">
-            <p className="text-[var(--app-text-secondary)] mb-4">{promptState.msg}</p>
-            <input 
-              type="text" 
-              autoFocus
-              className="w-full bg-[var(--app-bg-base)] border border-[var(--app-border-base)] rounded p-2 text-[var(--app-text-primary)] mb-6 outline-none focus:border-[var(--app-accent)] transition-colors"
-              value={promptInput}
-              onChange={(e) => setPromptInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handlePromptClose(true);
-                if (e.key === 'Escape') handlePromptClose(false);
-              }}
-            />
-            <div className="flex justify-end gap-3">
-              <button 
-                onClick={() => handlePromptClose(false)}
-                className="px-4 py-2 rounded text-sm text-[var(--app-text-secondary)] hover:bg-[var(--app-border-base)] transition-colors"
-              >
-                取消
-              </button>
-              <button 
-                onClick={() => handlePromptClose(true)}
-                className="px-4 py-2 rounded text-sm bg-[var(--app-accent)] hover:bg-[var(--app-accent-hover)] text-black font-medium transition-colors"
-              >
-                送出
-              </button>
-            </div>
-          </div>
+        />
+        <div className="flex justify-end gap-3">
+          <button 
+            onClick={() => handlePromptClose(false)}
+            className="px-4 py-2 rounded text-xs text-[var(--app-text-secondary)] hover:bg-[var(--app-border-base)] font-semibold transition-colors"
+          >
+            取消
+          </button>
+          <button 
+            onClick={() => handlePromptClose(true)}
+            className="px-5 py-2 rounded bg-[var(--app-accent)] hover:bg-[var(--app-accent-hover)] text-black font-semibold text-xs transition-colors"
+          >
+            確認
+          </button>
         </div>
-      )}
+      </BaseDialog>
     </DialogContext.Provider>
   );
 }

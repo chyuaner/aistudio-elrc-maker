@@ -848,6 +848,7 @@ export function TopToolbar({ hideTitle = false }: { hideTitle?: boolean }) {
                       exportEmbeddedSimple: () => handleExport('simple', 'embedded')
                     };
                     (actionMap as any)[opt.action]();
+                    setExportDropdownOpen(false);
                   }}>
                     <span>{opt.label}</span>
                   </button>

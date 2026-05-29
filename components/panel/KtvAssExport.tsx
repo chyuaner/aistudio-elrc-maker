@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useRef } from "react";
+import { BaseDialog } from "@/components/dialog/BaseDialog";
 import { useEditor } from "@/components/base/EditorProvider";
 import { generateAss, AssOptions } from "@/lib/ass-generator";
 import {
@@ -10,10 +11,16 @@ import {
   Image as ImageIcon,
   ChevronDown,
   ChevronRight,
+  Film,
+  Copy,
+  Check,
+  X,
 } from "lucide-react";
 import { RawTextDisplay } from "@/components/panel/RawTextDisplay";
 import { formatTime, parseSeconds } from "@/lib/lyric-utils";
 import { FontSelect } from "@/components/common/FontSelect";
+
+const SHOW_INTERNAL_TEST_PARAMS = true;
 
 export function getDefaultAssOptions(lrcMetadata: any) {
   const initialTT = lrcMetadata.TT || lrcMetadata.tt;
@@ -69,10 +76,32 @@ export function KtvAssExport() {
     duration,
   } = useEditor();
   const [fontConfigOpen, setFontConfigOpen] = useState(false);
+  const [colorConfigOpen, setColorConfigOpen] = useState(false);
+  const [testParamsOpen, setTestParamsOpen] = useState(false);
+  const [burnVideoDialogOpen, setBurnVideoDialogOpen] = useState(false);
+  const [ffmpegMode, setFfmpegMode] = useState<"cpu" | "nvidia">("cpu");
+  const [copiedFeedback, setCopiedFeedback] = useState(false);
 
   const [options, setOptions] = useState<
     Omit<AssOptions, "interludeThreshold" | "fadeInOutTime">
   >(() => getDefaultAssOptions(lrcMetadata));
+
+  const originalVideoName = audioFileName || "video.mp4";
+  const baseName = useMemo(() => {
+    return audioFileName
+      ? audioFileName.replace(/\.[^/.]+$/, "")
+      : lrcMetadata.ti || "KTV";
+  }, [audioFileName, lrcMetadata.ti]);
+  const assFilename = `${baseName}.ass`;
+  const outputVideoName = `【KTV】${originalVideoName}`;
+
+  const ffmpegCommand = useMemo(() => {
+    if (ffmpegMode === "cpu") {
+      return `ffmpeg -i "${originalVideoName}" -vf "subtitles='${assFilename}'" -c:v libx264 -crf 18 -preset slow -c:a copy "${outputVideoName}"`;
+    } else {
+      return `ffmpeg -i "${originalVideoName}" -vf "subtitles='${assFilename}'" -c:v h264_nvenc -preset slow -cq 19 -rc constqp -pix_fmt yuv420p -c:a copy "${outputVideoName}"`;
+    }
+  }, [ffmpegMode, originalVideoName, assFilename, outputVideoName]);
 
   // 在掛載時載入 localStorage 中的使用者自訂樣式設定 (透過 useEffect 避免 Next.js Hydration Mismatch)
   useEffect(() => {
@@ -498,6 +527,26 @@ export function KtvAssExport() {
 
   return (
     <div className="flex flex-col h-full bg-[var(--app-bg-main)] overflow-hidden">
+      {/* Title Bar inside Tab */}
+      <div className="shrink-0 px-4 py-3 bg-[var(--app-bg-base)] border-b border-[var(--app-border-base)] flex items-center justify-between">
+        <h2 className="text-sm font-bold text-[var(--app-text-primary)]">KTV ASS 輸出</h2>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleDownload}
+            className="text-[11px] flex items-center gap-1.5 bg-[var(--app-accent)] hover:bg-[var(--app-accent-hover)] text-black px-3 py-1.5 rounded transition-colors font-bold z-10 animate-in fade-in duration-200"
+          >
+            <Download className="w-3.5 h-3.5" /> 下載 .ass 檔
+          </button>
+          
+          <button
+            onClick={() => setBurnVideoDialogOpen(true)}
+            className="text-[11px] flex items-center gap-1.5 bg-[var(--app-bg-panel)] border border-[var(--app-border-light)] text-[var(--app-text-primary)] hover:bg-[var(--app-border-base)] px-3 py-1.5 rounded transition-colors font-bold z-10 animate-in fade-in duration-200"
+          >
+            <Film className="w-3.5 h-3.5" /> 壓製成影片
+          </button>
+        </div>
+      </div>
+
       {/* Settings / Toolbar Panel */}
       <div className="shrink-0 p-4 bg-[var(--app-bg-base)] border-b border-[var(--app-border-base)] flex flex-col gap-4 overflow-y-auto max-h-[50vh]">
         <div className="text-xs text-[var(--app-text-secondary)]">
@@ -634,105 +683,6 @@ export function KtvAssExport() {
                 </div>
               </div>
 
-              {/* 字幕顏色設定 */}
-              <div className="flex flex-col gap-2">
-                <label className="font-semibold text-[var(--app-text-primary)] text-xs">
-                  字幕顏色設定
-                </label>
-                <div className="grid grid-cols-2 gap-x-4 gap-y-3 bg-[var(--app-bg-input)] p-3 border border-[var(--app-border-light)] rounded">
-                  <div className="flex flex-col gap-1">
-                    <span className="text-[10px] text-[var(--app-text-muted)] font-medium">
-                      已唱字幕 (Color 1)
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="color"
-                        value={options.primaryColor}
-                        onChange={(e) =>
-                          setOptions({
-                            ...options,
-                            primaryColor: e.target.value,
-                          })
-                        }
-                        className="h-6 w-6 rounded cursor-pointer bg-transparent border-0 p-0 shrink-0"
-                      />
-                      <span className="font-mono text-[10px] text-[var(--app-text-primary)]">
-                        {options.primaryColor.toUpperCase()}
-                      </span>
-                    </div>
-                  </div>
-                  <div
-                    className="flex flex-col gap-1 opacity-50 tooltip-wrapper"
-                    title="尚未實裝多部和音支援"
-                  >
-                    <span className="text-[10px] text-[var(--app-text-muted)] font-medium">
-                      已唱字幕2 (暫不支援)
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="color"
-                        value={options.color2}
-                        onChange={(e) =>
-                          setOptions({ ...options, color2: e.target.value })
-                        }
-                        disabled
-                        className="h-6 w-6 rounded cursor-pointer bg-transparent border-0 p-0 shrink-0"
-                      />
-                      <span className="font-mono text-[10px] text-[var(--app-text-primary)]">
-                        {options.color2.toUpperCase()}
-                      </span>
-                    </div>
-                  </div>
-                  <div
-                    className="flex flex-col gap-1 opacity-50 tooltip-wrapper"
-                    title="尚未實裝多部和音支援"
-                  >
-                    <span className="text-[10px] text-[var(--app-text-muted)] font-medium">
-                      已唱字幕3 (暫不支援)
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="color"
-                        value={options.color3}
-                        onChange={(e) =>
-                          setOptions({ ...options, color3: e.target.value })
-                        }
-                        disabled
-                        className="h-6 w-6 rounded cursor-pointer bg-transparent border-0 p-0 shrink-0"
-                      />
-                      <span className="font-mono text-[10px] text-[var(--app-text-primary)]">
-                        {options.color3.toUpperCase()}
-                      </span>
-                    </div>
-                  </div>
-                  <div
-                    className="flex flex-col gap-1 opacity-50 tooltip-wrapper"
-                    title="尚未實裝多部和音支援"
-                  >
-                    <span className="text-[10px] text-[var(--app-text-muted)] font-medium">
-                      已唱合唱 (暫不支援)
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="color"
-                        value={options.chorusColor}
-                        onChange={(e) =>
-                          setOptions({
-                            ...options,
-                            chorusColor: e.target.value,
-                          })
-                        }
-                        disabled
-                        className="h-6 w-6 rounded cursor-pointer bg-transparent border-0 p-0 shrink-0"
-                      />
-                      <span className="font-mono text-[10px] text-[var(--app-text-primary)]">
-                        {options.chorusColor.toUpperCase()}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
               {/* 間奏閥值 */}
               <div className="flex flex-col gap-1.5">
                 <label className="font-semibold text-[var(--app-text-primary)] text-xs">
@@ -779,6 +729,116 @@ export function KtvAssExport() {
                 </div>
               </div>
 
+              {/* 字幕顏色設定 */}
+              <div className="flex flex-col gap-1.5">
+                <div
+                  onClick={() => setColorConfigOpen(!colorConfigOpen)}
+                  className="flex items-center justify-between font-semibold text-[var(--app-text-primary)] text-xs cursor-pointer group hover:text-white transition-colors"
+                >
+                  <span>字幕顏色設定</span>
+                  {colorConfigOpen ? (
+                    <ChevronDown className="w-4 h-4 text-[var(--app-text-muted)] group-hover:text-white" />
+                  ) : (
+                    <ChevronRight className="w-4 h-4 text-[var(--app-text-muted)] group-hover:text-white" />
+                  )}
+                </div>
+
+                {colorConfigOpen && (
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-3 bg-[var(--app-bg-input)] p-3 border border-[var(--app-border-light)] rounded animate-in fade-in duration-200">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[10px] text-[var(--app-text-muted)] font-medium">
+                        已唱字幕 (Color 1)
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          value={options.primaryColor}
+                          onChange={(e) =>
+                            setOptions({
+                              ...options,
+                              primaryColor: e.target.value,
+                            })
+                          }
+                          className="h-6 w-6 rounded cursor-pointer bg-transparent border-0 p-0 shrink-0"
+                        />
+                        <span className="font-mono text-[10px] text-[var(--app-text-primary)]">
+                          {options.primaryColor.toUpperCase()}
+                        </span>
+                      </div>
+                    </div>
+                    <div
+                      className="flex flex-col gap-1 opacity-50 tooltip-wrapper"
+                      title="尚未實裝多部和音支援"
+                    >
+                      <span className="text-[10px] text-[var(--app-text-muted)] font-medium">
+                        已唱字幕2 (暫不支援)
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          value={options.color2}
+                          onChange={(e) =>
+                            setOptions({ ...options, color2: e.target.value })
+                          }
+                          disabled
+                          className="h-6 w-6 rounded cursor-pointer bg-transparent border-0 p-0 shrink-0"
+                        />
+                        <span className="font-mono text-[10px] text-[var(--app-text-primary)]">
+                          {options.color2.toUpperCase()}
+                        </span>
+                      </div>
+                    </div>
+                    <div
+                      className="flex flex-col gap-1 opacity-50 tooltip-wrapper"
+                      title="尚未實裝多部和音支援"
+                    >
+                      <span className="text-[10px] text-[var(--app-text-muted)] font-medium">
+                        已唱字幕3 (暫不支援)
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          value={options.color3}
+                          onChange={(e) =>
+                            setOptions({ ...options, color3: e.target.value })
+                          }
+                          disabled
+                          className="h-6 w-6 rounded cursor-pointer bg-transparent border-0 p-0 shrink-0"
+                        />
+                        <span className="font-mono text-[10px] text-[var(--app-text-primary)]">
+                          {options.color3.toUpperCase()}
+                        </span>
+                      </div>
+                    </div>
+                    <div
+                      className="flex flex-col gap-1 opacity-50 tooltip-wrapper"
+                      title="尚未實裝多部和音支援"
+                    >
+                      <span className="text-[10px] text-[var(--app-text-muted)] font-medium">
+                        已唱合唱 (暫不支援)
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          value={options.chorusColor}
+                          onChange={(e) =>
+                            setOptions({
+                              ...options,
+                              chorusColor: e.target.value,
+                            })
+                          }
+                          disabled
+                          className="h-6 w-6 rounded cursor-pointer bg-transparent border-0 p-0 shrink-0"
+                        />
+                        <span className="font-mono text-[10px] text-[var(--app-text-primary)]">
+                          {options.chorusColor.toUpperCase()}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* 字體設定 */}
               <div className="flex flex-col gap-1.5">
                 <div
@@ -798,7 +858,7 @@ export function KtvAssExport() {
                     <div className="flex flex-col gap-2 border-b border-[var(--app-border-light)] pb-3">
                       <div className="flex items-center gap-2">
                         <span className="text-[10px] text-[var(--app-text-muted)] font-medium shrink-0">
-                          本機字型名稱與大小:
+                          本機字型名稱:
                         </span>
                         <FontSelect
                           value={options.fontFamily}
@@ -809,24 +869,6 @@ export function KtvAssExport() {
                             }
                             setOptions({ ...options, ...updates });
                           }}
-                        />
-                        <input
-                          type="number"
-                          value={options.fontSize}
-                          onChange={(e) => {
-                            const newSize = parseInt(e.target.value) || 120;
-                            const diff = newSize - options.fontSize;
-                            setOptions({
-                              ...options,
-                              fontSize: newSize,
-                              infoFontSize:
-                                (options.infoFontSize || 110) + diff,
-                              infoTitleFontSize:
-                                (options.infoTitleFontSize || 140) + diff,
-                            });
-                          }}
-                          className="w-[60px] shrink-0 bg-[var(--app-bg-panel)] border border-[var(--app-border-input)] rounded px-2 py-1 focus:outline-none focus:border-[var(--app-accent)] text-center font-mono text-xs"
-                          title="主字體大小"
                         />
                       </div>
 
@@ -842,6 +884,30 @@ export function KtvAssExport() {
                     </div>
 
                     <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                      <div className="flex items-center gap-1.5 flex-1 min-w-[80px]">
+                        <span className="text-[10px] text-[var(--app-text-muted)] font-medium whitespace-nowrap">
+                          字體大小:
+                        </span>
+                        <input
+                          type="number"
+                          value={options.fontSize}
+                          onChange={(e) => {
+                            const newSize = parseInt(e.target.value) || 120;
+                            const diff = newSize - options.fontSize;
+                            setOptions({
+                              ...options,
+                              fontSize: newSize,
+                              infoFontSize:
+                                (options.infoFontSize || 110) + diff,
+                              infoTitleFontSize:
+                                (options.infoTitleFontSize || 140) + diff,
+                            });
+                          }}
+                          className="w-full bg-[var(--app-bg-panel)] border border-[var(--app-border-input)] rounded px-2 py-1 focus:outline-none focus:border-[var(--app-accent)] text-center font-mono text-xs"
+                          title="主字體大小"
+                        />
+                      </div>
+
                       <div className="flex items-center gap-1.5 flex-1 min-w-[80px]">
                         <span className="text-[10px] text-[var(--app-text-muted)] font-medium whitespace-nowrap">
                           描邊粗細:
@@ -865,37 +931,41 @@ export function KtvAssExport() {
                           className="w-full bg-[var(--app-bg-panel)] border border-[var(--app-border-input)] rounded px-1.5 py-1 focus:outline-none focus:border-[var(--app-accent)] text-center font-mono text-xs"
                         />
                       </div>
-
-                      <div className="flex items-center gap-1.5 flex-1 min-w-[100px]">
-                        <span className="text-[10px] text-[var(--app-text-muted)] font-medium whitespace-nowrap">
-                          標題大小:
-                        </span>
-                        <input
-                          type="number"
-                          value={options.infoTitleFontSize || 140}
-                          onChange={(e) => {
-                            const val = parseInt(e.target.value) || 140;
-                            setOptions({ ...options, infoTitleFontSize: val });
-                          }}
-                          className="w-full bg-[var(--app-bg-panel)] border border-[var(--app-border-input)] rounded px-1.5 py-1 focus:outline-none focus:border-[var(--app-accent)] text-center font-mono text-xs"
-                        />
-                      </div>
-
-                      <div className="flex items-center gap-1.5 flex-1 min-w-[100px]">
-                        <span className="text-[10px] text-[var(--app-text-muted)] font-medium whitespace-nowrap">
-                          內文大小:
-                        </span>
-                        <input
-                          type="number"
-                          value={options.infoFontSize || 110}
-                          onChange={(e) => {
-                            const val = parseInt(e.target.value) || 110;
-                            setOptions({ ...options, infoFontSize: val });
-                          }}
-                          className="w-full bg-[var(--app-bg-panel)] border border-[var(--app-border-input)] rounded px-1.5 py-1 focus:outline-none focus:border-[var(--app-accent)] text-center font-mono text-xs"
-                        />
-                      </div>
                     </div>
+
+                    {SHOW_INTERNAL_TEST_PARAMS && (
+                      <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap border-t border-[var(--app-border-light)] pt-3 mt-1">
+                        <div className="flex items-center gap-1.5 flex-1 min-w-[100px]">
+                          <span className="text-[10px] text-[var(--app-text-muted)] font-medium whitespace-nowrap">
+                            標題大小:
+                          </span>
+                          <input
+                            type="number"
+                            value={options.infoTitleFontSize || 140}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value) || 140;
+                              setOptions({ ...options, infoTitleFontSize: val });
+                            }}
+                            className="w-full bg-[var(--app-bg-panel)] border border-[var(--app-border-input)] rounded px-1.5 py-1 focus:outline-none focus:border-[var(--app-accent)] text-center font-mono text-xs"
+                          />
+                        </div>
+
+                        <div className="flex items-center gap-1.5 flex-1 min-w-[100px]">
+                          <span className="text-[10px] text-[var(--app-text-muted)] font-medium whitespace-nowrap">
+                            內文大小:
+                          </span>
+                          <input
+                            type="number"
+                            value={options.infoFontSize || 110}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value) || 110;
+                              setOptions({ ...options, infoFontSize: val });
+                            }}
+                            className="w-full bg-[var(--app-bg-panel)] border border-[var(--app-border-input)] rounded px-1.5 py-1 focus:outline-none focus:border-[var(--app-accent)] text-center font-mono text-xs"
+                          />
+                        </div>
+                      </div>
+                    )}
 
                     <p className="text-[10px] text-[var(--app-text-muted)] mt-auto leading-tight">
                       字體外框皆固定從反（白字體配黑框，彩字體配白框）。
@@ -905,165 +975,178 @@ export function KtvAssExport() {
               </div>
 
               {/* 密集測試區 */}
-              <div className="flex flex-col gap-2 p-3 bg-[var(--app-bg-panel)] border border-[var(--app-border-light)] rounded">
-                <label className="font-semibold text-[var(--app-text-primary)] text-xs">
-                  測試參數 (內部)
-                </label>
-                <div className="grid grid-cols-2 gap-2 text-[10px]">
-                  <div className="flex flex-col">
-                    <label className="text-[var(--app-text-muted)]">
-                      行間距 (px)
-                    </label>
-                    <input
-                      type="number"
-                      value={options.dualRowSpacing}
-                      onChange={(e) =>
-                        setOptions({
-                          ...options,
-                          dualRowSpacing: parseInt(e.target.value) || 0,
-                        })
-                      }
-                      className="bg-[var(--app-bg-input)] border border-[var(--app-border-input)] rounded px-1 py-0.5"
-                    />
+              {SHOW_INTERNAL_TEST_PARAMS && (
+                <div className="flex flex-col gap-1.5">
+                  <div
+                    onClick={() => setTestParamsOpen(!testParamsOpen)}
+                    className="flex items-center justify-between font-semibold text-[var(--app-text-primary)] text-xs cursor-pointer group hover:text-white transition-colors"
+                  >
+                    <span>測試參數 (內部)</span>
+                    {testParamsOpen ? (
+                      <ChevronDown className="w-4 h-4 text-[var(--app-text-muted)] group-hover:text-white" />
+                    ) : (
+                      <ChevronRight className="w-4 h-4 text-[var(--app-text-muted)] group-hover:text-white" />
+                    )}
                   </div>
-                  <div className="flex flex-col">
-                    <label className="text-[var(--app-text-muted)]">
-                      左右邊距 LR (px)
-                    </label>
-                    <input
-                      type="number"
-                      value={options.dualRowMarginL}
-                      onChange={(e) => {
-                        const val = parseInt(e.target.value) || 0;
-                        setOptions({
-                          ...options,
-                          dualRowMarginL: val,
-                          dualRowMarginR: val,
-                        });
-                      }}
-                      className="bg-[var(--app-bg-input)] border border-[var(--app-border-input)] rounded px-1 py-0.5"
-                    />
-                  </div>
-                  <div className="flex flex-col">
-                    <label className="text-[var(--app-text-muted)]">
-                      上下邊距 V (px)
-                    </label>
-                    <input
-                      type="number"
-                      value={options.dualRowMarginV}
-                      onChange={(e) =>
-                        setOptions({
-                          ...options,
-                          dualRowMarginV: parseInt(e.target.value) || 0,
-                        })
-                      }
-                      className="bg-[var(--app-bg-input)] border border-[var(--app-border-input)] rounded px-1 py-0.5"
-                    />
-                  </div>
-                  <div className="flex flex-col">
-                    <label className="text-[var(--app-text-muted)]">
-                      資訊字體
-                    </label>
-                    <input
-                      type="number"
-                      value={options.infoFontSize}
-                      onChange={(e) =>
-                        setOptions({
-                          ...options,
-                          infoFontSize: parseInt(e.target.value),
-                        })
-                      }
-                      className="bg-[var(--app-bg-input)] border border-[var(--app-border-input)] rounded px-1 py-0.5"
-                    />
-                  </div>
-                  <div className="flex flex-col">
-                    <label className="text-[var(--app-text-muted)]">
-                      標題字體
-                    </label>
-                    <input
-                      type="number"
-                      value={options.infoTitleFontSize}
-                      onChange={(e) =>
-                        setOptions({
-                          ...options,
-                          infoTitleFontSize: parseInt(e.target.value) || 150,
-                        })
-                      }
-                      className="bg-[var(--app-bg-input)] border border-[var(--app-border-input)] rounded px-1 py-0.5"
-                    />
-                  </div>
-                  <div className="flex flex-col">
-                    <label className="text-[var(--app-text-muted)]">
-                      字體補正 (px)
-                    </label>
-                    <input
-                      type="number"
-                      value={options.fontSizeOffset || 0}
-                      onChange={(e) =>
-                        setOptions({
-                          ...options,
-                          fontSizeOffset: parseInt(e.target.value) || 0,
-                        })
-                      }
-                      className="bg-[var(--app-bg-input)] border border-[var(--app-border-input)] rounded px-1 py-0.5 text-[var(--app-accent)] border-dashed border-[var(--app-accent)/50]"
-                      title="字體大小強制補正值 (隨字體切換自動載入)"
-                    />
-                  </div>
-                  <div className="flex flex-col">
-                    <label className="text-[var(--app-text-muted)]">
-                      間奏緩衝 (s)
-                    </label>
-                    <input
-                      type="number"
-                      step="0.1"
-                      value={options.interludeBuffer}
-                      onChange={(e) =>
-                        setOptions({
-                          ...options,
-                          interludeBuffer: parseFloat(e.target.value),
-                        })
-                      }
-                      className="bg-[var(--app-bg-input)] border border-[var(--app-border-input)] rounded px-1 py-0.5"
-                    />
-                  </div>
-                  <div className="flex flex-col">
-                    <label className="text-[var(--app-text-muted)]">
-                      觸發索引
-                    </label>
-                    <input
-                      type="number"
-                      value={options.nextTriggerIndex}
-                      onChange={(e) =>
-                        setOptions({
-                          ...options,
-                          nextTriggerIndex: parseInt(e.target.value),
-                        })
-                      }
-                      className="bg-[var(--app-bg-input)] border border-[var(--app-border-input)] rounded px-1 py-0.5"
-                    />
-                  </div>
-                  <div className="flex flex-col">
-                    <label className="text-[var(--app-text-muted)]">
-                      淡出模式
-                    </label>
-                    <select
-                      value={options.row2FadeoutMode}
-                      onChange={(e) =>
-                        setOptions({
-                          ...options,
-                          row2FadeoutMode: e.target.value as
-                            | "immediate"
-                            | "delayed",
-                        })
-                      }
-                      className="bg-[var(--app-bg-input)] border border-[var(--app-border-input)] rounded px-1 py-0.5"
-                    >
-                      <option value="immediate">Immediate</option>
-                      <option value="delayed">Delayed</option>
-                    </select>
-                  </div>
+
+                  {testParamsOpen && (
+                    <div className="grid grid-cols-2 gap-2 text-[10px] bg-[var(--app-bg-panel)] border border-[var(--app-border-light)] p-3 rounded animate-in fade-in duration-200">
+                      <div className="flex flex-col">
+                        <label className="text-[var(--app-text-muted)]">
+                          行間距 (px)
+                        </label>
+                        <input
+                          type="number"
+                          value={options.dualRowSpacing}
+                          onChange={(e) =>
+                            setOptions({
+                              ...options,
+                              dualRowSpacing: parseInt(e.target.value) || 0,
+                            })
+                          }
+                          className="bg-[var(--app-bg-input)] border border-[var(--app-border-input)] rounded px-1 py-0.5"
+                        />
+                      </div>
+                      <div className="flex flex-col">
+                        <label className="text-[var(--app-text-muted)]">
+                          左右邊距 LR (px)
+                        </label>
+                        <input
+                          type="number"
+                          value={options.dualRowMarginL}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value) || 0;
+                            setOptions({
+                              ...options,
+                              dualRowMarginL: val,
+                              dualRowMarginR: val,
+                            });
+                          }}
+                          className="bg-[var(--app-bg-input)] border border-[var(--app-border-input)] rounded px-1 py-0.5"
+                        />
+                      </div>
+                      <div className="flex flex-col">
+                        <label className="text-[var(--app-text-muted)]">
+                          上下邊距 V (px)
+                        </label>
+                        <input
+                          type="number"
+                          value={options.dualRowMarginV}
+                          onChange={(e) =>
+                            setOptions({
+                              ...options,
+                              dualRowMarginV: parseInt(e.target.value) || 0,
+                            })
+                          }
+                          className="bg-[var(--app-bg-input)] border border-[var(--app-border-input)] rounded px-1 py-0.5"
+                        />
+                      </div>
+                      <div className="flex flex-col">
+                        <label className="text-[var(--app-text-muted)]">
+                          資訊字體
+                        </label>
+                        <input
+                          type="number"
+                          value={options.infoFontSize}
+                          onChange={(e) =>
+                            setOptions({
+                              ...options,
+                              infoFontSize: parseInt(e.target.value),
+                            })
+                          }
+                          className="bg-[var(--app-bg-input)] border border-[var(--app-border-input)] rounded px-1 py-0.5"
+                        />
+                      </div>
+                      <div className="flex flex-col">
+                        <label className="text-[var(--app-text-muted)]">
+                          標題字體
+                        </label>
+                        <input
+                          type="number"
+                          value={options.infoTitleFontSize}
+                          onChange={(e) =>
+                            setOptions({
+                              ...options,
+                              infoTitleFontSize: parseInt(e.target.value) || 150,
+                            })
+                          }
+                          className="bg-[var(--app-bg-input)] border border-[var(--app-border-input)] rounded px-1 py-0.5"
+                        />
+                      </div>
+                      <div className="flex flex-col">
+                        <label className="text-[var(--app-text-muted)]">
+                          字體補正 (px)
+                        </label>
+                        <input
+                          type="number"
+                          value={options.fontSizeOffset || 0}
+                          onChange={(e) =>
+                            setOptions({
+                              ...options,
+                              fontSizeOffset: parseInt(e.target.value) || 0,
+                            })
+                          }
+                          className="bg-[var(--app-bg-input)] border border-[var(--app-border-input)] rounded px-1 py-0.5 text-[var(--app-accent)] border-dashed border-[var(--app-accent)/50]"
+                          title="字體大小強制補正值 (隨字體切換自動載入)"
+                        />
+                      </div>
+                      <div className="flex flex-col">
+                        <label className="text-[var(--app-text-muted)]">
+                          間奏緩衝 (s)
+                        </label>
+                        <input
+                          type="number"
+                          step="0.1"
+                          value={options.interludeBuffer}
+                          onChange={(e) =>
+                            setOptions({
+                              ...options,
+                              interludeBuffer: parseFloat(e.target.value),
+                            })
+                          }
+                          className="bg-[var(--app-bg-input)] border border-[var(--app-border-input)] rounded px-1 py-0.5"
+                        />
+                      </div>
+                      <div className="flex flex-col">
+                        <label className="text-[var(--app-text-muted)]">
+                          觸發索引
+                        </label>
+                        <input
+                          type="number"
+                          value={options.nextTriggerIndex}
+                          onChange={(e) =>
+                            setOptions({
+                              ...options,
+                              nextTriggerIndex: parseInt(e.target.value),
+                            })
+                          }
+                          className="bg-[var(--app-bg-input)] border border-[var(--app-border-input)] rounded px-1 py-0.5"
+                        />
+                      </div>
+                      <div className="flex flex-col col-span-2">
+                        <label className="text-[var(--app-text-muted)]">
+                          淡出模式
+                        </label>
+                        <select
+                          value={options.row2FadeoutMode}
+                          onChange={(e) =>
+                            setOptions({
+                              ...options,
+                              row2FadeoutMode: e.target.value as
+                                | "immediate"
+                                | "delayed",
+                            })
+                          }
+                          className="bg-[var(--app-bg-input)] border border-[var(--app-border-input)] rounded px-1 py-0.5"
+                        >
+                          <option value="immediate">Immediate</option>
+                          <option value="delayed">Delayed</option>
+                        </select>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Right Column */}
@@ -1242,18 +1325,98 @@ export function KtvAssExport() {
               </span>
             </div>
           }
-          customRightControls={
-            <div className="flex gap-2">
-              <button
-                onClick={handleDownload}
-                className="text-[10px] flex items-center gap-2 bg-[var(--app-accent)] hover:bg-[var(--app-accent-hover)] text-black px-3 py-1.5 rounded transition-colors font-bold uppercase tracking-widest z-10"
-              >
-                <Download className="w-3.5 h-3.5" /> 下載 .ass 檔
-              </button>
-            </div>
-          }
         />
       </div>
+
+      {/* FFmpeg 壓製影片教學 Dialog */}
+      <BaseDialog
+        isOpen={burnVideoDialogOpen}
+        onClose={() => setBurnVideoDialogOpen(false)}
+        title={
+          <span className="flex items-center gap-2">
+            <Film className="w-4 h-4 text-[var(--app-accent)]" /> 壓製成新影片 (利用 FFmpeg)
+          </span>
+        }
+        maxWidthClass="max-w-2xl"
+        footer={
+          <button 
+            onClick={() => setBurnVideoDialogOpen(false)}
+            className="px-5 py-2 bg-[var(--app-bg-hover)] hover:bg-[var(--app-border-base)] text-[var(--app-text-primary)] text-[11px] font-semibold rounded transition-colors"
+          >
+            關閉
+          </button>
+        }
+      >
+        <div className="text-xs sm:text-sm text-[var(--app-text-secondary)] leading-relaxed space-y-4">
+          <p>
+            要將字幕<strong>永久壓製固定 (Hardsub)</strong>在您的 MV 影片中，最有效率且畫質最好的方式是使用免費開源工具 <strong>FFmpeg</strong>。
+          </p>
+          <p className="bg-[var(--app-accent)]/10 text-[var(--app-accent)] p-3 rounded border border-[var(--app-accent)]/30">
+            ⚠️ <strong>開始前提醒：</strong>請確認您已點擊上方 <strong>「下載 .ass 檔」</strong> 按鈕將字幕檔案儲存到本機，並與您的原始影片放置在<strong>同一個資料夾</strong>中。
+          </p>
+
+          <div className="space-y-2 border border-[var(--app-border-light)] p-4 rounded bg-[var(--app-bg-input)]">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <label className="text-xs font-semibold text-[var(--app-text-primary)]">
+                選擇硬體加速/解碼模式：
+              </label>
+              <select
+                value={ffmpegMode}
+                onChange={(e) => setFfmpegMode(e.target.value as "cpu" | "nvidia")}
+                className="bg-[var(--app-bg-panel)] border border-[var(--app-border-input)] rounded px-2 py-1 text-xs focus:outline-none focus:border-[var(--app-accent)]"
+              >
+                <option value="cpu">💻 CPU 模式 (適合任何電腦，畫質好，速度一般)</option>
+                <option value="nvidia">⚡ Nvidia 模式 (適合顯卡支援 CUDA，極速壓製)</option>
+              </select>
+            </div>
+
+            <p className="text-[10px] text-[var(--app-text-muted)] leading-tight">
+              {ffmpegMode === "cpu" 
+                ? "CPU 模式使用 libx264 編碼器，設定較高壓縮比與高品質參數 (-crf 18 -preset slow)。" 
+                : "Nvidia 模式使用 GPU 硬體加速編碼器 h264_nvenc，可大幅縮短轉檔時間，兼顧超高畫質。"}
+            </p>
+          </div>
+
+          <div className="space-y-1">
+            <span className="text-[var(--app-text-muted)] text-[11px] font-medium block">
+              終端機指令 (Terminal / CMD)：
+            </span>
+            <div className="relative">
+              <textarea
+                readOnly
+                value={ffmpegCommand}
+                className="w-full bg-black text-green-400 font-mono text-[11px] leading-relaxed p-3.5 pr-12 rounded border border-[var(--app-border-light)] focus:outline-none select-all h-24 resize-none"
+              />
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(ffmpegCommand);
+                  setCopiedFeedback(true);
+                  setTimeout(() => setCopiedFeedback(false), 2000);
+                  showToast("已將 ffmpeg 指令複製到剪貼簿！");
+                }}
+                className="absolute right-3 top-3 p-1.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded transition-colors"
+                title="複製指令"
+              >
+                {copiedFeedback ? (
+                  <Check className="w-4 h-4 text-green-400" />
+                ) : (
+                  <Copy className="w-4 h-4 text-zinc-300" />
+                )}
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-1.5 border-t border-[var(--app-border-base)] pt-3 text-xs text-[var(--app-text-muted)] space-y-1">
+            <p className="font-semibold text-[var(--app-text-primary)]">💡 執行步驟：</p>
+            <ol className="list-decimal pl-5 space-y-1 text-[var(--app-text-secondary)]">
+              <li>打開您電腦的終端機 App (Windows 為 <strong>CMD / PowerShell</strong>，Mac/Linux 為 <strong>Terminal</strong>)。</li>
+              <li>使用 <code>cd</code> 指令切換至存放影片與字幕檔的資料夾。</li>
+              <li>複製並貼上上方的指令，然後按下 Enter 開始壓製。</li>
+              <li>壓製完成後，即可於同個資料夾中獲得檔名開頭為 <strong>【KTV】</strong> 的全新壓製影片！</li>
+            </ol>
+          </div>
+        </div>
+      </BaseDialog>
     </div>
   );
 }
